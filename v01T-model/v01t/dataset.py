@@ -26,6 +26,7 @@ JUNE_PATH = os.path.join(_ROOT, "data", "btc_usd_1h_jun2026.json")
 DATASETS = {
     "jan2026": VENDORED_PATH,
     "jun2026": JUNE_PATH,
+    "jul2026": os.path.join(_ROOT, "data", "btc_usd_1h_jul2026.json"),
 }
 
 JAN_2026_PERIOD1 = 1767225600  # 2026-01-01 00:00 UTC
