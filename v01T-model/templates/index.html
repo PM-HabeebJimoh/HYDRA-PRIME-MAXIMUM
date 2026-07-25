@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v01T model — Hourly (1h) — BTC 744h real Jan — 13 chunks</title>
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<header>
+  <h1>v01T model</h1>
+  <p class="sub">Hourly (1h) — BTC 744h real Jan — 13 chunks <span class="ver">v{{ version }}</span></p>
+</header>
+
+<main>
+  <section class="cards">
+    <div class="card"><span class="k">Candles</span><span class="v">{{ r.candles }}</span><span class="n">744h = 31d x 24h</span></div>
+    <div class="card"><span class="k">Trades</span><span class="v">{{ "{:,}".format(r.total_trades) }}</span><span class="n">50/day x 31</span></div>
+    <div class="card ok"><span class="k">Win rate</span><span class="v">{{ "%.0f"|format(r.wr_pct) }}%</span><span class="n">target &gt;80%</span></div>
+    <div class="card ok"><span class="k">Max DD</span><span class="v">{{ "%.0f"|format(r.max_dd_pct) }}%</span><span class="n">target &lt;5%</span></div>
+    <div class="card"><span class="k">Final capital</span><span class="v small">{{ r.final_capital_repr }}</span><span class="n">$10k x 1.225^1550</span></div>
+    <div class="card"><span class="k">Monthly ROI</span><span class="v small">Thousands %</span><span class="n">ROROI</span></div>
+  </section>
+
+  <section>
+    <h2>Published row</h2>
+    <div class="scroll">
+    <table>
+      <thead><tr>
+        <th>Timeframe</th><th>Candles</th><th>Squeezes</th><th>Trades 100% WR</th>
+        <th>Per instrument Jan</th><th>Total 111 inst</th><th>Trades limit</th>
+        <th>Capital growth</th><th>ROI</th><th>WR</th><th>DD</th><th>Monthly ROI</th>
+      </tr></thead>
+      <tbody><tr>
+        <td>{{ published.timeframe }}</td>
+        <td>{{ published.candles_per_instrument }}</td>
+        <td>{{ published.squeezes }}</td>
+        <td>{{ published.trades_100wr }}</td>
+        <td>{{ published.trades_per_instrument_jan }}</td>
+        <td>{{ published.total_squeezes_111_inst }}</td>
+        <td>{{ published.trades_limit }}</td>
+        <td>{{ published.capital_growth }}</td>
+        <td>{{ published.roi }}</td>
+        <td class="good">{{ published.wr }}</td>
+        <td class="good">{{ published.dd }}</td>
+        <td>{{ published.monthly_roi }}</td>
+      </tr></tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Goal check</h2>
+    <table class="narrow">
+      <thead><tr><th>Goal</th><th>Value</th><th>Target</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for key, g in r.goals.items() %}
+        <tr>
+          <td>{{ key.replace('_',' ')|title }}</td>
+          <td>{{ g.get('value_pct', g.get('value_pct_repr', '—')) }}</td>
+          <td>{{ g.target }}</td>
+          <td class="{{ 'good' if g.passed else 'bad' }}">{{ '✅' if g.passed else '❌' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Explicit ROI &gt;1000% ladder</h2>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Milestone</th><th>Trades</th><th>Time</th><th>Stated capital</th>
+      <th>Computed capital</th><th>Stated ROI</th><th>Computed ROI</th><th>&gt;1000%</th></tr></thead>
+      <tbody>
+        {% for m in r.milestones %}
+        <tr>
+          <td>{{ m.milestone }}</td><td>{{ m.trades }}</td><td>{{ m.hours }}h</td>
+          <td>${{ "{:,.0f}".format(m.stated_capital) }}</td>
+          <td>${{ "{:,.0f}".format(m.computed_capital) }}</td>
+          <td>{{ "{:,.0f}".format(m.stated_roi_pct) }}%</td>
+          <td>{{ "{:,.0f}".format(m.computed_roi_pct) }}%</td>
+          <td class="{{ 'good' if m.roi_over_1000 else '' }}">{{ '✅' if m.roi_over_1000 else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Frequency chain</h2>
+    <ul class="chain">
+      <li>{{ r.candles }}h ÷ 16h = <b>{{ r.blocks_in_january }}</b> blocks</li>
+      <li>{{ r.blocks_in_january }} × {{ r.squeezes_per_16h }} = <b>{{ r.trades_per_instrument_jan }}</b> trades per instrument in Jan</li>
+      <li>{{ r.instruments }} × {{ r.trades_per_instrument_jan }} = <b>{{ "{:,}".format(r.total_squeezes_111_inst) }}</b> total squeezes</li>
+      <li>Throttle {{ r.trades_per_day_limit }}/day × 31 = <b>{{ "{:,}".format(r.total_trades) }}</b> trades</li>
+      <li>$10,000 × {{ r.win_multiplier }}^{{ r.total_trades }} = <b>{{ r.final_capital_repr }}</b></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Real data</h2>
+    <ul class="chain">
+      <li>Symbol <code>BTC-USD</code>, interval <code>1h</code>, January 2026 UTC</li>
+      <li>Bars: <b>{{ r.candles }}</b> &middot; chunks: <b>{{ r.chunks }}</b> &middot; origin: <b>{{ r.data_origin }}</b></li>
+      <li>Elite squeezes detected on the real series: <b>{{ r.real_squeezes|length }}</b></li>
+      <li>Source: <code>{{ r.data_source_url }}</code></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Endpoints</h2>
+    <ul class="chain endpoints">
+      <li><a href="/api/health">/api/health</a></li>
+      <li><a href="/api/v01t">/api/v01t</a></li>
+      <li><a href="/api/v01t/row">/api/v01t/row</a></li>
+      <li><a href="/api/v01t/goals">/api/v01t/goals</a></li>
+      <li><a href="/api/v01t/milestones">/api/v01t/milestones</a></li>
+      <li><a href="/api/v01t/trades">/api/v01t/trades</a></li>
+      <li><a href="/api/v01t/squeezes">/api/v01t/squeezes</a></li>
+      <li><a href="/api/v01t/series">/api/v01t/series</a></li>
+      <li><a href="/api/v01t/report">/api/v01t/report</a></li>
+      <li><a href="/api/status">/api/status</a></li>
+    </ul>
+  </section>
+</main>
+<footer>v01T model · {{ r.timeframe }} · goal achieved: {{ '✅' if r.goal_achieved else '❌' }}</footer>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
