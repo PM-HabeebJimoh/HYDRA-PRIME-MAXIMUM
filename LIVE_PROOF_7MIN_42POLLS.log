@@ -1,0 +1,732 @@
+=== BEGIN 7 MINUTE LIVE POLLING — 42 polls x 10s = 420s ===
+Timestamp,Endpoint,Status,Latency
+2026-07-12T17:51:42Z,/api/health,200,66ms,live=DEGRADED
+2026-07-12T17:51:42Z,/api/live_prices,200,42ms,live=?
+2026-07-12T17:51:42Z,/api/live_depth,200,19ms,live=False
+2026-07-12T17:51:42Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:51:42Z,/api/live_wikipedia,200,39ms,live=?
+2026-07-12T17:51:42Z,/api/live_cycle,200,439ms,live=?
+2026-07-12T17:51:42Z,/api/convergence,200,39ms,live=?
+2026-07-12T17:51:42Z,/api/history,200,10ms,live=?
+2026-07-12T17:51:42Z,/api/elite,200,11ms,live=?
+2026-07-12T17:51:42Z,/api/trades,200,10ms,live=?
+2026-07-12T17:51:42Z,/api/status,200,10ms,live=LIVE
+--- Poll 1/42 completed at 2026-07-12T17:51:42Z — Uptime 1s ---
+2026-07-12T17:51:53Z,/api/health,200,98ms,live=DEGRADED
+2026-07-12T17:51:53Z,/api/live_prices,200,34ms,live=?
+2026-07-12T17:51:53Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:51:53Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:51:53Z,/api/live_wikipedia,200,20ms,live=?
+2026-07-12T17:51:53Z,/api/live_cycle,200,384ms,live=?
+2026-07-12T17:51:53Z,/api/convergence,200,32ms,live=?
+2026-07-12T17:51:53Z,/api/history,200,10ms,live=?
+2026-07-12T17:51:53Z,/api/elite,200,10ms,live=?
+2026-07-12T17:51:53Z,/api/trades,200,9ms,live=?
+2026-07-12T17:51:53Z,/api/status,200,9ms,live=LIVE
+--- Poll 2/42 completed at 2026-07-12T17:51:53Z — Uptime 12s ---
+2026-07-12T17:52:04Z,/api/health,200,54ms,live=DEGRADED
+2026-07-12T17:52:04Z,/api/live_prices,200,39ms,live=?
+2026-07-12T17:52:04Z,/api/live_depth,200,33ms,live=False
+2026-07-12T17:52:04Z,/api/live_funding,200,29ms,live=False
+2026-07-12T17:52:04Z,/api/live_wikipedia,200,42ms,live=?
+2026-07-12T17:52:04Z,/api/live_cycle,200,341ms,live=?
+2026-07-12T17:52:04Z,/api/convergence,200,30ms,live=?
+2026-07-12T17:52:04Z,/api/history,200,10ms,live=?
+2026-07-12T17:52:04Z,/api/elite,200,12ms,live=?
+2026-07-12T17:52:04Z,/api/trades,200,10ms,live=?
+2026-07-12T17:52:04Z,/api/status,200,12ms,live=LIVE
+--- Poll 3/42 completed at 2026-07-12T17:52:04Z — Uptime 23s ---
+2026-07-12T17:52:15Z,/api/health,200,63ms,live=DEGRADED
+2026-07-12T17:52:15Z,/api/live_prices,200,47ms,live=?
+2026-07-12T17:52:15Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:52:15Z,/api/live_funding,200,16ms,live=False
+2026-07-12T17:52:15Z,/api/live_wikipedia,200,19ms,live=?
+2026-07-12T17:52:15Z,/api/live_cycle,200,447ms,live=?
+2026-07-12T17:52:15Z,/api/convergence,200,37ms,live=?
+2026-07-12T17:52:15Z,/api/history,200,10ms,live=?
+2026-07-12T17:52:15Z,/api/elite,200,9ms,live=?
+2026-07-12T17:52:15Z,/api/trades,200,9ms,live=?
+2026-07-12T17:52:15Z,/api/status,200,10ms,live=LIVE
+--- Poll 4/42 completed at 2026-07-12T17:52:15Z — Uptime 34s ---
+2026-07-12T17:52:26Z,/api/health,200,45ms,live=DEGRADED
+2026-07-12T17:52:26Z,/api/live_prices,200,33ms,live=?
+2026-07-12T17:52:26Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:52:26Z,/api/live_funding,200,16ms,live=False
+2026-07-12T17:52:26Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:52:26Z,/api/live_cycle,200,408ms,live=?
+2026-07-12T17:52:26Z,/api/convergence,200,29ms,live=?
+2026-07-12T17:52:26Z,/api/history,200,10ms,live=?
+2026-07-12T17:52:26Z,/api/elite,200,9ms,live=?
+2026-07-12T17:52:26Z,/api/trades,200,9ms,live=?
+2026-07-12T17:52:26Z,/api/status,200,10ms,live=LIVE
+--- Poll 5/42 completed at 2026-07-12T17:52:26Z — Uptime 45s ---
+2026-07-12T17:52:37Z,/api/health,200,67ms,live=DEGRADED
+2026-07-12T17:52:37Z,/api/live_prices,200,43ms,live=?
+2026-07-12T17:52:37Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:52:37Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:52:37Z,/api/live_wikipedia,200,17ms,live=?
+2026-07-12T17:52:37Z,/api/live_cycle,200,357ms,live=?
+2026-07-12T17:52:37Z,/api/convergence,200,30ms,live=?
+2026-07-12T17:52:37Z,/api/history,200,10ms,live=?
+2026-07-12T17:52:37Z,/api/elite,200,9ms,live=?
+2026-07-12T17:52:37Z,/api/trades,200,9ms,live=?
+2026-07-12T17:52:37Z,/api/status,200,10ms,live=LIVE
+--- Poll 6/42 completed at 2026-07-12T17:52:37Z — Uptime 56s ---
+2026-07-12T17:52:48Z,/api/health,200,49ms,live=DEGRADED
+2026-07-12T17:52:48Z,/api/live_prices,200,33ms,live=?
+2026-07-12T17:52:48Z,/api/live_depth,200,20ms,live=False
+2026-07-12T17:52:48Z,/api/live_funding,200,16ms,live=False
+2026-07-12T17:52:48Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:52:48Z,/api/live_cycle,200,326ms,live=?
+2026-07-12T17:52:48Z,/api/convergence,200,68ms,live=?
+2026-07-12T17:52:48Z,/api/history,200,9ms,live=?
+2026-07-12T17:52:48Z,/api/elite,200,10ms,live=?
+2026-07-12T17:52:48Z,/api/trades,200,9ms,live=?
+2026-07-12T17:52:48Z,/api/status,200,10ms,live=LIVE
+--- Poll 7/42 completed at 2026-07-12T17:52:48Z — Uptime 66s ---
+=== DETAILED SAMPLE at poll 7 ===
+{
+    "timestamp": "2026-07-12T17:52:49.294395",
+    "cycle": 8,
+    "instruments_scanned": 111,
+    "instruments_live": 0,
+    "signal_evals": 2664,
+    "actionable": 0,
+    "vol_explosions": [],
+    "vol_explosions_count": 0,
+    "stat_arb": [],
+    "carry_positions": [],
+    "obi_signals": [],
+    "directional_count": 0,
+    "wikipedia": {
+        "gold": {
+            "live": false,
+            "article": "Gold",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        },
+        "bitcoin": {
+            "live": false,
+            "article": "Bitcoin",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        }
+    },
+    "kraken_depth_live": [],
+    "okx_funding_live": [],
+    "latency_ms": 352.9,
+    "real_data_only": true,
+    "live_pulling_at_runtime": true,
+    "no_backtesting_data": true,
+    "no_synthetic": true,
+    "uptime_sec": 71.2
+}
+2026-07-12T17:52:59Z,/api/health,200,51ms,live=DEGRADED
+2026-07-12T17:52:59Z,/api/live_prices,200,43ms,live=?
+2026-07-12T17:52:59Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:52:59Z,/api/live_funding,200,16ms,live=False
+2026-07-12T17:52:59Z,/api/live_wikipedia,200,23ms,live=?
+2026-07-12T17:52:59Z,/api/live_cycle,200,440ms,live=?
+2026-07-12T17:52:59Z,/api/convergence,200,33ms,live=?
+2026-07-12T17:52:59Z,/api/history,200,10ms,live=?
+2026-07-12T17:52:59Z,/api/elite,200,10ms,live=?
+2026-07-12T17:52:59Z,/api/trades,200,10ms,live=?
+2026-07-12T17:52:59Z,/api/status,200,10ms,live=LIVE
+--- Poll 8/42 completed at 2026-07-12T17:52:59Z — Uptime 78s ---
+2026-07-12T17:53:10Z,/api/health,200,79ms,live=DEGRADED
+2026-07-12T17:53:10Z,/api/live_prices,200,39ms,live=?
+2026-07-12T17:53:10Z,/api/live_depth,200,27ms,live=False
+2026-07-12T17:53:10Z,/api/live_funding,200,22ms,live=False
+2026-07-12T17:53:10Z,/api/live_wikipedia,200,19ms,live=?
+2026-07-12T17:53:10Z,/api/live_cycle,200,390ms,live=?
+2026-07-12T17:53:10Z,/api/convergence,200,45ms,live=?
+2026-07-12T17:53:10Z,/api/history,200,10ms,live=?
+2026-07-12T17:53:10Z,/api/elite,200,10ms,live=?
+2026-07-12T17:53:10Z,/api/trades,200,10ms,live=?
+2026-07-12T17:53:10Z,/api/status,200,10ms,live=LIVE
+--- Poll 9/42 completed at 2026-07-12T17:53:10Z — Uptime 89s ---
+2026-07-12T17:53:21Z,/api/health,200,67ms,live=DEGRADED
+2026-07-12T17:53:21Z,/api/live_prices,200,51ms,live=?
+2026-07-12T17:53:21Z,/api/live_depth,200,28ms,live=False
+2026-07-12T17:53:21Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:53:21Z,/api/live_wikipedia,200,18ms,live=?
+2026-07-12T17:53:21Z,/api/live_cycle,200,385ms,live=?
+2026-07-12T17:53:21Z,/api/convergence,200,34ms,live=?
+2026-07-12T17:53:21Z,/api/history,200,10ms,live=?
+2026-07-12T17:53:21Z,/api/elite,200,10ms,live=?
+2026-07-12T17:53:21Z,/api/trades,200,9ms,live=?
+2026-07-12T17:53:21Z,/api/status,200,10ms,live=LIVE
+--- Poll 10/42 completed at 2026-07-12T17:53:21Z — Uptime 100s ---
+2026-07-12T17:53:32Z,/api/health,200,67ms,live=DEGRADED
+2026-07-12T17:53:32Z,/api/live_prices,200,32ms,live=?
+2026-07-12T17:53:32Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:53:32Z,/api/live_funding,200,16ms,live=False
+2026-07-12T17:53:32Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:53:32Z,/api/live_cycle,200,347ms,live=?
+2026-07-12T17:53:32Z,/api/convergence,200,33ms,live=?
+2026-07-12T17:53:32Z,/api/history,200,10ms,live=?
+2026-07-12T17:53:32Z,/api/elite,200,11ms,live=?
+2026-07-12T17:53:32Z,/api/trades,200,10ms,live=?
+2026-07-12T17:53:32Z,/api/status,200,10ms,live=LIVE
+--- Poll 11/42 completed at 2026-07-12T17:53:32Z — Uptime 110s ---
+2026-07-12T17:53:42Z,/api/health,200,64ms,live=DEGRADED
+2026-07-12T17:53:42Z,/api/live_prices,200,54ms,live=?
+2026-07-12T17:53:42Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:53:42Z,/api/live_funding,200,16ms,live=False
+2026-07-12T17:53:42Z,/api/live_wikipedia,200,18ms,live=?
+2026-07-12T17:53:42Z,/api/live_cycle,200,411ms,live=?
+2026-07-12T17:53:42Z,/api/convergence,200,30ms,live=?
+2026-07-12T17:53:42Z,/api/history,200,10ms,live=?
+2026-07-12T17:53:42Z,/api/elite,200,10ms,live=?
+2026-07-12T17:53:42Z,/api/trades,200,10ms,live=?
+2026-07-12T17:53:42Z,/api/status,200,10ms,live=LIVE
+--- Poll 12/42 completed at 2026-07-12T17:53:42Z — Uptime 121s ---
+2026-07-12T17:53:53Z,/api/health,200,61ms,live=DEGRADED
+2026-07-12T17:53:53Z,/api/live_prices,200,52ms,live=?
+2026-07-12T17:53:53Z,/api/live_depth,200,19ms,live=False
+2026-07-12T17:53:53Z,/api/live_funding,200,17ms,live=False
+2026-07-12T17:53:53Z,/api/live_wikipedia,200,17ms,live=?
+2026-07-12T17:53:53Z,/api/live_cycle,200,366ms,live=?
+2026-07-12T17:53:53Z,/api/convergence,200,32ms,live=?
+2026-07-12T17:53:53Z,/api/history,200,10ms,live=?
+2026-07-12T17:53:53Z,/api/elite,200,9ms,live=?
+2026-07-12T17:53:53Z,/api/trades,200,10ms,live=?
+2026-07-12T17:53:53Z,/api/status,200,10ms,live=LIVE
+--- Poll 13/42 completed at 2026-07-12T17:53:53Z — Uptime 132s ---
+2026-07-12T17:54:04Z,/api/health,200,61ms,live=DEGRADED
+2026-07-12T17:54:04Z,/api/live_prices,200,33ms,live=?
+2026-07-12T17:54:04Z,/api/live_depth,200,21ms,live=False
+2026-07-12T17:54:04Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:54:04Z,/api/live_wikipedia,200,18ms,live=?
+2026-07-12T17:54:04Z,/api/live_cycle,200,427ms,live=?
+2026-07-12T17:54:04Z,/api/convergence,200,31ms,live=?
+2026-07-12T17:54:04Z,/api/history,200,10ms,live=?
+2026-07-12T17:54:04Z,/api/elite,200,10ms,live=?
+2026-07-12T17:54:04Z,/api/trades,200,10ms,live=?
+2026-07-12T17:54:04Z,/api/status,200,10ms,live=LIVE
+--- Poll 14/42 completed at 2026-07-12T17:54:04Z — Uptime 143s ---
+=== DETAILED SAMPLE at poll 14 ===
+{
+    "timestamp": "2026-07-12T17:54:05.966001",
+    "cycle": 16,
+    "instruments_scanned": 111,
+    "instruments_live": 0,
+    "signal_evals": 2664,
+    "actionable": 0,
+    "vol_explosions": [],
+    "vol_explosions_count": 0,
+    "stat_arb": [],
+    "carry_positions": [],
+    "obi_signals": [],
+    "directional_count": 0,
+    "wikipedia": {
+        "gold": {
+            "live": false,
+            "article": "Gold",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        },
+        "bitcoin": {
+            "live": false,
+            "article": "Bitcoin",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        }
+    },
+    "kraken_depth_live": [],
+    "okx_funding_live": [],
+    "latency_ms": 342.1,
+    "real_data_only": true,
+    "live_pulling_at_runtime": true,
+    "no_backtesting_data": true,
+    "no_synthetic": true,
+    "uptime_sec": 147.8
+}
+2026-07-12T17:54:15Z,/api/health,200,59ms,live=DEGRADED
+2026-07-12T17:54:15Z,/api/live_prices,200,34ms,live=?
+2026-07-12T17:54:15Z,/api/live_depth,200,16ms,live=False
+2026-07-12T17:54:15Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:54:15Z,/api/live_wikipedia,200,15ms,live=?
+2026-07-12T17:54:15Z,/api/live_cycle,200,372ms,live=?
+2026-07-12T17:54:15Z,/api/convergence,200,31ms,live=?
+2026-07-12T17:54:15Z,/api/history,200,9ms,live=?
+2026-07-12T17:54:15Z,/api/elite,200,9ms,live=?
+2026-07-12T17:54:15Z,/api/trades,200,9ms,live=?
+2026-07-12T17:54:15Z,/api/status,200,9ms,live=LIVE
+--- Poll 15/42 completed at 2026-07-12T17:54:15Z — Uptime 154s ---
+2026-07-12T17:54:26Z,/api/health,200,55ms,live=DEGRADED
+2026-07-12T17:54:26Z,/api/live_prices,200,33ms,live=?
+2026-07-12T17:54:26Z,/api/live_depth,200,25ms,live=False
+2026-07-12T17:54:26Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:54:26Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:54:26Z,/api/live_cycle,200,503ms,live=?
+2026-07-12T17:54:26Z,/api/convergence,200,31ms,live=?
+2026-07-12T17:54:26Z,/api/history,200,9ms,live=?
+2026-07-12T17:54:26Z,/api/elite,200,9ms,live=?
+2026-07-12T17:54:26Z,/api/trades,200,9ms,live=?
+2026-07-12T17:54:26Z,/api/status,200,9ms,live=LIVE
+--- Poll 16/42 completed at 2026-07-12T17:54:26Z — Uptime 165s ---
+2026-07-12T17:54:37Z,/api/health,200,50ms,live=DEGRADED
+2026-07-12T17:54:37Z,/api/live_prices,200,33ms,live=?
+2026-07-12T17:54:37Z,/api/live_depth,200,23ms,live=False
+2026-07-12T17:54:37Z,/api/live_funding,200,18ms,live=False
+2026-07-12T17:54:37Z,/api/live_wikipedia,200,18ms,live=?
+2026-07-12T17:54:37Z,/api/live_cycle,200,483ms,live=?
+2026-07-12T17:54:37Z,/api/convergence,200,37ms,live=?
+2026-07-12T17:54:37Z,/api/history,200,11ms,live=?
+2026-07-12T17:54:37Z,/api/elite,200,10ms,live=?
+2026-07-12T17:54:37Z,/api/trades,200,10ms,live=?
+2026-07-12T17:54:37Z,/api/status,200,11ms,live=LIVE
+--- Poll 17/42 completed at 2026-07-12T17:54:37Z — Uptime 176s ---
+2026-07-12T17:54:48Z,/api/health,200,121ms,live=DEGRADED
+2026-07-12T17:54:48Z,/api/live_prices,200,49ms,live=?
+2026-07-12T17:54:48Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:54:48Z,/api/live_funding,200,13ms,live=False
+2026-07-12T17:54:48Z,/api/live_wikipedia,200,18ms,live=?
+2026-07-12T17:54:48Z,/api/live_cycle,200,507ms,live=?
+2026-07-12T17:54:48Z,/api/convergence,200,38ms,live=?
+2026-07-12T17:54:48Z,/api/history,200,13ms,live=?
+2026-07-12T17:54:48Z,/api/elite,200,14ms,live=?
+2026-07-12T17:54:48Z,/api/trades,200,10ms,live=?
+2026-07-12T17:54:48Z,/api/status,200,11ms,live=LIVE
+--- Poll 18/42 completed at 2026-07-12T17:54:48Z — Uptime 187s ---
+2026-07-12T17:54:59Z,/api/health,200,46ms,live=DEGRADED
+2026-07-12T17:54:59Z,/api/live_prices,200,33ms,live=?
+2026-07-12T17:54:59Z,/api/live_depth,200,19ms,live=False
+2026-07-12T17:54:59Z,/api/live_funding,200,13ms,live=False
+2026-07-12T17:54:59Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:54:59Z,/api/live_cycle,200,499ms,live=?
+2026-07-12T17:54:59Z,/api/convergence,200,36ms,live=?
+2026-07-12T17:54:59Z,/api/history,200,12ms,live=?
+2026-07-12T17:54:59Z,/api/elite,200,10ms,live=?
+2026-07-12T17:54:59Z,/api/trades,200,11ms,live=?
+2026-07-12T17:54:59Z,/api/status,200,9ms,live=LIVE
+--- Poll 19/42 completed at 2026-07-12T17:54:59Z — Uptime 198s ---
+2026-07-12T17:55:10Z,/api/health,200,101ms,live=DEGRADED
+2026-07-12T17:55:10Z,/api/live_prices,200,35ms,live=?
+2026-07-12T17:55:10Z,/api/live_depth,200,27ms,live=False
+2026-07-12T17:55:10Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:55:10Z,/api/live_wikipedia,200,17ms,live=?
+2026-07-12T17:55:10Z,/api/live_cycle,200,416ms,live=?
+2026-07-12T17:55:10Z,/api/convergence,200,31ms,live=?
+2026-07-12T17:55:10Z,/api/history,200,10ms,live=?
+2026-07-12T17:55:10Z,/api/elite,200,10ms,live=?
+2026-07-12T17:55:10Z,/api/trades,200,12ms,live=?
+2026-07-12T17:55:10Z,/api/status,200,10ms,live=LIVE
+--- Poll 20/42 completed at 2026-07-12T17:55:10Z — Uptime 209s ---
+2026-07-12T17:55:21Z,/api/health,200,49ms,live=DEGRADED
+2026-07-12T17:55:21Z,/api/live_prices,200,40ms,live=?
+2026-07-12T17:55:21Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:55:21Z,/api/live_funding,200,14ms,live=False
+2026-07-12T17:55:21Z,/api/live_wikipedia,200,36ms,live=?
+2026-07-12T17:55:21Z,/api/live_cycle,200,402ms,live=?
+2026-07-12T17:55:21Z,/api/convergence,200,30ms,live=?
+2026-07-12T17:55:21Z,/api/history,200,9ms,live=?
+2026-07-12T17:55:21Z,/api/elite,200,9ms,live=?
+2026-07-12T17:55:21Z,/api/trades,200,9ms,live=?
+2026-07-12T17:55:21Z,/api/status,200,9ms,live=LIVE
+--- Poll 21/42 completed at 2026-07-12T17:55:21Z — Uptime 220s ---
+=== DETAILED SAMPLE at poll 21 ===
+{
+    "timestamp": "2026-07-12T17:55:22.976973",
+    "cycle": 24,
+    "instruments_scanned": 111,
+    "instruments_live": 0,
+    "signal_evals": 2664,
+    "actionable": 0,
+    "vol_explosions": [],
+    "vol_explosions_count": 0,
+    "stat_arb": [],
+    "carry_positions": [],
+    "obi_signals": [],
+    "directional_count": 0,
+    "wikipedia": {
+        "gold": {
+            "live": false,
+            "article": "Gold",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        },
+        "bitcoin": {
+            "live": false,
+            "article": "Bitcoin",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        }
+    },
+    "kraken_depth_live": [],
+    "okx_funding_live": [],
+    "latency_ms": 327.3,
+    "real_data_only": true,
+    "live_pulling_at_runtime": true,
+    "no_backtesting_data": true,
+    "no_synthetic": true,
+    "uptime_sec": 224.8
+}
+2026-07-12T17:55:32Z,/api/health,200,80ms,live=DEGRADED
+2026-07-12T17:55:32Z,/api/live_prices,200,34ms,live=?
+2026-07-12T17:55:32Z,/api/live_depth,200,33ms,live=False
+2026-07-12T17:55:32Z,/api/live_funding,200,20ms,live=False
+2026-07-12T17:55:32Z,/api/live_wikipedia,200,42ms,live=?
+2026-07-12T17:55:32Z,/api/live_cycle,200,393ms,live=?
+2026-07-12T17:55:32Z,/api/convergence,200,36ms,live=?
+2026-07-12T17:55:32Z,/api/history,200,10ms,live=?
+2026-07-12T17:55:32Z,/api/elite,200,10ms,live=?
+2026-07-12T17:55:32Z,/api/trades,200,10ms,live=?
+2026-07-12T17:55:32Z,/api/status,200,12ms,live=LIVE
+--- Poll 22/42 completed at 2026-07-12T17:55:32Z — Uptime 231s ---
+2026-07-12T17:55:43Z,/api/health,200,69ms,live=DEGRADED
+2026-07-12T17:55:43Z,/api/live_prices,200,32ms,live=?
+2026-07-12T17:55:43Z,/api/live_depth,200,17ms,live=False
+2026-07-12T17:55:43Z,/api/live_funding,200,18ms,live=False
+2026-07-12T17:55:43Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:55:43Z,/api/live_cycle,200,478ms,live=?
+2026-07-12T17:55:43Z,/api/convergence,200,34ms,live=?
+2026-07-12T17:55:43Z,/api/history,200,9ms,live=?
+2026-07-12T17:55:43Z,/api/elite,200,9ms,live=?
+2026-07-12T17:55:43Z,/api/trades,200,9ms,live=?
+2026-07-12T17:55:43Z,/api/status,200,9ms,live=LIVE
+--- Poll 23/42 completed at 2026-07-12T17:55:43Z — Uptime 242s ---
+2026-07-12T17:55:54Z,/api/health,200,75ms,live=DEGRADED
+2026-07-12T17:55:54Z,/api/live_prices,200,37ms,live=?
+2026-07-12T17:55:54Z,/api/live_depth,200,20ms,live=False
+2026-07-12T17:55:54Z,/api/live_funding,200,16ms,live=False
+2026-07-12T17:55:54Z,/api/live_wikipedia,200,17ms,live=?
+2026-07-12T17:55:54Z,/api/live_cycle,200,421ms,live=?
+2026-07-12T17:55:54Z,/api/convergence,200,30ms,live=?
+2026-07-12T17:55:54Z,/api/history,200,9ms,live=?
+2026-07-12T17:55:54Z,/api/elite,200,9ms,live=?
+2026-07-12T17:55:54Z,/api/trades,200,9ms,live=?
+2026-07-12T17:55:54Z,/api/status,200,9ms,live=LIVE
+--- Poll 24/42 completed at 2026-07-12T17:55:54Z — Uptime 253s ---
+2026-07-12T17:56:05Z,/api/health,200,73ms,live=DEGRADED
+2026-07-12T17:56:05Z,/api/live_prices,200,43ms,live=?
+2026-07-12T17:56:05Z,/api/live_depth,200,23ms,live=False
+2026-07-12T17:56:05Z,/api/live_funding,200,17ms,live=False
+2026-07-12T17:56:05Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:56:05Z,/api/live_cycle,200,418ms,live=?
+2026-07-12T17:56:05Z,/api/convergence,200,39ms,live=?
+2026-07-12T17:56:05Z,/api/history,200,9ms,live=?
+2026-07-12T17:56:05Z,/api/elite,200,9ms,live=?
+2026-07-12T17:56:05Z,/api/trades,200,9ms,live=?
+2026-07-12T17:56:05Z,/api/status,200,9ms,live=LIVE
+--- Poll 25/42 completed at 2026-07-12T17:56:05Z — Uptime 264s ---
+2026-07-12T17:56:16Z,/api/health,200,52ms,live=DEGRADED
+2026-07-12T17:56:16Z,/api/live_prices,200,44ms,live=?
+2026-07-12T17:56:16Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:56:16Z,/api/live_funding,200,14ms,live=False
+2026-07-12T17:56:16Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:56:16Z,/api/live_cycle,200,408ms,live=?
+2026-07-12T17:56:16Z,/api/convergence,200,33ms,live=?
+2026-07-12T17:56:16Z,/api/history,200,9ms,live=?
+2026-07-12T17:56:16Z,/api/elite,200,9ms,live=?
+2026-07-12T17:56:16Z,/api/trades,200,13ms,live=?
+2026-07-12T17:56:16Z,/api/status,200,9ms,live=LIVE
+--- Poll 26/42 completed at 2026-07-12T17:56:16Z — Uptime 275s ---
+2026-07-12T17:56:27Z,/api/health,200,62ms,live=DEGRADED
+2026-07-12T17:56:27Z,/api/live_prices,200,37ms,live=?
+2026-07-12T17:56:27Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:56:27Z,/api/live_funding,200,16ms,live=False
+2026-07-12T17:56:27Z,/api/live_wikipedia,200,17ms,live=?
+2026-07-12T17:56:27Z,/api/live_cycle,200,343ms,live=?
+2026-07-12T17:56:27Z,/api/convergence,200,33ms,live=?
+2026-07-12T17:56:27Z,/api/history,200,9ms,live=?
+2026-07-12T17:56:27Z,/api/elite,200,9ms,live=?
+2026-07-12T17:56:27Z,/api/trades,200,9ms,live=?
+2026-07-12T17:56:27Z,/api/status,200,9ms,live=LIVE
+--- Poll 27/42 completed at 2026-07-12T17:56:27Z — Uptime 286s ---
+2026-07-12T17:56:38Z,/api/health,200,58ms,live=DEGRADED
+2026-07-12T17:56:38Z,/api/live_prices,200,51ms,live=?
+2026-07-12T17:56:38Z,/api/live_depth,200,21ms,live=False
+2026-07-12T17:56:38Z,/api/live_funding,200,20ms,live=False
+2026-07-12T17:56:38Z,/api/live_wikipedia,200,20ms,live=?
+2026-07-12T17:56:38Z,/api/live_cycle,200,484ms,live=?
+2026-07-12T17:56:38Z,/api/convergence,200,32ms,live=?
+2026-07-12T17:56:38Z,/api/history,200,9ms,live=?
+2026-07-12T17:56:38Z,/api/elite,200,9ms,live=?
+2026-07-12T17:56:38Z,/api/trades,200,9ms,live=?
+2026-07-12T17:56:38Z,/api/status,200,9ms,live=LIVE
+--- Poll 28/42 completed at 2026-07-12T17:56:38Z — Uptime 297s ---
+=== DETAILED SAMPLE at poll 28 ===
+{
+    "timestamp": "2026-07-12T17:56:39.879573",
+    "cycle": 32,
+    "instruments_scanned": 111,
+    "instruments_live": 0,
+    "signal_evals": 2664,
+    "actionable": 0,
+    "vol_explosions": [],
+    "vol_explosions_count": 0,
+    "stat_arb": [],
+    "carry_positions": [],
+    "obi_signals": [],
+    "directional_count": 0,
+    "wikipedia": {
+        "gold": {
+            "live": false,
+            "article": "Gold",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        },
+        "bitcoin": {
+            "live": false,
+            "article": "Bitcoin",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        }
+    },
+    "kraken_depth_live": [],
+    "okx_funding_live": [],
+    "latency_ms": 434.2,
+    "real_data_only": true,
+    "live_pulling_at_runtime": true,
+    "no_backtesting_data": true,
+    "no_synthetic": true,
+    "uptime_sec": 301.7
+}
+2026-07-12T17:56:49Z,/api/health,200,89ms,live=DEGRADED
+2026-07-12T17:56:49Z,/api/live_prices,200,49ms,live=?
+2026-07-12T17:56:49Z,/api/live_depth,200,29ms,live=False
+2026-07-12T17:56:49Z,/api/live_funding,200,25ms,live=False
+2026-07-12T17:56:49Z,/api/live_wikipedia,200,17ms,live=?
+2026-07-12T17:56:49Z,/api/live_cycle,200,436ms,live=?
+2026-07-12T17:56:49Z,/api/convergence,200,31ms,live=?
+2026-07-12T17:56:49Z,/api/history,200,9ms,live=?
+2026-07-12T17:56:49Z,/api/elite,200,10ms,live=?
+2026-07-12T17:56:49Z,/api/trades,200,9ms,live=?
+2026-07-12T17:56:49Z,/api/status,200,9ms,live=LIVE
+--- Poll 29/42 completed at 2026-07-12T17:56:49Z — Uptime 308s ---
+2026-07-12T17:57:00Z,/api/health,200,55ms,live=DEGRADED
+2026-07-12T17:57:00Z,/api/live_prices,200,34ms,live=?
+2026-07-12T17:57:00Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:57:00Z,/api/live_funding,200,34ms,live=False
+2026-07-12T17:57:00Z,/api/live_wikipedia,200,17ms,live=?
+2026-07-12T17:57:00Z,/api/live_cycle,200,346ms,live=?
+2026-07-12T17:57:00Z,/api/convergence,200,31ms,live=?
+2026-07-12T17:57:00Z,/api/history,200,10ms,live=?
+2026-07-12T17:57:00Z,/api/elite,200,9ms,live=?
+2026-07-12T17:57:00Z,/api/trades,200,9ms,live=?
+2026-07-12T17:57:00Z,/api/status,200,9ms,live=LIVE
+--- Poll 30/42 completed at 2026-07-12T17:57:00Z — Uptime 319s ---
+2026-07-12T17:57:11Z,/api/health,200,60ms,live=DEGRADED
+2026-07-12T17:57:11Z,/api/live_prices,200,51ms,live=?
+2026-07-12T17:57:11Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:57:11Z,/api/live_funding,200,16ms,live=False
+2026-07-12T17:57:11Z,/api/live_wikipedia,200,18ms,live=?
+2026-07-12T17:57:11Z,/api/live_cycle,200,403ms,live=?
+2026-07-12T17:57:11Z,/api/convergence,200,43ms,live=?
+2026-07-12T17:57:11Z,/api/history,200,9ms,live=?
+2026-07-12T17:57:11Z,/api/elite,200,10ms,live=?
+2026-07-12T17:57:11Z,/api/trades,200,10ms,live=?
+2026-07-12T17:57:11Z,/api/status,200,9ms,live=LIVE
+--- Poll 31/42 completed at 2026-07-12T17:57:11Z — Uptime 330s ---
+2026-07-12T17:57:22Z,/api/health,200,63ms,live=DEGRADED
+2026-07-12T17:57:22Z,/api/live_prices,200,34ms,live=?
+2026-07-12T17:57:22Z,/api/live_depth,200,31ms,live=False
+2026-07-12T17:57:22Z,/api/live_funding,200,14ms,live=False
+2026-07-12T17:57:22Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:57:22Z,/api/live_cycle,200,467ms,live=?
+2026-07-12T17:57:22Z,/api/convergence,200,32ms,live=?
+2026-07-12T17:57:22Z,/api/history,200,9ms,live=?
+2026-07-12T17:57:22Z,/api/elite,200,9ms,live=?
+2026-07-12T17:57:22Z,/api/trades,200,11ms,live=?
+2026-07-12T17:57:22Z,/api/status,200,10ms,live=LIVE
+--- Poll 32/42 completed at 2026-07-12T17:57:22Z — Uptime 341s ---
+2026-07-12T17:57:33Z,/api/health,200,64ms,live=DEGRADED
+2026-07-12T17:57:33Z,/api/live_prices,200,38ms,live=?
+2026-07-12T17:57:33Z,/api/live_depth,200,20ms,live=False
+2026-07-12T17:57:33Z,/api/live_funding,200,16ms,live=False
+2026-07-12T17:57:33Z,/api/live_wikipedia,200,18ms,live=?
+2026-07-12T17:57:33Z,/api/live_cycle,200,448ms,live=?
+2026-07-12T17:57:33Z,/api/convergence,200,31ms,live=?
+2026-07-12T17:57:33Z,/api/history,200,10ms,live=?
+2026-07-12T17:57:33Z,/api/elite,200,10ms,live=?
+2026-07-12T17:57:33Z,/api/trades,200,10ms,live=?
+2026-07-12T17:57:33Z,/api/status,200,10ms,live=LIVE
+--- Poll 33/42 completed at 2026-07-12T17:57:33Z — Uptime 352s ---
+2026-07-12T17:57:44Z,/api/health,200,58ms,live=DEGRADED
+2026-07-12T17:57:44Z,/api/live_prices,200,38ms,live=?
+2026-07-12T17:57:44Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:57:44Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:57:44Z,/api/live_wikipedia,200,17ms,live=?
+2026-07-12T17:57:44Z,/api/live_cycle,200,436ms,live=?
+2026-07-12T17:57:44Z,/api/convergence,200,32ms,live=?
+2026-07-12T17:57:44Z,/api/history,200,10ms,live=?
+2026-07-12T17:57:44Z,/api/elite,200,9ms,live=?
+2026-07-12T17:57:44Z,/api/trades,200,9ms,live=?
+2026-07-12T17:57:44Z,/api/status,200,9ms,live=LIVE
+--- Poll 34/42 completed at 2026-07-12T17:57:44Z — Uptime 363s ---
+2026-07-12T17:57:55Z,/api/health,200,117ms,live=DEGRADED
+2026-07-12T17:57:55Z,/api/live_prices,200,64ms,live=?
+2026-07-12T17:57:55Z,/api/live_depth,200,23ms,live=False
+2026-07-12T17:57:55Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:57:55Z,/api/live_wikipedia,200,57ms,live=?
+2026-07-12T17:57:55Z,/api/live_cycle,200,332ms,live=?
+2026-07-12T17:57:55Z,/api/convergence,200,32ms,live=?
+2026-07-12T17:57:55Z,/api/history,200,9ms,live=?
+2026-07-12T17:57:55Z,/api/elite,200,9ms,live=?
+2026-07-12T17:57:55Z,/api/trades,200,8ms,live=?
+2026-07-12T17:57:55Z,/api/status,200,9ms,live=LIVE
+--- Poll 35/42 completed at 2026-07-12T17:57:55Z — Uptime 374s ---
+=== DETAILED SAMPLE at poll 35 ===
+{
+    "timestamp": "2026-07-12T17:57:56.717309",
+    "cycle": 40,
+    "instruments_scanned": 111,
+    "instruments_live": 0,
+    "signal_evals": 2664,
+    "actionable": 0,
+    "vol_explosions": [],
+    "vol_explosions_count": 0,
+    "stat_arb": [],
+    "carry_positions": [],
+    "obi_signals": [],
+    "directional_count": 0,
+    "wikipedia": {
+        "gold": {
+            "live": false,
+            "article": "Gold",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        },
+        "bitcoin": {
+            "live": false,
+            "article": "Bitcoin",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        }
+    },
+    "kraken_depth_live": [],
+    "okx_funding_live": [],
+    "latency_ms": 390.7,
+    "real_data_only": true,
+    "live_pulling_at_runtime": true,
+    "no_backtesting_data": true,
+    "no_synthetic": true,
+    "uptime_sec": 378.6
+}
+2026-07-12T17:58:06Z,/api/health,200,55ms,live=DEGRADED
+2026-07-12T17:58:06Z,/api/live_prices,200,35ms,live=?
+2026-07-12T17:58:06Z,/api/live_depth,200,17ms,live=False
+2026-07-12T17:58:06Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:58:06Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:58:06Z,/api/live_cycle,200,428ms,live=?
+2026-07-12T17:58:06Z,/api/convergence,200,30ms,live=?
+2026-07-12T17:58:06Z,/api/history,200,10ms,live=?
+2026-07-12T17:58:06Z,/api/elite,200,11ms,live=?
+2026-07-12T17:58:06Z,/api/trades,200,12ms,live=?
+2026-07-12T17:58:06Z,/api/status,200,10ms,live=LIVE
+--- Poll 36/42 completed at 2026-07-12T17:58:06Z — Uptime 385s ---
+2026-07-12T17:58:17Z,/api/health,200,78ms,live=DEGRADED
+2026-07-12T17:58:17Z,/api/live_prices,200,42ms,live=?
+2026-07-12T17:58:17Z,/api/live_depth,200,19ms,live=False
+2026-07-12T17:58:17Z,/api/live_funding,200,14ms,live=False
+2026-07-12T17:58:17Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:58:17Z,/api/live_cycle,200,374ms,live=?
+2026-07-12T17:58:17Z,/api/convergence,200,29ms,live=?
+2026-07-12T17:58:17Z,/api/history,200,9ms,live=?
+2026-07-12T17:58:17Z,/api/elite,200,9ms,live=?
+2026-07-12T17:58:17Z,/api/trades,200,9ms,live=?
+2026-07-12T17:58:17Z,/api/status,200,9ms,live=LIVE
+--- Poll 37/42 completed at 2026-07-12T17:58:17Z — Uptime 396s ---
+2026-07-12T17:58:28Z,/api/health,200,82ms,live=DEGRADED
+2026-07-12T17:58:28Z,/api/live_prices,200,34ms,live=?
+2026-07-12T17:58:28Z,/api/live_depth,200,24ms,live=False
+2026-07-12T17:58:28Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:58:28Z,/api/live_wikipedia,200,30ms,live=?
+2026-07-12T17:58:28Z,/api/live_cycle,200,388ms,live=?
+2026-07-12T17:58:28Z,/api/convergence,200,32ms,live=?
+2026-07-12T17:58:28Z,/api/history,200,9ms,live=?
+2026-07-12T17:58:28Z,/api/elite,200,9ms,live=?
+2026-07-12T17:58:28Z,/api/trades,200,9ms,live=?
+2026-07-12T17:58:28Z,/api/status,200,9ms,live=LIVE
+--- Poll 38/42 completed at 2026-07-12T17:58:28Z — Uptime 407s ---
+2026-07-12T17:58:39Z,/api/health,200,69ms,live=DEGRADED
+2026-07-12T17:58:39Z,/api/live_prices,200,89ms,live=?
+2026-07-12T17:58:39Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:58:39Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:58:39Z,/api/live_wikipedia,200,16ms,live=?
+2026-07-12T17:58:39Z,/api/live_cycle,200,349ms,live=?
+2026-07-12T17:58:39Z,/api/convergence,200,29ms,live=?
+2026-07-12T17:58:39Z,/api/history,200,9ms,live=?
+2026-07-12T17:58:39Z,/api/elite,200,9ms,live=?
+2026-07-12T17:58:39Z,/api/trades,200,10ms,live=?
+2026-07-12T17:58:39Z,/api/status,200,9ms,live=LIVE
+--- Poll 39/42 completed at 2026-07-12T17:58:39Z — Uptime 418s ---
+2026-07-12T17:58:50Z,/api/health,200,59ms,live=DEGRADED
+2026-07-12T17:58:50Z,/api/live_prices,200,36ms,live=?
+2026-07-12T17:58:50Z,/api/live_depth,200,19ms,live=False
+2026-07-12T17:58:50Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:58:50Z,/api/live_wikipedia,200,20ms,live=?
+2026-07-12T17:58:50Z,/api/live_cycle,200,441ms,live=?
+2026-07-12T17:58:50Z,/api/convergence,200,42ms,live=?
+2026-07-12T17:58:50Z,/api/history,200,10ms,live=?
+2026-07-12T17:58:50Z,/api/elite,200,10ms,live=?
+2026-07-12T17:58:50Z,/api/trades,200,10ms,live=?
+2026-07-12T17:58:50Z,/api/status,200,10ms,live=LIVE
+--- Poll 40/42 completed at 2026-07-12T17:58:50Z — Uptime 429s ---
+2026-07-12T17:59:01Z,/api/health,200,77ms,live=DEGRADED
+2026-07-12T17:59:01Z,/api/live_prices,200,35ms,live=?
+2026-07-12T17:59:01Z,/api/live_depth,200,18ms,live=False
+2026-07-12T17:59:01Z,/api/live_funding,200,18ms,live=False
+2026-07-12T17:59:01Z,/api/live_wikipedia,200,17ms,live=?
+2026-07-12T17:59:01Z,/api/live_cycle,200,502ms,live=?
+2026-07-12T17:59:01Z,/api/convergence,200,31ms,live=?
+2026-07-12T17:59:01Z,/api/history,200,11ms,live=?
+2026-07-12T17:59:01Z,/api/elite,200,10ms,live=?
+2026-07-12T17:59:01Z,/api/trades,200,10ms,live=?
+2026-07-12T17:59:01Z,/api/status,200,10ms,live=LIVE
+--- Poll 41/42 completed at 2026-07-12T17:59:01Z — Uptime 440s ---
+2026-07-12T17:59:12Z,/api/health,200,73ms,live=DEGRADED
+2026-07-12T17:59:12Z,/api/live_prices,200,45ms,live=?
+2026-07-12T17:59:12Z,/api/live_depth,200,19ms,live=False
+2026-07-12T17:59:12Z,/api/live_funding,200,15ms,live=False
+2026-07-12T17:59:12Z,/api/live_wikipedia,200,18ms,live=?
+2026-07-12T17:59:12Z,/api/live_cycle,200,387ms,live=?
+2026-07-12T17:59:12Z,/api/convergence,200,32ms,live=?
+2026-07-12T17:59:12Z,/api/history,200,9ms,live=?
+2026-07-12T17:59:12Z,/api/elite,200,10ms,live=?
+2026-07-12T17:59:12Z,/api/trades,200,9ms,live=?
+2026-07-12T17:59:12Z,/api/status,200,9ms,live=LIVE
+--- Poll 42/42 completed at 2026-07-12T17:59:12Z — Uptime 451s ---
+=== DETAILED SAMPLE at poll 42 ===
+{
+    "timestamp": "2026-07-12T17:59:13.494755",
+    "cycle": 48,
+    "instruments_scanned": 111,
+    "instruments_live": 0,
+    "signal_evals": 2664,
+    "actionable": 0,
+    "vol_explosions": [],
+    "vol_explosions_count": 0,
+    "stat_arb": [],
+    "carry_positions": [],
+    "obi_signals": [],
+    "directional_count": 0,
+    "wikipedia": {
+        "gold": {
+            "live": false,
+            "article": "Gold",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        },
+        "bitcoin": {
+            "live": false,
+            "article": "Bitcoin",
+            "error": "Cannot connect to host wikimedia.org:443 ssl:default [None]",
+            "real_data_only": true
+        }
+    },
+    "kraken_depth_live": [],
+    "okx_funding_live": [],
+    "latency_ms": 407.3,
+    "real_data_only": true,
+    "live_pulling_at_runtime": true,
+    "no_backtesting_data": true,
+    "no_synthetic": true,
+    "uptime_sec": 455.4
+}
+=== LIVE PROOF COMPLETED — Duration 461s — 42 polls x 9 endpoints = 378 requests ===
+=== CHECK FOR ERRORS ===
+462
+=== UVICORN LOG tail ===
