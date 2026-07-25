@@ -21,6 +21,12 @@ from . import spec
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
 VENDORED_PATH = os.path.join(_ROOT, "data", "btc_usd_1h_jan2026.json")
+JUNE_PATH = os.path.join(_ROOT, "data", "btc_usd_1h_jun2026.json")
+
+DATASETS = {
+    "jan2026": VENDORED_PATH,
+    "jun2026": JUNE_PATH,
+}
 
 JAN_2026_PERIOD1 = 1767225600  # 2026-01-01 00:00 UTC
 JAN_2026_PERIOD2 = 1769817600  # 2026-01-31 00:00 UTC (Yahoo end bound)
@@ -41,14 +47,14 @@ class Series:
         return len(self.closes)
 
 
-def load_vendored(path: str = VENDORED_PATH) -> Series:
-    """Load the committed real January 2026 hourly series."""
+def load_vendored(path: str = VENDORED_PATH, expected_bars: int | None = spec.CANDLES) -> Series:
+    """Load a committed real hourly series (defaults to January 2026)."""
     with open(path, "r") as fh:
         payload = json.load(fh)
     closes = payload["closes"]
-    if len(closes) != spec.CANDLES:
+    if expected_bars is not None and len(closes) != expected_bars:
         raise ValueError(
-            f"vendored dataset has {len(closes)} closes, expected {spec.CANDLES}"
+            f"vendored dataset has {len(closes)} closes, expected {expected_bars}"
         )
     if any(c is None for c in closes):
         raise ValueError("vendored dataset contains null closes")
@@ -109,3 +115,10 @@ def load(live: bool = False) -> Series:
         except Exception:
             pass
     return load_vendored()
+
+
+def load_month(key: str) -> Series:
+    """Load a vendored month by key, e.g. "jan2026" (744 bars) or "jun2026" (720 bars)."""
+    if key not in DATASETS:
+        raise KeyError(f"unknown dataset {key!r}; available: {sorted(DATASETS)}")
+    return load_vendored(DATASETS[key], expected_bars=None)

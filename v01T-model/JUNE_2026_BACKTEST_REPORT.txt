@@ -1,0 +1,80 @@
+==============================================================================
+v01T MODEL — FULL BACKTEST — JUNE 2026 — BTC-USD 1h — REAL DATA
+==============================================================================
+Period   : 2026-06-01T00:00:00+00:00 .. 2026-06-30T23:00:00+00:00
+Bars     : 720 hourly closes (30 days x 24h)
+Source   : https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?period1=1780272000&period2=1782864000&interval=1h
+Price    : 73,781.07 -> 58,523.93 (-20.68% buy & hold)
+
+------------------------------------------------------------------------------
+A. SPEC VIEW — published v01T arithmetic rescaled to June (30 days)
+------------------------------------------------------------------------------
+  720h / 16h            = 45.0 blocks
+  45.0 x 9 squeezes      = 405 trades per instrument
+  111 x 405             = 44,955 total squeezes
+  50/day x 30 days       = 1,500 trades
+  $10k x 1.225^1500     = 1.600048E+136
+  WR 100%  DD 0%  ROI 1.600048E+134 %
+  NOTE: no loss branch exists in this view, so WR/DD are definitional.
+
+------------------------------------------------------------------------------
+B. REAL ENGINE — bar-by-bar execution with stops, targets, fees, slippage
+------------------------------------------------------------------------------
+  Filter    : BB% <10.0 or >90.0, HV <0.8, score >=85
+  Risk      : 2.5% equity | stop 0.05% | TP 0.50% | 50x cap
+  Costs     : fee 0.04%/side | slippage 0.02%/fill
+  Hold      : max 4 bars | throttle 50/day
+
+  Squeezes detected .... 27
+  Trades taken ......... 27   (wins 8 / losses 19)
+  Win rate ............. 29.63%   target >80%  FAIL
+  Max drawdown ......... 45.75%   target <5%   FAIL
+  ROI .................. -33.17%   target >1000% FAIL
+  Capital .............. $10,000.00 -> $6,683.20
+  Peak equity .......... $12,318.51
+  Gross P&L ............ $6,617.00
+  Fees paid ............ $9,933.80
+  Net P&L .............. $-3,316.80
+  Profit factor ........ 0.744
+  Expectancy / trade ... $-122.84
+  Avg win / avg loss ... $1,203.79 / $-681.43
+  Largest win / loss ... $2,051.84 / $-923.65
+  Max consec. losses ... 6
+  Exit breakdown ....... {'stop_loss': 18, 'take_profit': 4, 'timeout': 5}
+
+  Trade log:
+    # dir         entry       exit bars     BB%     HV      net $      equity  outcome
+    1 long       69,725     69,676    1    -4.1   0.71       -750       9,250  stop_loss
+    2 long       65,985     65,939    2     2.7   0.66       -694       8,557  stop_loss
+    3 long       64,922     65,234    1   -10.1   0.72      1,710      10,267  take_profit
+    4 long       62,375     62,675    2     9.1   0.57      2,052      12,319  take_profit
+    5 long       61,923     61,880    1     9.1   0.78       -924      11,395  stop_loss
+    6 long       62,251     62,208    1    -0.9   0.67       -854      10,540  stop_loss
+    7 short      62,595     62,639    1    97.3   0.71       -791       9,750  stop_loss
+    8 short      62,875     62,919    2    91.4   0.50       -731       9,018  stop_loss
+    9 short      63,911     63,955    1    92.7   0.59       -677       8,342  stop_loss
+   10 short      64,166     64,211    1   104.0   0.64       -626       7,716  stop_loss
+   11 short      65,857     65,644    4    93.2   0.76        938       8,654  timeout
+   12 long       65,617     65,769    4    -4.1   0.67        652       9,306  timeout
+   13 long       65,485     65,440    1    10.0   0.54       -698       8,609  stop_loss
+   14 long       63,823     64,129    3     8.8   0.69      1,720      10,329  take_profit
+   15 short      63,133     63,062    4    90.5   0.75        165      10,494  timeout
+   16 short      64,184     64,229    1   103.6   0.59       -787       9,707  stop_loss
+   17 short      64,195     64,240    3    91.0   0.60       -728       8,978  stop_loss
+   18 short      64,569     64,615    1    99.9   0.76       -674       8,305  stop_loss
+   19 short      65,490     65,175    1   120.7   0.79      1,662       9,967  take_profit
+   20 long       63,551     63,506    1     4.7   0.79       -747       9,220  stop_loss
+   21 long       62,874     62,830    1    -9.0   0.71       -691       8,528  stop_loss
+   22 long       62,321     62,277    2    -7.8   0.77       -639       7,889  stop_loss
+   23 short      62,837     62,815    4    91.8   0.69       -176       7,713  timeout
+   24 short      60,440     60,277    4    91.6   0.28        730       8,444  timeout
+   25 long       59,612     59,570    1   -19.7   0.68       -633       7,811  stop_loss
+   26 long       59,532     59,490    1    -1.8   0.68       -586       7,225  stop_loss
+   27 long       59,221     59,179    3     9.9   0.60       -542       6,683  stop_loss
+
+==============================================================================
+VERDICT — June 2026
+==============================================================================
+  Spec view : WR 100%, DD 0%, ROI 1.600048E+134 %  (arithmetic, no losses possible)
+  Real view : WR 29.63%, DD 45.75%, ROI -33.17%  (measured on 720 real bars)
+  Goals achieved on real data: False
