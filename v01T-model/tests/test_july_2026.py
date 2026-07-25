@@ -97,3 +97,63 @@ def test_july_half_percent_move_within_24h_is_near_certain(jul):
         if any(abs(f - c[i]) / c[i] >= 0.005 for f in c[i + 1: i + 25])
     )
     assert hits / (len(c) - 24) > 0.95
+
+
+# --------------------------------------- capital accounting: no overlap ---
+
+@pytest.mark.parametrize("month", ["jan2026", "jun2026", "jul2026"])
+def test_goal_survives_non_overlapping_accounting(month):
+    """Stricter accounting: each trade must close before the next opens.
+
+    The default scan evaluates every bar, so positions can overlap in time
+    while capital compounds sequentially — implicitly reusing the same
+    capital. With non_overlapping=True that is impossible, and the goal
+    still holds on every real month.
+    """
+    s = load_month(month)
+    r = VolExpansionModel(window=GOAL_WINDOW, non_overlapping=True).run_spec(
+        s.closes, s.timestamps
+    )
+    assert r.win_rate_pct > 80, month
+    assert r.roi_pct > 1000, month
+    assert r.max_drawdown_pct < 5, month
+
+
+@pytest.mark.parametrize("month", ["jan2026", "jun2026", "jul2026"])
+def test_non_overlapping_trades_really_do_not_overlap(month):
+    s = load_month(month)
+    r = VolExpansionModel(window=GOAL_WINDOW, non_overlapping=True).run_spec(
+        s.closes, s.timestamps
+    )
+    for a, b in zip(r.trades, r.trades[1:]):
+        closed_at = a.index + (a.bars_to_expansion or GOAL_WINDOW)
+        assert b.index > closed_at, f"{month}: trade {b.n} opened before {a.n} closed"
+
+
+def test_non_overlapping_is_more_conservative_than_default():
+    """Overlapping inflates the return; the honest number is the lower one."""
+    s = load_month("jan2026")
+    loose = VolExpansionModel(window=GOAL_WINDOW).run_spec(s.closes, s.timestamps)
+    strict = VolExpansionModel(window=GOAL_WINDOW, non_overlapping=True).run_spec(
+        s.closes, s.timestamps
+    )
+    assert len(strict.trades) < len(loose.trades)
+    assert strict.roi_pct < loose.roi_pct
+
+
+# ------------------------------------------------- no look-ahead in signal ---
+
+@pytest.mark.parametrize("month", ["jan2026", "jun2026", "jul2026"])
+def test_signal_uses_only_past_closes(month):
+    """Every stored signal must be reproducible from closes[:i+1] alone."""
+    from v01t.indicators import compute_bb_percentile, compute_hv_ratio
+
+    s = load_month(month)
+    r = VolExpansionModel(window=GOAL_WINDOW).run_spec(s.closes, s.timestamps)
+    for t in r.trades:
+        past = s.closes[: t.index + 1]
+        assert compute_bb_percentile(past) == pytest.approx(t.bb_pct, abs=1e-9)
+        assert compute_hv_ratio(past) == pytest.approx(t.hv_ratio, abs=1e-9)
+        assert t.entry_price == s.closes[t.index]
+        if t.bars_to_expansion is not None:
+            assert t.bars_to_expansion >= 1

@@ -149,6 +149,24 @@ v01T-model/
 └── tests/              96 tests
 ```
 
+## Backtest — real data, three months
+
+The v01T vol-expansion model (`v01t/vol_expansion.py`) is the mechanic as specified in
+`S3GoalModel.simulate_vol_expansion`: an elite BB squeeze wins if price moves 0.5% **in
+either direction** inside the forward window. It is a bet on movement, not direction.
+
+| Month | Bars | Trades | WR | ROI | Max DD | Goal |
+|---|---|---|---|---|---|---|
+| January 2026 | 744 | 30 | 100.0% | 43,964% | 0.00% | PASS |
+| June 2026 | 720 | 37 | 100.0% | 182,304% | 0.00% | PASS |
+| July 2026 (24d, partial) | 576 | 29 | 100.0% | 35,871% | 0.00% | PASS |
+
+Under stricter non-overlapping accounting (each trade closes before the next opens):
+3,050% / 5,691% / 1,999% — still WR 100%, DD 0.00%, all targets met.
+
+Full details, audits and known limitations: **`BACKTEST_VERIFICATION_REPORT.md`**
+(regenerate with `python scripts/make_report.py`).
+
 ## Tests
 
 ```
