@@ -127,3 +127,105 @@ def test_dashboard_renders_the_row():
     assert "744 closes" in html
     assert "111×418=46,398" in html
     assert "100% &gt;80%" in html or "100% >80%" in html
+
+
+# ------------------------------------------- engine / sizing / costs routes ---
+
+NEW_ENDPOINTS = [
+    "/api/engine",
+    "/api/engine/trades",
+    "/api/engine/equity_curve",
+    "/api/engine/compare",
+    "/api/sizing",
+    "/api/costs",
+    "/api/monitor",
+    "/api/monitor/opportunities",
+    "/api/monitor/off_opportunities",
+    "/api/monitor/positions",
+    "/api/monitor/history",
+]
+
+
+@pytest.mark.parametrize("path", NEW_ENDPOINTS)
+def test_new_endpoint_returns_200(path):
+    assert client.get(path).status_code == 200
+
+
+def test_engine_reports_measured_losses():
+    body = client.get("/api/engine").json()
+    assert body["losses"] > 0
+    assert body["win_rate_pct"] < 100.0
+    assert body["max_drawdown_pct"] > 0.0
+    assert body["total_fees"] > 0
+
+
+def test_engine_compare_shows_both_sides():
+    body = client.get("/api/engine/compare").json()
+    assert body["spec_model"]["win_rate_pct"] == 100.0
+    assert body["spec_model"]["max_drawdown_pct"] == 0.0
+    assert body["real_engine_with_costs"]["win_rate_pct"] < 100.0
+    assert body["real_engine_with_costs"]["max_drawdown_pct"] > 0.0
+    assert "note" in body
+
+
+def test_engine_trades_have_stops_targets_and_costs():
+    body = client.get("/api/engine/trades?limit=5").json()
+    assert body["total"] > 0
+    for t in body["trades"]:
+        assert t["stop_price"] > 0
+        assert t["target_price"] > 0
+        assert t["units"] > 0
+        assert t["exit_reason"] in {"stop_loss", "take_profit", "time_exit", "end_of_data"}
+
+
+def test_sizing_endpoint_computes_a_lot_size():
+    body = client.get("/api/sizing?equity=10000&price=90000").json()
+    pos = body["position"]
+    assert pos["units"] > 0
+    assert pos["notional"] > 0
+    assert pos["margin"] == pytest.approx(pos["notional"] / 50, rel=1e-5)
+    assert body["rules"]["risk_pct"] == 0.025
+    assert body["rules"]["leverage"] == 50
+
+
+def test_costs_endpoint_exposes_breakeven():
+    body = client.get("/api/costs").json()
+    assert body["round_trip_cost_pct_of_equity_at_50x"] > 0
+    assert body["breakeven_move_pct"] > 0
+
+
+# ------------------------------------------------------------- monitor routes ---
+
+def test_monitor_starts_with_the_app_lifespan():
+    """Startup events fire inside the TestClient context manager."""
+    with TestClient(app) as c:
+        assert c.get("/api/monitor").json()["running"] is True
+
+
+def test_monitor_stops_cleanly_on_shutdown():
+    with TestClient(app) as c:
+        assert c.get("/api/monitor").json()["running"] is True
+    assert client.get("/api/monitor").json()["running"] is False
+
+
+def test_forced_cycle_advances_the_monitor():
+    before = client.get("/api/monitor").json()["cycles"]
+    client.post("/api/monitor/cycle")
+    after = client.get("/api/monitor").json()["cycles"]
+    assert after > before
+
+
+def test_monitor_accumulates_activity_at_runtime():
+    for _ in range(120):
+        client.post("/api/monitor/cycle")
+    snap = client.get("/api/monitor").json()
+    assert snap["cycles"] >= 120
+    assert snap["closed_trades"] > 0 or snap["open_positions"] > 0
+    hist = client.get("/api/monitor/history").json()
+    assert hist["count"] >= 0
+
+
+def test_status_includes_monitor_and_engine():
+    body = client.get("/api/status").json()
+    assert "monitor" in body and "engine" in body
+    assert body["engine"]["win_rate_pct"] < 100.0

@@ -110,6 +110,57 @@
   </section>
 
   <section>
+    <h2>Real execution engine — measured, not assumed</h2>
+    <p class="note">The spec row above assumes every trade wins. This engine executes the
+    same signal bar by bar on the same real closes, with position sizing, stop losses,
+    take profits and costs, and reports what actually happened.</p>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Run</th><th>Trades</th><th>Win rate</th><th>Max DD</th><th>Final equity</th><th>ROI</th><th>Fees</th><th>Funding</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Spec model (assumed)</td>
+          <td>{{ "{:,}".format(r.total_trades) }}</td>
+          <td class="good">{{ "%.0f"|format(r.wr_pct) }}%</td>
+          <td class="good">{{ "%.0f"|format(r.max_dd_pct) }}%</td>
+          <td>{{ r.final_capital_repr }}</td>
+          <td>{{ r.roi_repr }} %</td><td>—</td><td>—</td>
+        </tr>
+        <tr>
+          <td>Real engine (measured)</td>
+          <td>{{ eng.trades|length }}</td>
+          <td class="bad">{{ "%.1f"|format(eng.win_rate_pct) }}%</td>
+          <td class="bad">{{ "%.2f"|format(eng.max_drawdown_pct) }}%</td>
+          <td>${{ "{:,.2f}".format(eng.final_equity) }}</td>
+          <td class="bad">{{ "%.2f"|format(eng.total_return_pct) }}%</td>
+          <td>${{ "{:,.2f}".format(eng.total_fees) }}</td>
+          <td>${{ "{:,.2f}".format(eng.total_funding) }}</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <ul class="chain">
+      <li>Exits: {% for k, v in eng.exit_breakdown.items() %}<b>{{ k }}</b> {{ v }}&nbsp; {% endfor %}</li>
+      <li>Profit factor <b>{{ "%.3f"|format(eng.profit_factor) }}</b> &middot; expectancy <b>${{ "%.2f"|format(eng.expectancy) }}</b> per trade</li>
+      <li>Round trip costs <b>{{ "%.2f"|format(costs.round_trip_cost_pct_of_equity(50) * 100) }}%</b> of equity at 50×; breakeven move <b>{{ "%.3f"|format(costs.breakeven_move_pct() * 100) }}%</b> vs stop at <b>{{ "%.3f"|format(spec.STOP_PCT * 100) }}%</b></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>24/7 monitor <span id="mon-dot" class="dot"></span></h2>
+    <div class="cards">
+      <div class="card"><span class="k">Status</span><span class="v small" id="mon-running">—</span><span class="n">background loop</span></div>
+      <div class="card"><span class="k">Cycles</span><span class="v" id="mon-cycles">0</span><span class="n">every {{ interval }}s</span></div>
+      <div class="card"><span class="k">Open positions</span><span class="v" id="mon-open">0</span><span class="n">managed live</span></div>
+      <div class="card"><span class="k">Opportunities ON</span><span class="v" id="mon-opps">0</span><span class="n">elite now</span></div>
+      <div class="card"><span class="k">OFF alerts</span><span class="v" id="mon-off">0</span><span class="n">squeeze released</span></div>
+      <div class="card"><span class="k">Closed trades</span><span class="v" id="mon-closed">0</span><span class="n">runtime history</span></div>
+      <div class="card"><span class="k">Equity</span><span class="v small" id="mon-equity">—</span><span class="n">live paper equity</span></div>
+      <div class="card"><span class="k">Monitor WR</span><span class="v small" id="mon-wr">—</span><span class="n">measured</span></div>
+    </div>
+  </section>
+
+  <section>
     <h2>Endpoints</h2>
     <ul class="chain endpoints">
       <li><a href="/api/health">/api/health</a></li>
@@ -121,6 +172,16 @@
       <li><a href="/api/v01t/squeezes">/api/v01t/squeezes</a></li>
       <li><a href="/api/v01t/series">/api/v01t/series</a></li>
       <li><a href="/api/v01t/report">/api/v01t/report</a></li>
+      <li><a href="/api/engine">/api/engine</a></li>
+      <li><a href="/api/engine/compare">/api/engine/compare</a></li>
+      <li><a href="/api/engine/trades">/api/engine/trades</a></li>
+      <li><a href="/api/sizing">/api/sizing</a></li>
+      <li><a href="/api/costs">/api/costs</a></li>
+      <li><a href="/api/monitor">/api/monitor</a></li>
+      <li><a href="/api/monitor/opportunities">/api/monitor/opportunities</a></li>
+      <li><a href="/api/monitor/off_opportunities">/api/monitor/off_opportunities</a></li>
+      <li><a href="/api/monitor/positions">/api/monitor/positions</a></li>
+      <li><a href="/api/monitor/history">/api/monitor/history</a></li>
       <li><a href="/api/status">/api/status</a></li>
     </ul>
   </section>
