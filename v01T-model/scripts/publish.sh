@@ -21,17 +21,21 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
 echo "==> staging $HERE"
-rsync -a --exclude '.git' --exclude '__pycache__' --exclude '.pytest_cache' \
-         --exclude '.venv' --exclude '*.pyc' "$HERE"/ "$STAGE"/
+# tar rather than rsync: rsync is not present in every environment
+tar --exclude='.git' --exclude='__pycache__' --exclude='.pytest_cache' \
+    --exclude='.venv' --exclude='*.pyc' -cf - -C "$HERE" . | (cd "$STAGE" && tar -xf -)
+find "$STAGE" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
 
 cd "$STAGE"
 
 echo "==> verifying before publish"
-python -m pip install --quiet --upgrade pip
-python -m pip install --quiet -r requirements-dev.txt
-python scripts/build_dataset.py
-python -m pytest -q
-python -m v01t.cli >/dev/null
+PY="${PYTHON:-python3}"
+"$PY" -m pip install --quiet --upgrade pip 2>/dev/null || true
+"$PY" -m pip install --quiet -r requirements-dev.txt
+"$PY" scripts/build_dataset.py
+"$PY" scripts/build_july_dataset.py
+"$PY" -m pytest -q
+"$PY" -m v01t.cli >/dev/null
 
 echo "==> pushing to https://github.com/$TARGET"
 git init -q -b main
