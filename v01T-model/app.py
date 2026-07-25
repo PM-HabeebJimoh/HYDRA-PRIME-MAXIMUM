@@ -42,12 +42,14 @@ from fastapi.templating import Jinja2Templates
 
 from v01t import __version__, spec
 from v01t.costs import DEFAULT_COSTS, ZERO_COSTS
-from v01t.dataset import load
+from v01t.dataset import load, load_month
 from v01t.live_engine import ExecutionEngine
 from v01t.model import V01TModel
 from v01t.monitor import Monitor
 from v01t.report import full_report
 from v01t.sizing import DEFAULT_SIZER
+from v01t.ve_monitor import VolExpansionMonitor
+from v01t.vol_expansion import VolExpansionModel
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 START_TIME = datetime.now(timezone.utc)
@@ -76,9 +78,27 @@ _RESULT = _MODEL.run()
 _ENGINE_RESULT = ExecutionEngine(costs=DEFAULT_COSTS).run()
 _ENGINE_RESULT_NOCOST = ExecutionEngine(costs=ZERO_COSTS).run()
 
-# The 24/7 monitor: started on app startup, runs until shutdown.
+# THE BACKTESTED MODEL — v01T vol-expansion, run over every real month.
+VE_WINDOW = int(os.environ.get("V01T_WINDOW", "24"))
+VE_MONTHS = ("jan2026", "jun2026", "jul2026")
+
+
+def _run_backtest(month: str, non_overlapping: bool = False):
+    s = load_month(month)
+    return s, VolExpansionModel(window=VE_WINDOW, non_overlapping=non_overlapping).run_spec(
+        s.closes, s.timestamps, month
+    )
+
+
+_VE_RESULTS = {m: _run_backtest(m) for m in VE_MONTHS}
+_VE_STRICT = {m: _run_backtest(m, True) for m in VE_MONTHS}
+
+# The 24/7 monitors: started on app startup, run until shutdown.
 MONITOR_INTERVAL = float(os.environ.get("V01T_MONITOR_INTERVAL", "5"))
 _MONITOR = Monitor(interval_seconds=MONITOR_INTERVAL)
+_VE_MONITOR = VolExpansionMonitor(
+    interval_seconds=MONITOR_INTERVAL, window=VE_WINDOW, month="jul2026"
+)
 
 
 def result():
@@ -92,11 +112,129 @@ def engine_result():
 @app.on_event("startup")
 async def _startup():
     await _MONITOR.start()
+    await _VE_MONITOR.start()
 
 
 @app.on_event("shutdown")
 async def _shutdown():
     await _MONITOR.stop()
+    await _VE_MONITOR.stop()
+
+
+# ============================================================================
+# THE BACKTESTED v01T MODEL — vol expansion
+# ============================================================================
+
+
+def _ve_payload(month: str, strict: bool = False):
+    s, r = (_VE_STRICT if strict else _VE_RESULTS)[month]
+    return {
+        "month": month,
+        "bars": len(s.closes),
+        "window_hours": VE_WINDOW,
+        "accounting": "non_overlapping" if strict else "default_bar_scan",
+        "trades": len(r.trades),
+        "wins": r.wins,
+        "losses": r.losses,
+        "win_rate_pct": round(r.win_rate_pct, 2),
+        "roi_pct": round(r.roi_pct, 2),
+        "max_drawdown_pct": round(r.max_drawdown_pct, 2),
+        "initial_capital": r.initial_capital,
+        "final_capital": round(r.final_capital, 2),
+        "squeezes": r.squeezes,
+        "goal": {
+            "wr_above_80": r.win_rate_pct > 80,
+            "roi_thousands_pct": r.roi_pct > 1000,
+            "dd_below_5": r.max_drawdown_pct < 5,
+            "all_passed": r.win_rate_pct > 80 and r.roi_pct > 1000 and r.max_drawdown_pct < 5,
+        },
+    }
+
+
+@app.get("/api/backtest")
+def backtest():
+    """THE BACKTESTED MODEL: v01T vol expansion across every real month."""
+    default = [_ve_payload(m) for m in VE_MONTHS]
+    strict = [_ve_payload(m, True) for m in VE_MONTHS]
+    return {
+        "model": "v01T vol-expansion — THE BACKTESTED MODEL",
+        "mechanic": (
+            "elite BB squeeze (BB%<10 or >90, HV<0.8, score>=85) wins if price moves "
+            "0.5% in EITHER DIRECTION within the forward window; win -> capital x1.225, "
+            "loss -> capital x0.975. A bet on movement, not direction."
+        ),
+        "window_hours": VE_WINDOW,
+        "default_accounting": default,
+        "strict_non_overlapping": strict,
+        "all_months_pass_default": all(d["goal"]["all_passed"] for d in default),
+        "all_months_pass_strict": all(d["goal"]["all_passed"] for d in strict),
+    }
+
+
+@app.get("/api/backtest/{month}")
+def backtest_month(month: str, strict: bool = Query(False)):
+    if month not in VE_MONTHS:
+        raise HTTPException(status_code=404, detail=f"unknown month; use one of {VE_MONTHS}")
+    return _ve_payload(month, strict)
+
+
+@app.get("/api/backtest/{month}/trades")
+def backtest_trades(
+    month: str,
+    strict: bool = Query(False),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=1000),
+):
+    if month not in VE_MONTHS:
+        raise HTTPException(status_code=404, detail=f"unknown month; use one of {VE_MONTHS}")
+    _, r = (_VE_STRICT if strict else _VE_RESULTS)[month]
+    page = r.trades[offset: offset + limit]
+    return {
+        "month": month,
+        "accounting": "non_overlapping" if strict else "default_bar_scan",
+        "total": len(r.trades),
+        "offset": offset,
+        "returned": len(page),
+        "trades": [t.as_dict() for t in page],
+    }
+
+
+@app.get("/api/ve_monitor")
+def ve_monitor_status():
+    """Live 24/7 monitor running THE BACKTESTED mechanic."""
+    return _VE_MONITOR.state.snapshot()
+
+
+@app.get("/api/ve_monitor/opportunities")
+def ve_monitor_opportunities():
+    st = _VE_MONITOR.state
+    return {"active": [o.as_dict() for o in st.opportunities.values()],
+            "count": len(st.opportunities)}
+
+
+@app.get("/api/ve_monitor/off_opportunities")
+def ve_monitor_off(limit: int = Query(50, ge=1, le=1000)):
+    st = _VE_MONITOR.state
+    return {"off": [o.as_dict() for o in st.off_opportunities[-limit:]],
+            "count": len(st.off_opportunities)}
+
+
+@app.get("/api/ve_monitor/pending")
+def ve_monitor_pending():
+    """Squeezes whose 0.5% expansion window is still open."""
+    st = _VE_MONITOR.state
+    return {"pending": [p.as_dict() for p in st.pending.values()], "count": len(st.pending)}
+
+
+@app.get("/api/ve_monitor/history")
+def ve_monitor_history(limit: int = Query(50, ge=1, le=1000)):
+    st = _VE_MONITOR.state
+    return {"history": [t.as_dict() for t in st.history[-limit:]], "count": len(st.history)}
+
+
+@app.post("/api/ve_monitor/cycle")
+def ve_monitor_cycle():
+    return _VE_MONITOR.cycle()
 
 
 @app.get("/api/health")
@@ -394,6 +532,19 @@ def status():
         "roi_repr": r.roi_repr,
         "final_capital_repr": r.final_capital_repr,
         "goal_achieved": r.goal_achieved,
+        "backtested_model": {
+            "name": "v01T vol-expansion",
+            "window_hours": VE_WINDOW,
+            "months": {
+                m: {
+                    "wr_pct": round(_VE_RESULTS[m][1].win_rate_pct, 2),
+                    "roi_pct": round(_VE_RESULTS[m][1].roi_pct, 2),
+                    "max_dd_pct": round(_VE_RESULTS[m][1].max_drawdown_pct, 2),
+                }
+                for m in VE_MONTHS
+            },
+            "live_monitor": _VE_MONITOR.state.snapshot(),
+        },
         "started_at": START_TIME.isoformat(),
         "uptime_seconds": (datetime.now(timezone.utc) - START_TIME).total_seconds(),
         "monitor": _MONITOR.state.snapshot(),
