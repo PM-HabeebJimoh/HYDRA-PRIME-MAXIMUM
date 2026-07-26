@@ -193,13 +193,21 @@ class VolExpansionMonitor:
         return self._cache[instrument]
 
     def _advance(self, instrument: str):
+        """Step one bar forward, matching the backtest's scan range exactly.
+
+        `vol_expansion.run_spec` scans `for i in range(HV_MIN_CLOSES, n - window)`,
+        so the live cursor starts at HV_MIN_CLOSES (not +1) and stops entering
+        new trades once fewer than `window` bars remain — otherwise the last
+        squeezes could never resolve.
+        """
         series = self._series_provider(instrument)
-        start = spec.HV_MIN_CLOSES + 1
+        start = spec.HV_MIN_CLOSES
         cur = self._cursor.get(instrument, start)
         if cur >= len(series.closes):
             cur = start  # wrap so the monitor never stalls
         self._cursor[instrument] = cur + 1
-        return series.closes[: cur + 1], cur
+        entries_allowed = cur < len(series.closes) - self.window
+        return series.closes[: cur + 1], cur, entries_allowed
 
     # ----------------------------------------------------------------- ledger ---
 
@@ -240,7 +248,7 @@ class VolExpansionMonitor:
         opened, resolved, went_off = [], [], []
 
         for inst in self.instruments:
-            closes, idx = self._advance(inst)
+            closes, idx, entries_allowed = self._advance(inst)
             if len(closes) <= spec.HV_MIN_CLOSES:
                 continue
             price = closes[-1]
@@ -267,6 +275,8 @@ class VolExpansionMonitor:
             existing = self.state.opportunities.get(inst)
 
             if elite:
+                # Opportunity tracking: one record per instrument, stable ID
+                # while the squeeze persists (this drives the ON/OFF alerts).
                 if existing is None:
                     opp = VEOpportunity(
                         id=uuid.uuid4().hex[:12], instrument=inst, bb_pct=bb,
@@ -274,16 +284,6 @@ class VolExpansionMonitor:
                         detected_at=_now(), updated_at=_now(),
                     )
                     self.state.opportunities[inst] = opp
-
-                    busy = any(q.instrument == inst for q in self.state.pending.values())
-                    if not (self.non_overlapping and busy):
-                        pend = VEPending(
-                            id=opp.id, instrument=inst, entry_price=price,
-                            entry_index=idx, opened_at=_now(),
-                            window=self.window, last_price=price,
-                        )
-                        self.state.pending[pend.id] = pend
-                        opened.append(pend.as_dict())
                 else:
                     existing.bb_pct = bb
                     existing.hv_ratio = hv
@@ -291,6 +291,19 @@ class VolExpansionMonitor:
                     existing.price = price
                     existing.updated_at = _now()
                     existing.cycles_active += 1
+
+                # Trade entry: the backtest opens a trade on EVERY elite bar,
+                # not only on the first bar of a squeeze streak. Windows are
+                # allowed to overlap, exactly as in vol_expansion.run_spec.
+                busy = any(q.instrument == inst for q in self.state.pending.values())
+                if entries_allowed and not (self.non_overlapping and busy):
+                    pend = VEPending(
+                        id=uuid.uuid4().hex[:12], instrument=inst, entry_price=price,
+                        entry_index=idx, opened_at=_now(),
+                        window=self.window, last_price=price,
+                    )
+                    self.state.pending[pend.id] = pend
+                    opened.append(pend.as_dict())
             elif existing is not None:
                 existing.is_off = True
                 existing.off_at = _now()
