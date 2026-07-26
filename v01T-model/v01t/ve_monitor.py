@@ -34,7 +34,7 @@ from typing import Callable, Dict, List, Optional
 
 from . import spec
 from .dataset import Series, load_month
-from .indicators import compute_bb_percentile, compute_hv_ratio, score_for
+from .indicators import compute_bb_percentile, compute_hv_ratio, is_elite, score_for
 from .vol_expansion import LOSS_MULT, WIN_MULT
 
 RESOLVED_WIN = "expansion_0.5pct"
@@ -271,7 +271,8 @@ class VolExpansionMonitor:
             bb = compute_bb_percentile(closes)
             hv = compute_hv_ratio(closes)
             sc = score_for(bb)
-            elite = (bb < spec.BB_LOW or bb > spec.BB_HIGH) and hv < spec.HV_MAX and sc >= spec.SCORE_MIN
+            # Single source of truth: the SAME gate the backtest uses.
+            elite = is_elite(bb, hv, sc)
             existing = self.state.opportunities.get(inst)
 
             if elite:
