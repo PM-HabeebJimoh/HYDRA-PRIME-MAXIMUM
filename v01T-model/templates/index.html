@@ -52,6 +52,7 @@
 
     <div class="rail-label">Execution</div>
     <button class="nav-item" data-view="monitor"   ><span class="ico">◉</span>Live Monitor<span class="nav-badge" id="badgeMon">0</span></button>
+    <button class="nav-item" data-view="execution" ><span class="ico">⇗</span>Auto Trading<span class="nav-badge" id="badgeExec">—</span></button>
     <button class="nav-item" data-view="risk"      ><span class="ico">⚠</span>Risk &amp; Sizing</button>
 
     <div class="rail-label">System</div>
@@ -235,6 +236,82 @@
           <th scope="col" class="num">Move</th><th scope="col" class="num">Bars</th>
           <th scope="col" class="num">×</th><th scope="col" class="num">Capital</th>
         </tr></thead><tbody id="settledRows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ============================================ EXECUTION -->
+    <section class="view" id="view-execution" role="tabpanel" aria-label="Automatic trading">
+      <div class="view-head">
+        <h2 class="view-title">Automatic Trading <span class="badge" id="execModeBadge">—</span></h2>
+        <p class="view-desc">Exchange execution of the double entry. Every elite squeeze places <strong>two</strong> orders — a long leg and a short leg at the same price, each with its own stop and target attached server-side.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><span class="section-title">Execution Status</span><span class="section-note" id="execVenue"></span></div>
+        <div class="metrics" id="execMetrics"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><span class="section-title">Mode Safety Ladder</span></div>
+        <div class="table-wrap"><table><thead><tr>
+          <th scope="col">Mode</th><th scope="col">Exchange contact</th><th scope="col">Orders sent</th><th scope="col">Requires</th><th scope="col">Active</th>
+        </tr></thead><tbody id="execModes"></tbody></table></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><span class="section-title">Credentials &amp; Preflight</span><span class="section-note">read from environment, never the repo</span></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><span class="card-title">Environment</span></div>
+            <div class="card-body"><div class="table-wrap" style="border:none"><table><tbody id="execCreds"></tbody></table></div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><span class="card-title">Preflight</span>
+              <button class="icon-btn" id="preflightBtn" style="width:auto;padding:0 var(--s-3);margin-left:auto">Run check</button>
+            </div>
+            <div class="card-body"><div id="execPreflight"><div class="empty"><span>Not run yet</span></div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><span class="section-title">Order Preview</span><span class="section-note">exactly what would be sent — no side effects</span></div>
+        <div class="card"><div class="card-body">
+          <div class="grid-2">
+            <div><label class="metric-label" for="pvPrice">Price (USD)</label>
+              <input id="pvPrice" class="endpoint" style="width:100%;margin-top:var(--s-2)" type="number" value="90000" min="1" step="100"></div>
+            <div><label class="metric-label" for="pvEquity">Equity (USD)</label>
+              <input id="pvEquity" class="endpoint" style="width:100%;margin-top:var(--s-2)" type="number" value="10000" min="1" step="100"></div>
+          </div>
+          <div class="table-wrap" style="margin-top:var(--s-4)"><table><thead><tr>
+            <th scope="col">Leg</th><th scope="col">Side</th><th scope="col">positionSide</th>
+            <th scope="col" class="num">Size</th><th scope="col" class="num">Stop Loss</th><th scope="col" class="num">Take Profit</th>
+          </tr></thead><tbody id="pvLegs"></tbody></table></div>
+          <div id="pvNote" class="metric-foot" style="margin-top:var(--s-2)"></div>
+        </div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><span class="section-title">Executed Double Entries</span>
+          <button class="icon-btn" id="execCycleBtn" style="width:auto;padding:0 var(--s-3);margin-left:auto">Run cycle</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th scope="col">ID</th><th scope="col" class="num">Entry</th><th scope="col" class="num">Contracts/leg</th>
+          <th scope="col" class="num">Notional/leg</th><th scope="col" class="num">BB%</th><th scope="col">Mode</th>
+        </tr></thead><tbody id="execOrders"></tbody></table></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><span class="section-title">Risk Rails</span><span class="section-note">enforced in every mode</span></div>
+        <div class="table-wrap"><table><thead><tr>
+          <th scope="col">Limit</th><th scope="col" class="num">Threshold</th><th scope="col" class="num">Current</th><th scope="col">State</th>
+        </tr></thead><tbody id="execRails"></tbody></table></div>
+      </div>
+
+      <div class="section">
+        <div class="callout warn"><span aria-hidden="true">⚠</span>
+          <div><strong>Hedge mode is mandatory.</strong> v01T holds a long and a short leg on the same symbol simultaneously. On a one-way (netting) account the two orders cancel to zero exposure and the model cannot function. Preflight sets hedge mode and refuses to trade without it.</div>
+        </div>
       </div>
     </section>
 

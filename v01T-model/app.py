@@ -50,6 +50,11 @@ from v01t.report import full_report
 from v01t.sizing import DEFAULT_SIZER
 from v01t.ve_monitor import VolExpansionMonitor
 from v01t.vol_expansion import VolExpansionModel
+from v01t.bybit import BybitClient
+from v01t.bybit_executor import BybitExecutor
+from v01t.kucoin import DEFAULT_SYMBOL as KUCOIN_SYMBOL, KucoinClient
+from v01t.kucoin_executor import (MODE_DRY_RUN, MODE_LIVE, MODE_PAPER,
+                                  KucoinExecutor, RiskLimits)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 START_TIME = datetime.now(timezone.utc)
@@ -99,6 +104,52 @@ _MONITOR = Monitor(interval_seconds=MONITOR_INTERVAL)
 _VE_MONITOR = VolExpansionMonitor(
     interval_seconds=MONITOR_INTERVAL, window=VE_WINDOW, month="jul2026"
 )
+
+# ---------------------------------------------------------------------------
+# EXCHANGE EXECUTION — KuCoin Futures (primary) and Bybit (alternate)
+#
+# Mode is read from the environment and defaults to PAPER, so importing this
+# module can never place a real order. Live requires BOTH:
+#     V01T_EXEC_MODE=live   and   V01T_LIVE=I_UNDERSTAND
+# ---------------------------------------------------------------------------
+EXEC_MODE = os.environ.get("V01T_EXEC_MODE", MODE_PAPER)
+EXEC_SYMBOL = os.environ.get("V01T_EXEC_SYMBOL", KUCOIN_SYMBOL)
+
+
+def _build_kucoin_client() -> KucoinClient:
+    return KucoinClient(
+        api_key=os.environ.get("KUCOIN_API_KEY", ""),
+        api_secret=os.environ.get("KUCOIN_API_SECRET", ""),
+        api_passphrase=os.environ.get("KUCOIN_API_PASSPHRASE", ""),
+        sandbox=os.environ.get("KUCOIN_SANDBOX", "1") != "0",
+    )
+
+
+def _build_executor():
+    """Never raise at import: fall back to paper if live is not authorised."""
+    mode = EXEC_MODE
+    client = _build_kucoin_client() if mode in (MODE_DRY_RUN, MODE_LIVE) else None
+    try:
+        return KucoinExecutor(client=client, symbol=EXEC_SYMBOL, mode=mode,
+                              leverage=spec.LEVERAGE), None
+    except (PermissionError, ValueError) as exc:
+        return (KucoinExecutor(symbol=EXEC_SYMBOL, mode=MODE_PAPER,
+                               leverage=spec.LEVERAGE), str(exc))
+
+
+_EXECUTOR, _EXEC_FALLBACK = _build_executor()
+
+
+def _credentials_present() -> dict:
+    return {
+        "kucoin_api_key": bool(os.environ.get("KUCOIN_API_KEY")),
+        "kucoin_api_secret": bool(os.environ.get("KUCOIN_API_SECRET")),
+        "kucoin_api_passphrase": bool(os.environ.get("KUCOIN_API_PASSPHRASE")),
+        "kucoin_sandbox": os.environ.get("KUCOIN_SANDBOX", "1") != "0",
+        "live_confirmation": os.environ.get("V01T_LIVE") == "I_UNDERSTAND",
+        "bybit_api_key": bool(os.environ.get("BYBIT_API_KEY")),
+        "bybit_api_secret": bool(os.environ.get("BYBIT_API_SECRET")),
+    }
 
 
 def result():
@@ -515,6 +566,119 @@ def monitor_history(limit: int = Query(50, ge=1, le=1000)):
 def monitor_force_cycle():
     """Force one monitoring pass immediately."""
     return _MONITOR.cycle()
+
+
+# ============================================================================
+# EXCHANGE EXECUTION API
+# ============================================================================
+
+
+@app.get("/api/exchange")
+def exchange_status():
+    """Execution mode, credentials and the double-entry contract."""
+    st = _EXECUTOR.state
+    return {
+        "exchange": "kucoin-futures",
+        "alternate": "bybit",
+        "symbol": _EXECUTOR.symbol,
+        "mode": _EXECUTOR.mode,
+        "mode_meaning": {
+            "paper": "no exchange contact; fills simulated locally",
+            "dry_run": "real keys and data; orders logged, NOT sent",
+            "live": "real orders placed on the exchange",
+        }[_EXECUTOR.mode],
+        "requested_mode": EXEC_MODE,
+        "fallback_reason": _EXEC_FALLBACK,
+        "leverage": _EXECUTOR.leverage,
+        "credentials": _credentials_present(),
+        "hedge_mode_required": True,
+        "hedge_mode_note": (
+            "v01T opens a long and a short leg on the same symbol. On a one-way "
+            "(netting) account they cancel to zero exposure and the model cannot run."
+        ),
+        "double_entry": {
+            "legs_per_squeeze": spec.LEGS_PER_TRADE,
+            "long": {"side": "buy", "position_side": "long",
+                     "stop_pct": -spec.STOP_PCT, "target_pct": spec.TP_PCT},
+            "short": {"side": "sell", "position_side": "short",
+                      "stop_pct": spec.STOP_PCT, "target_pct": -spec.TP_PCT},
+            "net_edge_pct_of_price": spec.NET_EDGE_PCT,
+            "net_pct_of_capital": spec.NET_EDGE_PCT * spec.LEVERAGE,
+        },
+        "state": st.snapshot(),
+    }
+
+
+@app.get("/api/exchange/preflight")
+def exchange_preflight():
+    """Verify the account can run v01T. Never places an order."""
+    return _EXECUTOR.preflight()
+
+
+@app.get("/api/exchange/orders")
+def exchange_orders(limit: int = Query(50, ge=1, le=500)):
+    """Double entries placed by the executor, newest last."""
+    hist = _EXECUTOR.state.history[-limit:]
+    return {"count": len(_EXECUTOR.state.history),
+            "mode": _EXECUTOR.mode,
+            "orders": [o.as_dict() for o in hist]}
+
+
+@app.get("/api/exchange/preview")
+def exchange_preview(price: float = Query(..., gt=0),
+                     equity: float = Query(spec.INITIAL_CAPITAL, gt=0)):
+    """Exactly what WOULD be sent for a squeeze at this price. No side effects."""
+    ex = KucoinExecutor(symbol=_EXECUTOR.symbol, mode=MODE_PAPER,
+                        leverage=_EXECUTOR.leverage, equity=equity)
+    contracts = ex.leg_contracts(price)
+    lv = ex.levels(price)
+    return {
+        "symbol": ex.symbol, "price": price, "equity": equity,
+        "leverage": ex.leverage,
+        "contracts_per_leg": contracts,
+        "notional_per_leg": ex.contracts_notional(contracts, price),
+        "tradable": contracts > 0,
+        "legs": [
+            {"leg": "LONG", "side": "buy", "positionSide": "long",
+             "size": contracts, "stopLoss": round(lv["long_stop"], 2),
+             "takeProfit": round(lv["long_target"], 2)},
+            {"leg": "SHORT", "side": "sell", "positionSide": "short",
+             "size": contracts, "stopLoss": round(lv["short_stop"], 2),
+             "takeProfit": round(lv["short_target"], 2)},
+        ],
+    }
+
+
+@app.post("/api/exchange/cycle")
+def exchange_cycle():
+    """Evaluate the latest bar and execute the double entry if elite."""
+    from v01t.dataset import load_month
+    closes = load_month("jul2026").closes
+    n = spec.HV_MIN_CLOSES + 1 + (_EXECUTOR.state.cycles % (len(closes) - spec.HV_MIN_CLOSES - 1))
+    return _EXECUTOR.cycle(closes[:n])
+
+
+@app.get("/api/exchange/risk")
+def exchange_risk():
+    lim = _EXECUTOR.limits
+    st = _EXECUTOR.state
+    return {
+        "limits": {
+            "max_concurrent_squeezes": lim.max_concurrent_squeezes,
+            "max_daily_loss_pct": lim.max_daily_loss_pct,
+            "max_notional_per_leg": lim.max_notional_per_leg,
+            "min_free_balance": lim.min_free_balance,
+            "kill_switch": lim.kill_switch,
+        },
+        "current": {
+            "open_squeezes": len(st.open_squeezes),
+            "daily_loss_pct": round(st.daily_loss_pct, 2),
+            "equity": round(st.equity, 2),
+            "rejected": st.rejected,
+            "last_rejection": st.last_rejection,
+        },
+        "blocking": lim.check(st),
+    }
 
 
 @app.get("/api/status")

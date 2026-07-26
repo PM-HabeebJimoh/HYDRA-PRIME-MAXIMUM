@@ -311,3 +311,86 @@ def test_monitor_starts_and_stops_with_the_app_lifespan():
     with TestClient(app) as c:
         assert c.get("/api/ve_monitor").json()["running"] is True
     assert client.get("/api/ve_monitor").json()["running"] is False
+
+
+# ------------------------------------------- exchange execution surface ---
+
+EXCHANGE_ENDPOINTS = [
+    "/api/exchange", "/api/exchange/preflight", "/api/exchange/orders",
+    "/api/exchange/preview?price=90000", "/api/exchange/risk",
+]
+
+
+@pytest.mark.parametrize("path", EXCHANGE_ENDPOINTS)
+def test_exchange_endpoint_returns_200(path):
+    assert client.get(path).status_code == 200
+
+
+def test_exchange_defaults_to_paper_mode():
+    """Importing the app must never be able to place a real order."""
+    body = client.get("/api/exchange").json()
+    assert body["mode"] == "paper"
+    assert body["exchange"] == "kucoin-futures"
+
+
+def test_exchange_declares_hedge_mode_requirement():
+    body = client.get("/api/exchange").json()
+    assert body["hedge_mode_required"] is True
+    assert "zero exposure" in body["hedge_mode_note"]
+
+
+def test_exchange_declares_double_entry():
+    de = client.get("/api/exchange").json()["double_entry"]
+    assert de["legs_per_squeeze"] == 2
+    assert de["long"]["position_side"] == "long"
+    assert de["short"]["position_side"] == "short"
+    assert de["net_pct_of_capital"] == pytest.approx(0.225)
+
+
+def test_exchange_reports_credential_presence_not_values():
+    creds = client.get("/api/exchange").json()["credentials"]
+    for v in creds.values():
+        assert isinstance(v, bool)          # never leak a key
+
+
+def test_preview_returns_both_legs_with_brackets():
+    d = client.get("/api/exchange/preview?price=90000&equity=10000").json()
+    assert len(d["legs"]) == 2
+    assert {l["positionSide"] for l in d["legs"]} == {"long", "short"}
+    assert {l["side"] for l in d["legs"]} == {"buy", "sell"}
+    for leg in d["legs"]:
+        assert leg["stopLoss"] > 0 and leg["takeProfit"] > 0
+        assert isinstance(leg["size"], int)
+
+
+def test_preview_flags_untradable_size():
+    d = client.get("/api/exchange/preview?price=90000&equity=1").json()
+    assert d["tradable"] is False
+    assert d["contracts_per_leg"] == 0
+
+
+def test_preview_has_no_side_effects():
+    before = client.get("/api/exchange/orders").json()["count"]
+    client.get("/api/exchange/preview?price=90000")
+    assert client.get("/api/exchange/orders").json()["count"] == before
+
+
+def test_exchange_risk_exposes_all_rails():
+    lim = client.get("/api/exchange/risk").json()["limits"]
+    for k in ("max_concurrent_squeezes", "max_daily_loss_pct",
+              "max_notional_per_leg", "min_free_balance", "kill_switch"):
+        assert k in lim
+
+
+def test_exchange_cycle_executes_the_double_entry():
+    r = client.post("/api/exchange/cycle")
+    assert r.status_code == 200
+    assert "cycle" in r.json()
+
+
+def test_dashboard_exposes_the_auto_trading_view():
+    html = client.get("/").text
+    assert 'id="view-execution"' in html
+    assert 'data-view="execution"' in html
+    assert "Auto Trading" in html
+    assert "positionSide" in html          # the leg contract is shown

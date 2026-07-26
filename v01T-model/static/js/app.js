@@ -65,8 +65,8 @@
   /* -------------------------------------------------------------- router */
   var TITLES = {
     overview: "Overview", backtest: "Backtest", trades: "Trade Ledger",
-    signals: "Signals", monitor: "Live Monitor", risk: "Risk & Sizing",
-    model: "Model Spec", api: "API & Health"
+    signals: "Signals", monitor: "Live Monitor", execution: "Auto Trading",
+    risk: "Risk & Sizing", model: "Model Spec", api: "API & Health"
   };
   var loaded = {};
 
@@ -105,6 +105,7 @@
     if (view === "trades")   loadTrades();
     if (view === "signals")  loadSignals();
     if (view === "monitor")  loadMonitor();
+    if (view === "execution") loadExecution();
     if (view === "risk")     { loadCosts(); calcSize(); }
     if (view === "api")      loadHealth();
   }
@@ -281,6 +282,150 @@
       '<div class="metric-foot">' + esc(foot) + "</div></div>";
   }
 
+
+  /* ----------------------------------------------------------- execution */
+  function loadExecution() {
+    api("/api/exchange").then(function (x) {
+      var st = x.state, c = x.credentials, live = x.mode === "live";
+      var badge = $("#execModeBadge");
+      if (badge) {
+        badge.textContent = x.mode.toUpperCase().replace("_", " ");
+        badge.className = "badge " + (live ? "fail" : x.mode === "dry_run" ? "warn" : "info");
+      }
+      var venue = $("#execVenue");
+      if (venue) venue.textContent = x.exchange + " · " + x.symbol + " · " + x.leverage + "×" +
+        (c.kucoin_sandbox ? " · sandbox" : " · MAINNET");
+
+      $("#execMetrics").innerHTML = [
+        metricCard("Mode", x.mode.toUpperCase(), x.mode_meaning, live ? "bad" : "ok", live ? "neg" : "pos"),
+        metricCard("Venue", "KUCOIN", "alternate: " + x.alternate, "", ""),
+        metricCard("Legs / Squeeze", String(x.double_entry.legs_per_squeeze), "long + short, same price", "ok", "pos"),
+        metricCard("Net Edge", pct(x.double_entry.net_pct_of_capital * 100, 1), "of capital per squeeze", "ok", "pos"),
+        metricCard("Squeezes Executed", fmt(st.squeezes_executed), fmt(st.legs_placed) + " legs placed", "", ""),
+        metricCard("Rejected", fmt(st.rejected), st.last_rejection || "none", st.rejected ? "watch" : "ok", st.rejected ? "warn-t" : "pos"),
+        metricCard("Errors", fmt(st.errors), st.last_error || "none", st.errors ? "bad" : "ok", st.errors ? "neg" : "pos"),
+        metricCard("Equity", money(st.equity), "loss " + pct(st.daily_loss_pct), "", "")
+      ].join("");
+
+      $("#execModes").innerHTML = [
+        ["paper", "none", "no", "nothing — default"],
+        ["dry_run", "yes (read)", "no — logged only", "API credentials"],
+        ["live", "yes (write)", "YES — real orders", "V01T_EXEC_MODE=live + V01T_LIVE=I_UNDERSTAND"]
+      ].map(function (m) {
+        var on = x.mode === m[0];
+        return "<tr" + (on ? ' style="background:var(--accent-dim)"' : "") + ">" +
+          "<td><strong>" + m[0] + "</strong></td><td class='muted'>" + m[1] + "</td>" +
+          "<td class='" + (m[0] === "live" ? "neg" : "muted") + "'>" + m[2] + "</td>" +
+          "<td class='mono' style='white-space:normal'>" + esc(m[3]) + "</td>" +
+          "<td>" + (on ? '<span class="badge pass">active</span>' : '<span class="badge neutral">—</span>') + "</td></tr>";
+      }).join("");
+
+      $("#execCreds").innerHTML = [
+        ["KUCOIN_API_KEY", c.kucoin_api_key], ["KUCOIN_API_SECRET", c.kucoin_api_secret],
+        ["KUCOIN_API_PASSPHRASE", c.kucoin_api_passphrase],
+        ["V01T_LIVE confirmation", c.live_confirmation],
+        ["BYBIT_API_KEY", c.bybit_api_key], ["BYBIT_API_SECRET", c.bybit_api_secret]
+      ].map(function (r) {
+        return "<tr><td class='mono muted'>" + esc(r[0]) + "</td><td>" +
+          (r[1] ? '<span class="badge pass">set</span>' : '<span class="badge neutral">not set</span>') +
+          "</td></tr>";
+      }).join("") +
+        "<tr><td class='mono muted'>Endpoint</td><td>" +
+        (c.kucoin_sandbox ? '<span class="badge info">sandbox</span>' : '<span class="badge fail">mainnet</span>') +
+        "</td></tr>";
+    }).catch(function (e) {
+      var m = $("#execMetrics"); if (m) m.innerHTML = '<div class="empty">' + esc(e.message) + "</div>";
+    });
+
+    api("/api/exchange/orders?limit=50").then(function (d) {
+      var rows = (d.orders || []).slice().reverse().map(function (o) {
+        return "<tr><td class='mono muted'>" + esc(o.id) + "</td>" +
+          '<td class="num mono">' + money(o.entry_price) + "</td>" +
+          '<td class="num mono">' + fmt(o.contracts_per_leg) + "</td>" +
+          '<td class="num mono">' + money(o.notional_per_leg) + "</td>" +
+          '<td class="num mono">' + fmt(o.bb_pct, 2) + "</td>" +
+          "<td><span class='badge " + (o.mode === "live" ? "fail" : "info") + "'>" + esc(o.mode) + "</span></td></tr>";
+      }).join("");
+      rowsInto($("#execOrders"), rows, 6, "No double entries executed yet");
+      var b = $("#badgeExec"); if (b) b.textContent = fmt(d.count);
+    }).catch(function () {});
+
+    api("/api/exchange/risk").then(function (r) {
+      var L = r.limits, C = r.current;
+      $("#execRails").innerHTML = [
+        ["Max concurrent squeezes", L.max_concurrent_squeezes, C.open_squeezes, C.open_squeezes < L.max_concurrent_squeezes],
+        ["Max daily loss", pct(L.max_daily_loss_pct), pct(C.daily_loss_pct), C.daily_loss_pct < L.max_daily_loss_pct],
+        ["Max notional / leg", money(L.max_notional_per_leg), "—", true],
+        ["Min free balance", money(L.min_free_balance), money(C.equity), C.equity >= L.min_free_balance],
+        ["Kill switch", L.kill_switch ? "ENGAGED" : "off", "—", !L.kill_switch]
+      ].map(function (x) {
+        return "<tr><td>" + esc(x[0]) + "</td><td class='num mono'>" + esc(x[1]) + "</td>" +
+          "<td class='num mono'>" + esc(x[2]) + "</td><td>" +
+          (x[3] ? '<span class="badge pass">ok</span>' : '<span class="badge fail">blocking</span>') + "</td></tr>";
+      }).join("");
+      if (r.blocking) toast("Execution blocked: " + r.blocking, "neg");
+    }).catch(function () {});
+
+    previewOrder();
+  }
+
+  function previewOrder() {
+    var pr = $("#pvPrice"), eq = $("#pvEquity");
+    if (!pr || !eq) return;
+    api("/api/exchange/preview?price=" + encodeURIComponent(pr.value) +
+        "&equity=" + encodeURIComponent(eq.value)).then(function (d) {
+      $("#pvLegs").innerHTML = d.legs.map(function (l) {
+        return "<tr><td><span class='badge " + (l.leg === "LONG" ? "pass" : "fail") + "'>" + l.leg + "</span></td>" +
+          "<td class='mono'>" + esc(l.side) + "</td><td class='mono muted'>" + esc(l.positionSide) + "</td>" +
+          "<td class='num mono'>" + fmt(l.size) + "</td>" +
+          "<td class='num mono neg'>" + money(l.stopLoss) + "</td>" +
+          "<td class='num mono pos'>" + money(l.takeProfit) + "</td></tr>";
+      }).join("");
+      $("#pvNote").innerHTML = d.tradable
+        ? fmt(d.contracts_per_leg) + " contracts/leg · " + money(d.notional_per_leg) +
+          " notional per leg · " + d.leverage + "× on " + esc(d.symbol)
+        : "<span class='neg'>Not tradable: size rounds to zero contracts at this equity/price.</span>";
+    }).catch(function (e) { rowsInto($("#pvLegs"), "", 6, e.message); });
+  }
+  ["#pvPrice", "#pvEquity"].forEach(function (s) {
+    var el = $(s);
+    if (el) { var t; el.addEventListener("input", function () { clearTimeout(t); t = setTimeout(previewOrder, 300); }); }
+  });
+
+  var pfBtn = $("#preflightBtn");
+  if (pfBtn) pfBtn.addEventListener("click", function () {
+    var host = $("#execPreflight");
+    host.innerHTML = '<div class="loading"><div class="spinner"></div><span>Contacting exchange…</span></div>';
+    api("/api/exchange/preflight").then(function (p) {
+      if (p.ready && p.note) { host.innerHTML = '<div class="callout info">' + esc(p.note) + "</div>"; return; }
+      var rows = Object.keys(p.checks || {}).map(function (k) {
+        var c = p.checks[k];
+        return "<tr><td>" + esc(k.replace(/_/g, " ")) + "</td><td>" +
+          (c.ok ? '<span class="badge pass">ok</span>' : '<span class="badge fail">fail</span>') +
+          "</td><td class='muted' style='white-space:normal'>" + esc(c.ok ? String(c.value) : c.error).slice(0, 90) + "</td></tr>";
+      }).join("");
+      host.innerHTML = "<div class='table-wrap' style='border:none'><table><tbody>" + rows + "</tbody></table></div>" +
+        (p.ready ? '<div class="callout info" style="margin-top:var(--s-3)">All checks passed — account is ready.</div>'
+                 : '<div class="callout warn" style="margin-top:var(--s-3)"><span>⚠</span><span>' +
+                   esc(p.fatal || "Not ready. Blocking: " + (p.blocking || []).join(", ")) + "</span></div>");
+      toast(p.ready ? "Preflight passed" : "Preflight failed", p.ready ? "pos" : "neg");
+    }).catch(function (e) {
+      host.innerHTML = '<div class="callout warn"><span>⚠</span><span>' + esc(e.message) + "</span></div>";
+    });
+  });
+
+  var ecBtn = $("#execCycleBtn");
+  if (ecBtn) ecBtn.addEventListener("click", function () {
+    fetch("/api/exchange/cycle", { method: "POST" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.executed) toast("Double entry placed @ " + money(d.executed.entry_price), "pos");
+        else if (d.blocked) toast("Blocked: " + d.blocked, "neg");
+        else toast(d.elite === false ? "No squeeze on this bar" : "Cycle complete");
+        loadExecution();
+      }).catch(function (e) { toast(e.message, "neg"); });
+  });
+
   /* ---------------------------------------------------------------- risk */
   function loadCosts() {
     api("/api/costs").then(function (c) {
@@ -440,7 +585,7 @@
     }
     if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
     var n = parseInt(e.key, 10);
-    if (n >= 1 && n <= 8) show(Object.keys(TITLES)[n - 1]);
+    if (n >= 1 && n <= 9) show(Object.keys(TITLES)[n - 1]);
   });
 
   var pb = $("#paletteBtn"); if (pb) pb.addEventListener("click", openPalette);
