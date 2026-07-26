@@ -32,8 +32,11 @@ the dashboard:
 
 ```
 KUCOIN_API_KEY  KUCOIN_API_SECRET  KUCOIN_API_PASSPHRASE  KUCOIN_SANDBOX=1
-V01T_LIVE=I_UNDERSTAND      # required before any real order is sent
+V01T_EXEC_MODE=paper        # paper (default) | dry_run | live
+V01T_LIVE=I_UNDERSTAND      # additionally required before any real order
 ```
+
+KuCoin Futures is the only supported venue. See `KUCOIN_SETUP.md`.
 
 Set these as Replit **Secrets**, never in the repo. `.gitignore` covers `.env`.
 

@@ -298,7 +298,7 @@
 
       $("#execMetrics").innerHTML = [
         metricCard("Mode", x.mode.toUpperCase(), x.mode_meaning, live ? "bad" : "ok", live ? "neg" : "pos"),
-        metricCard("Venue", "KUCOIN", "alternate: " + x.alternate, "", ""),
+        metricCard("Venue", "KUCOIN", "futures · hedge mode", "", ""),
         metricCard("Legs / Squeeze", String(x.double_entry.legs_per_squeeze), "long + short, same price", "ok", "pos"),
         metricCard("Net Edge", pct(x.double_entry.net_pct_of_capital * 100, 1), "of capital per squeeze", "ok", "pos"),
         metricCard("Squeezes Executed", fmt(st.squeezes_executed), fmt(st.legs_placed) + " legs placed", "", ""),
@@ -323,8 +323,7 @@
       $("#execCreds").innerHTML = [
         ["KUCOIN_API_KEY", c.kucoin_api_key], ["KUCOIN_API_SECRET", c.kucoin_api_secret],
         ["KUCOIN_API_PASSPHRASE", c.kucoin_api_passphrase],
-        ["V01T_LIVE confirmation", c.live_confirmation],
-        ["BYBIT_API_KEY", c.bybit_api_key], ["BYBIT_API_SECRET", c.bybit_api_secret]
+        ["V01T_LIVE confirmation", c.live_confirmation]
       ].map(function (r) {
         return "<tr><td class='mono muted'>" + esc(r[0]) + "</td><td>" +
           (r[1] ? '<span class="badge pass">set</span>' : '<span class="badge neutral">not set</span>') +

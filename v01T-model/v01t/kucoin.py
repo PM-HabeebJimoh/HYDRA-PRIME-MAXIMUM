@@ -27,7 +27,7 @@ with a side:
 AUTH — differs from most exchanges
 ----------------------------------
 KuCoin signs `timestamp + method + endpoint + body` with HMAC-SHA256 and then
-**base64-encodes** the digest (Bybit uses a plain hex digest). It additionally
+**base64-encodes** the digest — not the plain hex digest most venues use. It also
 requires the API passphrase, itself signed the same way, plus a key-version
 header. Getting any of these wrong returns 401.
 

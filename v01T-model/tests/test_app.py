@@ -394,3 +394,41 @@ def test_dashboard_exposes_the_auto_trading_view():
     assert 'data-view="execution"' in html
     assert "Auto Trading" in html
     assert "positionSide" in html          # the leg contract is shown
+
+
+# ------------------------------------------------ KuCoin is the sole venue ---
+
+def test_no_bybit_anywhere_in_the_project():
+    """Regression guard: Bybit was removed; it must not reappear."""
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    hits = []
+    for f in root.rglob("*"):
+        if not f.is_file():
+            continue
+        if any(part in {".git", "__pycache__", ".pytest_cache"} for part in f.parts):
+            continue
+        if f.suffix not in {".py", ".js", ".css", ".html", ".md", ".txt", ".yml", ".json"}:
+            continue
+        if f.name == "test_app.py":          # this guard names it deliberately
+            continue
+        try:
+            if "bybit" in f.read_text(errors="ignore").lower():
+                hits.append(str(f.relative_to(root)))
+        except Exception:
+            pass
+    assert hits == [], "Bybit references remain: %s" % hits
+
+
+def test_kucoin_is_the_only_exchange_exposed():
+    body = client.get("/api/exchange").json()
+    assert body["exchange"] == "kucoin-futures"
+    assert "alternate" not in body
+    for key in body["credentials"]:
+        assert "bybit" not in key.lower()
+
+
+def test_kucoin_modules_are_intact():
+    from v01t import kucoin, kucoin_executor
+    assert kucoin.DEFAULT_SYMBOL == "XBTUSDTM"
+    assert kucoin_executor.MODE_PAPER == "paper"

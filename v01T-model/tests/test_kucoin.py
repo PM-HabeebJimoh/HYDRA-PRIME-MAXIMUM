@@ -65,7 +65,7 @@ def client():
 # ----------------------------------------------------------------- signing ---
 
 def test_signature_is_base64_not_hex():
-    """KuCoin base64-encodes the HMAC digest; Bybit uses hex. Easy to get wrong."""
+    """KuCoin base64-encodes the HMAC digest, not hex. Easy to get wrong."""
     sig = sign_message("secret", "message")
     assert base64.b64decode(sig)                    # valid base64
     expected = base64.b64encode(

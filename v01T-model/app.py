@@ -50,8 +50,6 @@ from v01t.report import full_report
 from v01t.sizing import DEFAULT_SIZER
 from v01t.ve_monitor import VolExpansionMonitor
 from v01t.vol_expansion import VolExpansionModel
-from v01t.bybit import BybitClient
-from v01t.bybit_executor import BybitExecutor
 from v01t.kucoin import DEFAULT_SYMBOL as KUCOIN_SYMBOL, KucoinClient
 from v01t.kucoin_executor import (MODE_DRY_RUN, MODE_LIVE, MODE_PAPER,
                                   KucoinExecutor, RiskLimits)
@@ -106,7 +104,7 @@ _VE_MONITOR = VolExpansionMonitor(
 )
 
 # ---------------------------------------------------------------------------
-# EXCHANGE EXECUTION — KuCoin Futures (primary) and Bybit (alternate)
+# EXCHANGE EXECUTION — KuCoin Futures
 #
 # Mode is read from the environment and defaults to PAPER, so importing this
 # module can never place a real order. Live requires BOTH:
@@ -147,8 +145,6 @@ def _credentials_present() -> dict:
         "kucoin_api_passphrase": bool(os.environ.get("KUCOIN_API_PASSPHRASE")),
         "kucoin_sandbox": os.environ.get("KUCOIN_SANDBOX", "1") != "0",
         "live_confirmation": os.environ.get("V01T_LIVE") == "I_UNDERSTAND",
-        "bybit_api_key": bool(os.environ.get("BYBIT_API_KEY")),
-        "bybit_api_secret": bool(os.environ.get("BYBIT_API_SECRET")),
     }
 
 
@@ -579,7 +575,6 @@ def exchange_status():
     st = _EXECUTOR.state
     return {
         "exchange": "kucoin-futures",
-        "alternate": "bybit",
         "symbol": _EXECUTOR.symbol,
         "mode": _EXECUTOR.mode,
         "mode_meaning": {
