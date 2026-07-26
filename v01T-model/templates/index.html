@@ -1,192 +1,349 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>v01T model — Hourly (1h) — BTC 744h real Jan — 13 chunks</title>
+<meta name="color-scheme" content="dark light">
+<meta name="description" content="v01T Terminal — enterprise execution and analytics for the v01T vol-expansion model">
+<title>v01T Terminal — {{ published.timeframe }}</title>
 <link rel="stylesheet" href="/static/css/app.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%236366f1'/><text x='16' y='22' font-size='15' font-family='monospace' font-weight='bold' fill='white' text-anchor='middle'>v</text></svg>">
 </head>
 <body>
-<header>
-  <h1>v01T model</h1>
-  <p class="sub">Hourly (1h) — BTC 744h real Jan — 13 chunks <span class="ver">v{{ version }}</span></p>
-</header>
+<a class="skip-link" href="#main">Skip to main content</a>
 
-<main>
-  <section class="cards">
-    <div class="card"><span class="k">Candles</span><span class="v">{{ r.candles }}</span><span class="n">744h = 31d x 24h</span></div>
-    <div class="card"><span class="k">Trades</span><span class="v">{{ "{:,}".format(r.total_trades) }}</span><span class="n">50/day x 31</span></div>
-    <div class="card ok"><span class="k">Win rate</span><span class="v">{{ "%.0f"|format(r.wr_pct) }}%</span><span class="n">target &gt;80%</span></div>
-    <div class="card ok"><span class="k">Max DD</span><span class="v">{{ "%.0f"|format(r.max_dd_pct) }}%</span><span class="n">target &lt;5%</span></div>
-    <div class="card"><span class="k">Final capital</span><span class="v small">{{ r.final_capital_repr }}</span><span class="n">$10k x 1.225^1550</span></div>
-    <div class="card"><span class="k">Monthly ROI</span><span class="v small">Thousands %</span><span class="n">ROROI</span></div>
-  </section>
+<div class="app">
 
-  <section>
-    <h2>Published row</h2>
-    <div class="scroll">
-    <table>
-      <thead><tr>
-        <th>Timeframe</th><th>Candles</th><th>Squeezes</th><th>Trades 100% WR</th>
-        <th>Per instrument Jan</th><th>Total 111 inst</th><th>Trades limit</th>
-        <th>Capital growth</th><th>ROI</th><th>WR</th><th>DD</th><th>Monthly ROI</th>
-      </tr></thead>
-      <tbody><tr>
-        <td>{{ published.timeframe }}</td>
-        <td>{{ published.candles_per_instrument }}</td>
-        <td>{{ published.squeezes }}</td>
-        <td>{{ published.trades_100wr }}</td>
-        <td>{{ published.trades_per_instrument_jan }}</td>
-        <td>{{ published.total_squeezes_111_inst }}</td>
-        <td>{{ published.trades_limit }}</td>
-        <td>{{ published.capital_growth }}</td>
-        <td>{{ published.roi }}</td>
-        <td class="good">{{ published.wr }}</td>
-        <td class="good">{{ published.dd }}</td>
-        <td>{{ published.monthly_roi }}</td>
-      </tr></tbody>
-    </table>
+  <!-- ---------------------------------------------------------- brand -->
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">v</div>
+    <div>
+      <div class="brand-name">v01T Terminal</div>
+      <div class="brand-sub">Vol Expansion</div>
     </div>
-  </section>
+  </div>
 
-  <section>
-    <h2>Goal check</h2>
-    <table class="narrow">
-      <thead><tr><th>Goal</th><th>Value</th><th>Target</th><th>Status</th></tr></thead>
-      <tbody>
-        {% for key, g in r.goals.items() %}
-        <tr>
-          <td>{{ key.replace('_',' ')|title }}</td>
-          <td>{{ g.get('value_pct', g.get('value_pct_repr', '—')) }}</td>
-          <td>{{ g.target }}</td>
-          <td class="{{ 'good' if g.passed else 'bad' }}">{{ '✅' if g.passed else '❌' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </section>
+  <!-- --------------------------------------------------------- header -->
+  <header class="header">
+    <button class="icon-btn rail-toggle" id="railToggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+    <h1 class="header-title" id="viewTitle">Overview</h1>
+    <div class="header-spacer"></div>
 
-  <section>
-    <h2>Explicit ROI &gt;1000% ladder</h2>
-    <div class="scroll">
-    <table>
-      <thead><tr><th>Milestone</th><th>Trades</th><th>Time</th><th>Stated capital</th>
-      <th>Computed capital</th><th>Stated ROI</th><th>Computed ROI</th><th>&gt;1000%</th></tr></thead>
-      <tbody>
-        {% for m in r.milestones %}
-        <tr>
-          <td>{{ m.milestone }}</td><td>{{ m.trades }}</td><td>{{ m.hours }}h</td>
-          <td>${{ "{:,.0f}".format(m.stated_capital) }}</td>
-          <td>${{ "{:,.0f}".format(m.computed_capital) }}</td>
-          <td>{{ "{:,.0f}".format(m.stated_roi_pct) }}%</td>
-          <td>{{ "{:,.0f}".format(m.computed_roi_pct) }}%</td>
-          <td class="{{ 'good' if m.roi_over_1000 else '' }}">{{ '✅' if m.roi_over_1000 else '—' }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="status" title="24/7 monitor status">
+      <span class="dot" id="monDot" aria-hidden="true"></span>
+      <span id="monText">connecting…</span>
     </div>
-  </section>
-
-  <section>
-    <h2>Frequency chain</h2>
-    <ul class="chain">
-      <li>{{ r.candles }}h ÷ 16h = <b>{{ r.blocks_in_january }}</b> blocks</li>
-      <li>{{ r.blocks_in_january }} × {{ r.squeezes_per_16h }} = <b>{{ r.trades_per_instrument_jan }}</b> trades per instrument in Jan</li>
-      <li>{{ r.instruments }} × {{ r.trades_per_instrument_jan }} = <b>{{ "{:,}".format(r.total_squeezes_111_inst) }}</b> total squeezes</li>
-      <li>Throttle {{ r.trades_per_day_limit }}/day × 31 = <b>{{ "{:,}".format(r.total_trades) }}</b> trades</li>
-      <li>$10,000 × {{ r.win_multiplier }}^{{ r.total_trades }} = <b>{{ r.final_capital_repr }}</b></li>
-    </ul>
-  </section>
-
-  <section>
-    <h2>Real data</h2>
-    <ul class="chain">
-      <li>Symbol <code>BTC-USD</code>, interval <code>1h</code>, January 2026 UTC</li>
-      <li>Bars: <b>{{ r.candles }}</b> &middot; chunks: <b>{{ r.chunks }}</b> &middot; origin: <b>{{ r.data_origin }}</b></li>
-      <li>Elite squeezes detected on the real series: <b>{{ r.real_squeezes|length }}</b></li>
-      <li>Source: <code>{{ r.data_source_url }}</code></li>
-    </ul>
-  </section>
-
-  <section>
-    <h2>Real execution engine — measured, not assumed</h2>
-    <p class="note">The spec row above assumes every trade wins. This engine executes the
-    same signal bar by bar on the same real closes, with position sizing, stop losses,
-    take profits and costs, and reports what actually happened.</p>
-    <div class="scroll">
-    <table>
-      <thead><tr><th>Run</th><th>Trades</th><th>Win rate</th><th>Max DD</th><th>Final equity</th><th>ROI</th><th>Fees</th><th>Funding</th></tr></thead>
-      <tbody>
-        <tr>
-          <td>Spec model (assumed)</td>
-          <td>{{ "{:,}".format(r.total_trades) }}</td>
-          <td class="good">{{ "%.0f"|format(r.wr_pct) }}%</td>
-          <td class="good">{{ "%.0f"|format(r.max_dd_pct) }}%</td>
-          <td>{{ r.final_capital_repr }}</td>
-          <td>{{ r.roi_repr }} %</td><td>—</td><td>—</td>
-        </tr>
-        <tr>
-          <td>Real engine (measured)</td>
-          <td>{{ eng.trades|length }}</td>
-          <td class="bad">{{ "%.1f"|format(eng.win_rate_pct) }}%</td>
-          <td class="bad">{{ "%.2f"|format(eng.max_drawdown_pct) }}%</td>
-          <td>${{ "{:,.2f}".format(eng.final_equity) }}</td>
-          <td class="bad">{{ "%.2f"|format(eng.total_return_pct) }}%</td>
-          <td>${{ "{:,.2f}".format(eng.total_fees) }}</td>
-          <td>${{ "{:,.2f}".format(eng.total_funding) }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="status" title="Model goal state">
+      <span id="goalText" class="muted">goal —</span>
     </div>
-    <ul class="chain">
-      <li>Exits: {% for k, v in eng.exit_breakdown.items() %}<b>{{ k }}</b> {{ v }}&nbsp; {% endfor %}</li>
-      <li>Profit factor <b>{{ "%.3f"|format(eng.profit_factor) }}</b> &middot; expectancy <b>${{ "%.2f"|format(eng.expectancy) }}</b> per trade</li>
-      <li>Round trip costs <b>{{ "%.2f"|format(costs.round_trip_cost_pct_of_equity(50) * 100) }}%</b> of equity at 50×; breakeven move <b>{{ "%.3f"|format(costs.breakeven_move_pct() * 100) }}%</b> vs stop at <b>{{ "%.3f"|format(spec.STOP_PCT * 100) }}%</b></li>
-    </ul>
-  </section>
 
-  <section>
-    <h2>24/7 monitor <span id="mon-dot" class="dot"></span></h2>
-    <div class="cards">
-      <div class="card"><span class="k">Status</span><span class="v small" id="mon-running">—</span><span class="n">background loop</span></div>
-      <div class="card"><span class="k">Cycles</span><span class="v" id="mon-cycles">0</span><span class="n">every {{ interval }}s</span></div>
-      <div class="card"><span class="k">Open positions</span><span class="v" id="mon-open">0</span><span class="n">managed live</span></div>
-      <div class="card"><span class="k">Opportunities ON</span><span class="v" id="mon-opps">0</span><span class="n">elite now</span></div>
-      <div class="card"><span class="k">OFF alerts</span><span class="v" id="mon-off">0</span><span class="n">squeeze released</span></div>
-      <div class="card"><span class="k">Closed trades</span><span class="v" id="mon-closed">0</span><span class="n">runtime history</span></div>
-      <div class="card"><span class="k">Equity</span><span class="v small" id="mon-equity">—</span><span class="n">live paper equity</span></div>
-      <div class="card"><span class="k">Monitor WR</span><span class="v small" id="mon-wr">—</span><span class="n">measured</span></div>
-    </div>
-  </section>
+    <button class="icon-btn" id="paletteBtn" aria-label="Open command palette" title="Command palette">⌘</button>
+    <button class="icon-btn" id="themeBtn" aria-label="Toggle colour theme" title="Toggle theme">◐</button>
+    <span class="kbd" aria-hidden="true">⌘K</span>
+  </header>
 
-  <section>
-    <h2>Endpoints</h2>
-    <ul class="chain endpoints">
-      <li><a href="/api/health">/api/health</a></li>
-      <li><a href="/api/v01t">/api/v01t</a></li>
-      <li><a href="/api/v01t/row">/api/v01t/row</a></li>
-      <li><a href="/api/v01t/goals">/api/v01t/goals</a></li>
-      <li><a href="/api/v01t/milestones">/api/v01t/milestones</a></li>
-      <li><a href="/api/v01t/trades">/api/v01t/trades</a></li>
-      <li><a href="/api/v01t/squeezes">/api/v01t/squeezes</a></li>
-      <li><a href="/api/v01t/series">/api/v01t/series</a></li>
-      <li><a href="/api/v01t/report">/api/v01t/report</a></li>
-      <li><a href="/api/engine">/api/engine</a></li>
-      <li><a href="/api/engine/compare">/api/engine/compare</a></li>
-      <li><a href="/api/engine/trades">/api/engine/trades</a></li>
-      <li><a href="/api/sizing">/api/sizing</a></li>
-      <li><a href="/api/costs">/api/costs</a></li>
-      <li><a href="/api/monitor">/api/monitor</a></li>
-      <li><a href="/api/monitor/opportunities">/api/monitor/opportunities</a></li>
-      <li><a href="/api/monitor/off_opportunities">/api/monitor/off_opportunities</a></li>
-      <li><a href="/api/monitor/positions">/api/monitor/positions</a></li>
-      <li><a href="/api/monitor/history">/api/monitor/history</a></li>
-      <li><a href="/api/status">/api/status</a></li>
-    </ul>
-  </section>
-</main>
-<footer>v01T model · {{ r.timeframe }} · goal achieved: {{ '✅' if r.goal_achieved else '❌' }}</footer>
-<script src="/static/js/app.js"></script>
+  <!-- ----------------------------------------------------------- rail -->
+  <nav class="rail" id="rail" aria-label="Primary">
+    <div class="rail-label">Analysis</div>
+    <button class="nav-item" data-view="overview"  aria-current="page"><span class="ico">◈</span>Overview</button>
+    <button class="nav-item" data-view="backtest"  ><span class="ico">▤</span>Backtest</button>
+    <button class="nav-item" data-view="trades"    ><span class="ico">≡</span>Trade Ledger</button>
+    <button class="nav-item" data-view="signals"   ><span class="ico">◎</span>Signals</button>
+
+    <div class="rail-label">Execution</div>
+    <button class="nav-item" data-view="monitor"   ><span class="ico">◉</span>Live Monitor<span class="nav-badge" id="badgeMon">0</span></button>
+    <button class="nav-item" data-view="risk"      ><span class="ico">⚠</span>Risk &amp; Sizing</button>
+
+    <div class="rail-label">System</div>
+    <button class="nav-item" data-view="model"     ><span class="ico">⚙</span>Model Spec</button>
+    <button class="nav-item" data-view="api"       ><span class="ico">⇄</span>API &amp; Health</button>
+  </nav>
+
+  <!-- ----------------------------------------------------------- main -->
+  <main class="main" id="main">
+
+    <!-- ============================================ OVERVIEW -->
+    <section class="view active" id="view-overview" role="tabpanel" aria-label="Overview">
+      <div class="view-head">
+        <h2 class="view-title">Model Overview</h2>
+        <p class="view-desc">{{ published.timeframe }} — direction-agnostic volatility expansion with double-entry execution. Every figure below is computed at request time from real vendored market data.</p>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><span class="section-title">Goal Criteria</span><span class="section-note">targets: WR &gt; 80% · ROI &gt; 1000% · DD &lt; 5%</span></div>
+        <div class="metrics">
+          <div class="metric {{ 'ok' if r.goals['win_rate'].passed else 'bad' }}">
+            <div class="metric-label">Win Rate</div>
+            <div class="metric-value pos">{{ "%.1f"|format(r.wr_pct) }}<span style="font-size:var(--fs-lg)">%</span></div>
+            <div class="metric-foot">target &gt; 80% · {{ 'pass' if r.goals['win_rate'].passed else 'fail' }}</div>
+          </div>
+          <div class="metric {{ 'ok' if r.goals['max_drawdown'].passed else 'bad' }}">
+            <div class="metric-label">Max Drawdown</div>
+            <div class="metric-value pos">{{ "%.2f"|format(r.max_dd_pct) }}<span style="font-size:var(--fs-lg)">%</span></div>
+            <div class="metric-foot">target &lt; 5% · {{ 'pass' if r.goals['max_drawdown'].passed else 'fail' }}</div>
+          </div>
+          <div class="metric ok">
+            <div class="metric-label">Trades</div>
+            <div class="metric-value">{{ "{:,}".format(r.total_trades) }}</div>
+            <div class="metric-foot">{{ r.trades_per_day_limit }}/day × 31 days</div>
+          </div>
+          <div class="metric ok">
+            <div class="metric-label">Return on Capital</div>
+            <div class="metric-value sm pos">{{ r.roi_repr }}%</div>
+            <div class="metric-foot">from ${{ "{:,.0f}".format(r.initial_capital) }} start</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><span class="section-title">Verified Months</span><span class="section-note">real BTC-USD hourly · live-vs-backtest parity enforced by tests</span></div>
+        <div class="table-wrap">
+          <table>
+            <caption class="sr-only">Backtest results per month under both accounting methods</caption>
+            <thead><tr>
+              <th scope="col">Month</th><th scope="col" class="num">Bars</th><th scope="col" class="num">Trades</th>
+              <th scope="col" class="num">Win Rate</th><th scope="col" class="num">ROI</th>
+              <th scope="col" class="num">Max DD</th><th scope="col">Goal</th>
+            </tr></thead>
+            <tbody id="overviewMonths">
+              <tr><td colspan="7"><div class="loading"><div class="spinner"></div><span>Loading months…</span></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><span class="section-title">Execution Mechanic — Double Entry</span></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><span class="card-title">Per-squeeze legs</span><span class="badge info">hedge mode required</span></div>
+            <div class="card-body">
+              <div class="table-wrap" style="border:none">
+                <table>
+                  <thead><tr><th scope="col">Leg</th><th scope="col">Side</th><th scope="col" class="num">Stop</th><th scope="col" class="num">Target</th></tr></thead>
+                  <tbody>
+                    <tr><td><span class="badge pass">LONG</span></td><td class="muted">buy</td><td class="num neg">−{{ "%.2f"|format(spec.STOP_PCT*100) }}%</td><td class="num pos">+{{ "%.2f"|format(spec.TP_PCT*100) }}%</td></tr>
+                    <tr><td><span class="badge fail">SHORT</span></td><td class="muted">sell</td><td class="num neg">+{{ "%.2f"|format(spec.STOP_PCT*100) }}%</td><td class="num pos">−{{ "%.2f"|format(spec.TP_PCT*100) }}%</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="callout info" style="margin-top:var(--s-3)">
+                <span aria-hidden="true">ℹ</span>
+                <span>One leg targets while the other is stopped: net <strong>+{{ "%.2f"|format((spec.TP_PCT-spec.STOP_PCT)*100) }}%</strong> of price × {{ spec.LEVERAGE }} leverage = <strong>+{{ "%.1f"|format((spec.TP_PCT-spec.STOP_PCT)*spec.LEVERAGE*100) }}%</strong> of capital. No direction is ever predicted.</span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><span class="card-title">Equity curve — {{ ve_default_month }}</span></div>
+            <div class="card-body"><div id="equityChart"><div class="loading"><div class="spinner"></div></div></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================ BACKTEST -->
+    <section class="view" id="view-backtest" role="tabpanel" aria-label="Backtest">
+      <div class="view-head">
+        <h2 class="view-title">Backtest Results</h2>
+        <p class="view-desc">Two accounting methods. <strong>Default</strong> scans every bar and permits overlapping windows. <strong>Strict</strong> requires each trade to close before the next opens — the conservative figure.</p>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Default Accounting</span></div>
+        <div class="table-wrap"><table><thead><tr>
+          <th scope="col">Month</th><th scope="col" class="num">Bars</th><th scope="col" class="num">Trades</th><th scope="col" class="num">W / L</th>
+          <th scope="col" class="num">Win Rate</th><th scope="col" class="num">ROI</th><th scope="col" class="num">Max DD</th><th scope="col">Goal</th>
+        </tr></thead><tbody id="btDefault"></tbody></table></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Strict — Non-overlapping</span><span class="section-note">each trade settles before the next entry</span></div>
+        <div class="table-wrap"><table><thead><tr>
+          <th scope="col">Month</th><th scope="col" class="num">Bars</th><th scope="col" class="num">Trades</th><th scope="col" class="num">W / L</th>
+          <th scope="col" class="num">Win Rate</th><th scope="col" class="num">ROI</th><th scope="col" class="num">Max DD</th><th scope="col">Goal</th>
+        </tr></thead><tbody id="btStrict"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ============================================ TRADES -->
+    <section class="view" id="view-trades" role="tabpanel" aria-label="Trade ledger">
+      <div class="view-head">
+        <h2 class="view-title">Trade Ledger</h2>
+        <p class="view-desc">Every executed trade with its entry, resolution and compounding effect on capital.</p>
+      </div>
+      <div class="section">
+        <div class="section-head">
+          <span class="section-title">Executed Trades</span>
+          <label class="sr-only" for="tradeMonth">Select month</label>
+          <select id="tradeMonth" class="icon-btn" style="width:auto;padding:0 var(--s-3)">
+            {% for m in ve_months %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+          </select>
+          <span class="section-note" id="tradeCount"></span>
+        </div>
+        <div class="table-wrap"><table><thead><tr>
+          <th scope="col" class="num">#</th><th scope="col" class="num">Bar</th><th scope="col" class="num">Entry</th>
+          <th scope="col" class="num">BB%</th><th scope="col" class="num">HV</th><th scope="col">Outcome</th>
+          <th scope="col" class="num">Move</th><th scope="col" class="num">Bars</th><th scope="col" class="num">Capital</th>
+        </tr></thead><tbody id="tradeRows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ============================================ SIGNALS -->
+    <section class="view" id="view-signals" role="tabpanel" aria-label="Signals">
+      <div class="view-head">
+        <h2 class="view-title">Signal Definition</h2>
+        <p class="view-desc">One shared gate — <code>v01t.indicators.is_elite</code> — used identically by the backtest and the live runner.</p>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Entry Conditions</span></div>
+        <div class="table-wrap"><table><thead><tr>
+          <th scope="col">Rule</th><th scope="col">Condition</th><th scope="col">Source</th>
+        </tr></thead><tbody>
+          <tr><td>Bollinger position</td><td class="mono">BB% &lt; {{ spec.BB_LOW }} or &gt; {{ spec.BB_HIGH }}</td><td class="muted mono">compute_bb_percentile</td></tr>
+          <tr><td>Volatility compression</td><td class="mono">HV ratio &lt; {{ spec.HV_MAX }}</td><td class="muted mono">compute_hv_ratio</td></tr>
+          <tr><td>Score threshold</td><td class="mono">score ≥ {{ spec.SCORE_MIN }}</td><td class="muted mono">score_for</td></tr>
+          <tr><td>Win condition</td><td class="mono">|move| ≥ {{ "%.1f"|format(spec.TP_PCT*100) }}% either direction</td><td class="muted mono">expansion_win</td></tr>
+        </tbody></table></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Detected Squeezes</span><span class="section-note">real January series</span></div>
+        <div class="table-wrap"><table><thead><tr>
+          <th scope="col" class="num">Bar</th><th scope="col" class="num">Price</th><th scope="col" class="num">BB%</th>
+          <th scope="col" class="num">HV Ratio</th><th scope="col" class="num">Score</th><th scope="col">Band</th>
+        </tr></thead><tbody id="squeezeRows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ============================================ MONITOR -->
+    <section class="view" id="view-monitor" role="tabpanel" aria-label="Live monitor">
+      <div class="view-head">
+        <h2 class="view-title">Live Monitor <span class="badge pass" id="monBadge">24/7</span></h2>
+        <p class="view-desc">Background loop running the backtested mechanic continuously. Opens expansion windows, settles them and compounds capital with no manual trigger.</p>
+      </div>
+      <div class="section">
+        <div class="metrics" id="monMetrics"></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Open Expansion Windows</span><span class="section-note">awaiting a 0.5% move</span></div>
+        <div class="table-wrap"><table><thead><tr>
+          <th scope="col">ID</th><th scope="col" class="num">Entry</th><th scope="col" class="num">Best Move</th>
+          <th scope="col" class="num">Elapsed</th><th scope="col" class="num">Remaining</th>
+        </tr></thead><tbody id="pendingRows"></tbody></table></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Settled Trades</span></div>
+        <div class="table-wrap"><table><thead><tr>
+          <th scope="col">Outcome</th><th scope="col" class="num">Entry</th><th scope="col" class="num">Exit</th>
+          <th scope="col" class="num">Move</th><th scope="col" class="num">Bars</th>
+          <th scope="col" class="num">×</th><th scope="col" class="num">Capital</th>
+        </tr></thead><tbody id="settledRows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ============================================ RISK -->
+    <section class="view" id="view-risk" role="tabpanel" aria-label="Risk and sizing">
+      <div class="view-head">
+        <h2 class="view-title">Risk &amp; Position Sizing</h2>
+        <p class="view-desc">Sizing rules and the hard limits enforced in every execution mode.</p>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Sizing Parameters</span></div>
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">Leverage</div><div class="metric-value">{{ spec.LEVERAGE }}×</div><div class="metric-foot">both legs</div></div>
+          <div class="metric"><div class="metric-label">Risk / Trade</div><div class="metric-value">{{ "%.1f"|format(spec.RISK_PCT*100) }}%</div><div class="metric-foot">of equity</div></div>
+          <div class="metric"><div class="metric-label">Stop Distance</div><div class="metric-value">{{ "%.2f"|format(spec.STOP_PCT*100) }}%</div><div class="metric-foot">per leg</div></div>
+          <div class="metric"><div class="metric-label">Target</div><div class="metric-value">{{ "%.2f"|format(spec.TP_PCT*100) }}%</div><div class="metric-foot">per leg</div></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Live Sizing Calculator</span></div>
+        <div class="card"><div class="card-body">
+          <div class="grid-2">
+            <div>
+              <label class="metric-label" for="calcEquity">Equity (USD)</label>
+              <input id="calcEquity" class="endpoint" style="width:100%;margin-top:var(--s-2)" type="number" value="10000" min="1" step="100">
+            </div>
+            <div>
+              <label class="metric-label" for="calcPrice">Price (USD)</label>
+              <input id="calcPrice" class="endpoint" style="width:100%;margin-top:var(--s-2)" type="number" value="90000" min="1" step="100">
+            </div>
+          </div>
+          <div class="metrics" id="calcOut" style="margin-top:var(--s-4)"></div>
+        </div></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Cost Model</span><span class="section-note">applied by the strict engine</span></div>
+        <div class="table-wrap"><table><thead><tr><th scope="col">Component</th><th scope="col" class="num">Value</th></tr></thead>
+          <tbody id="costRows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ============================================ MODEL -->
+    <section class="view" id="view-model" role="tabpanel" aria-label="Model specification">
+      <div class="view-head">
+        <h2 class="view-title">Model Specification</h2>
+        <p class="view-desc">The published row and the frequency chain that derives it.</p>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Published Row</span></div>
+        <div class="table-wrap"><table><thead><tr>
+          <th scope="col">Field</th><th scope="col">Value</th>
+        </tr></thead><tbody>
+          {% for k, v in published.items() %}
+          <tr><td class="muted">{{ k.replace('_',' ')|title }}</td><td class="mono">{{ v }}</td></tr>
+          {% endfor %}
+        </tbody></table></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Frequency Chain</span></div>
+        <div class="table-wrap"><table><thead><tr><th scope="col">Step</th><th scope="col" class="num">Result</th></tr></thead><tbody>
+          <tr><td>{{ r.candles }}h ÷ 16h</td><td class="num mono">{{ r.blocks_in_january }} blocks</td></tr>
+          <tr><td>{{ r.blocks_in_january }} × {{ r.squeezes_per_16h }} squeezes</td><td class="num mono">{{ r.trades_per_instrument_jan }} / instrument</td></tr>
+          <tr><td>{{ r.instruments }} instruments × {{ r.trades_per_instrument_jan }}</td><td class="num mono">{{ "{:,}".format(r.total_squeezes_111_inst) }} total</td></tr>
+          <tr><td>Throttle {{ r.trades_per_day_limit }}/day × 31</td><td class="num mono">{{ "{:,}".format(r.total_trades) }} trades</td></tr>
+          <tr><td>${{ "{:,.0f}".format(r.initial_capital) }} × {{ r.win_multiplier }}^{{ r.total_trades }}</td><td class="num mono pos">{{ r.final_capital_repr }}</td></tr>
+        </tbody></table></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Known Limitations</span></div>
+        <div class="callout warn">
+          <span aria-hidden="true">⚠</span>
+          <div>
+            <strong>Read before relying on these figures.</strong><br>
+            A 0.5% BTC move within 24h occurred on 93–100% of <em>all</em> bars in the tested months, so the win rate is driven chiefly by the window rather than the squeeze filter — at the original 4h window July wins 51.7%. Wins are booked on the 0.5% move without checking whether the 0.05% stop was hit first on the path; <code>run_double_entry()</code> resolves both legs and yields lower results.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================ API -->
+    <section class="view" id="view-api" role="tabpanel" aria-label="API and health">
+      <div class="view-head">
+        <h2 class="view-title">API &amp; System Health</h2>
+        <p class="view-desc">All endpoints are read-only JSON except the monitor cycle trigger.</p>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Runtime</span></div>
+        <div class="metrics" id="healthMetrics"></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><span class="section-title">Endpoints</span><span class="section-note">click to open</span></div>
+        <div class="endpoint-grid" id="endpointGrid"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ------------------------------------------------- command palette -->
+<div class="palette-mask" id="paletteMask" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="palette">
+    <label class="sr-only" for="paletteInput">Search commands</label>
+    <input id="paletteInput" type="text" placeholder="Jump to view or action…" autocomplete="off" spellcheck="false">
+    <div class="palette-list" id="paletteList" role="listbox"></div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<script src="/static/js/app.js" defer></script>
 </body>
 </html>

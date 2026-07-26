@@ -121,12 +121,56 @@ def test_status():
     assert body["goal_achieved"] is True
 
 
-def test_dashboard_renders_the_row():
+def test_dashboard_renders_the_published_row():
+    """The published row is rendered server-side in the Model Spec view."""
     html = client.get("/").text
-    assert "v01T model" in html
     assert "744 closes" in html
     assert "111×418=46,398" in html
-    assert "100% &gt;80%" in html or "100% >80%" in html
+    assert "50/day ×31=1,550 trades" in html
+
+
+def test_dashboard_is_an_enterprise_shell():
+    """Multi-view application shell, not a single scrolling page."""
+    html = client.get("/").text
+    for view in ("overview", "backtest", "trades", "signals",
+                 "monitor", "risk", "model", "api"):
+        assert 'id="view-%s"' % view in html, view
+        assert 'data-view="%s"' % view in html, view
+
+
+def test_dashboard_declares_double_entry():
+    html = client.get("/").text.upper()
+    assert "DOUBLE ENTRY" in html
+    assert "HEDGE MODE" in html
+
+
+def test_dashboard_is_accessible():
+    """Baseline a11y: landmarks, skip link, labelled controls, live region."""
+    html = client.get("/").text
+    assert 'lang="en"' in html
+    assert 'class="skip-link"' in html
+    assert "<main" in html and "<nav" in html and "<header" in html
+    assert 'aria-label' in html
+    assert 'aria-live="polite"' in html
+    assert 'role="tabpanel"' in html
+    assert 'scope="col"' in html          # data tables are scoped
+
+
+def test_dashboard_ships_the_design_system():
+    css = client.get("/static/css/app.css").text
+    assert client.get("/static/css/app.css").status_code == 200
+    assert "--surface" in css and "--text-1" in css      # design tokens
+    assert "prefers-reduced-motion" in css               # motion safety
+    assert '[data-theme="light"]' in css                 # theme support
+    assert "@media (max-width: 1024px)" in css           # responsive
+    assert "tabular-nums" in css                         # aligned numerics
+
+
+def test_dashboard_ships_the_controller():
+    js = client.get("/static/js/app.js").text
+    assert client.get("/static/js/app.js").status_code == 200
+    assert "palette" in js.lower()                       # command palette
+    assert "setInterval" in js                           # live polling
 
 
 # ------------------------------------------- engine / sizing / costs routes ---
@@ -229,3 +273,41 @@ def test_status_includes_monitor_and_engine():
     body = client.get("/api/status").json()
     assert "monitor" in body and "engine" in body
     assert body["engine"]["win_rate_pct"] < 100.0
+
+
+# ------------------------------------------------ deployment readiness ---
+
+def test_replit_config_present_and_binds_all_interfaces():
+    cfg = open(".replit").read()
+    assert "uvicorn app:app" in cfg
+    assert "0.0.0.0" in cfg            # must not bind localhost on a PaaS
+    assert "PORT" in cfg               # honours the injected port
+
+
+def test_procfile_present():
+    assert "uvicorn app:app" in open("Procfile").read()
+
+
+def test_entrypoint_honours_the_port_env_var():
+    src = open("app.py").read()
+    assert 'os.environ.get("PORT"' in src
+    assert 'host="0.0.0.0"' in src
+
+
+def test_runtime_dependencies_are_declared():
+    reqs = open("requirements.txt").read().lower()
+    for pkg in ("fastapi", "uvicorn", "jinja2"):
+        assert pkg in reqs, pkg
+
+
+def test_no_network_needed_at_boot():
+    """Vendored data means the app starts in a sandboxed/offline container."""
+    from v01t.dataset import load_month
+    for m in ("jan2026", "jun2026", "jul2026"):
+        assert load_month(m).origin == "vendored"
+
+
+def test_monitor_starts_and_stops_with_the_app_lifespan():
+    with TestClient(app) as c:
+        assert c.get("/api/ve_monitor").json()["running"] is True
+    assert client.get("/api/ve_monitor").json()["running"] is False

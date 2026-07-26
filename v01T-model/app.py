@@ -571,6 +571,9 @@ def dashboard(request: Request):
             "spec": spec,
             "published": spec.PUBLISHED_ROW,
             "version": __version__,
+            "ve_months": list(VE_MONTHS),
+            "ve_default_month": "jul2026",
+            "ve_window": VE_WINDOW,
         },
     )
 
