@@ -50,3 +50,30 @@ def test_live_gate_is_the_backtest_gate():
             manual = ((bb < spec.BB_LOW or bb > spec.BB_HIGH)
                       and hv < spec.HV_MAX and sc >= spec.SCORE_MIN)
             assert is_elite(bb, hv, sc) == manual
+
+
+# ---------------------------------------- double entry must be documented ---
+
+def test_spec_declares_double_entry():
+    from v01t import spec
+    assert spec.DOUBLE_ENTRY is True
+    assert spec.LEGS_PER_TRADE == 2
+
+
+def test_net_edge_derives_from_the_two_legs():
+    """+0.45% = winning leg 0.50% minus the stopped leg 0.05%."""
+    from v01t import spec
+    assert spec.NET_EDGE_PCT == pytest.approx(spec.TP_PCT - spec.STOP_PCT)
+    assert spec.WIN_MULTIPLIER == pytest.approx(1.225)
+
+
+@pytest.mark.parametrize("path", ["v01t/spec.py", "v01t/ve_monitor.py", "HOW_TO_RUN.md"])
+def test_double_entry_is_documented(path):
+    txt = open(path).read().upper()
+    assert "DOUBLE ENTRY" in txt
+
+
+def test_hedge_mode_requirement_is_stated():
+    """Netting accounts would cancel the two legs; this must be flagged."""
+    for path in ("v01t/spec.py", "v01t/ve_monitor.py", "HOW_TO_RUN.md"):
+        assert "HEDGE" in open(path).read().upper(), path

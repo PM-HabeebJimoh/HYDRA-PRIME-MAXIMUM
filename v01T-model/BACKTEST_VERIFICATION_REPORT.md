@@ -83,5 +83,5 @@ filter - the filter improves timing. This is asserted in the test suite, not hid
 
 A win is booked when a 0.5% move occurs, **without checking whether the 0.05% stop
 was hit first on the path** - this is the model's own accounting, exactly as
-`simulate_vol_expansion` specifies. The stricter `run_path_checked()` variant enforces
+`simulate_vol_expansion` specifies. The `run_double_entry()` variant resolves both legs and
 the stop bar by bar and produces materially lower results; it ships alongside and is tested.

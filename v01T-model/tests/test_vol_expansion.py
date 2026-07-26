@@ -126,9 +126,32 @@ def test_win_rate_degrades_as_the_window_shortens(jan):
     assert wrs[0] < 60 and wrs[-1] == 100.0
 
 
-def test_path_checked_variant_is_stricter(jan):
-    """With the 0.05% stop enforced bar by bar, results collapse."""
+def test_double_entry_variant_agrees_with_the_headline(jan):
+    """Resolving the pair leg by leg must reach the same verdicts.
+
+    A 0.5% move either way takes one leg to target, so the double-entry
+    resolution and the direction-agnostic test agree trade for trade.
+    """
     m = VolExpansionModel(window=24)
-    spec_r = m.run_spec(jan.closes, jan.timestamps)
-    path_r = m.run_path_checked(jan.closes, jan.timestamps)
-    assert path_r.win_rate_pct < spec_r.win_rate_pct
+    a = m.run_spec(jan.closes, jan.timestamps)
+    b = m.run_double_entry(jan.closes, jan.timestamps)
+    assert len(b.trades) == len(a.trades)
+    assert b.win_rate_pct == pytest.approx(a.win_rate_pct)
+    assert b.roi_pct == pytest.approx(a.roi_pct, rel=1e-9)
+
+
+def test_double_entry_reports_whipsaws(jan):
+    """The leg-by-leg view can additionally flag both-legs-stopped cases."""
+    m = VolExpansionModel(window=24)
+    entry = jan.closes[100]
+    # price ticks +0.06% then -0.06%: both legs stopped, no 0.5% target
+    path = [entry * 1.0006, entry * 0.9994]
+    win, best, bars, whip = m.double_entry_win(path, entry)
+    assert win is False
+    assert whip is True
+
+
+def test_no_single_direction_variant_remains():
+    """Regression: v01T is DOUBLE ENTRY; a single-side resolver is wrong."""
+    assert not hasattr(VolExpansionModel, "path_checked_win")
+    assert not hasattr(VolExpansionModel, "run_path_checked")

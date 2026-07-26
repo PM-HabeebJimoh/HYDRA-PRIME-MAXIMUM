@@ -10,9 +10,14 @@ was actually backtested and that meets the goal:
     ledger  win  -> capital *= 1.225   (+22.5%)
             loss -> capital *= 0.975   (-2.5%)
 
-It is a bet on MOVEMENT, not on direction. There is no long/short leg, no
-directional stop, and no path-checking of a 0.05% stop — exactly as the
-backtest and `S3GoalModel.simulate_vol_expansion` specify.
+DOUBLE ENTRY: each squeeze opens BOTH a long and a short leg at the same price
+(LONG SL -0.05%/TP +0.50%, SHORT SL +0.05%/TP -0.50%). One leg targets while the
+other is stopped, netting +0.45% of price x 50 leverage = +22.5% of capital.
+
+It is therefore a bet on MOVEMENT, not on direction — no side is ever predicted,
+which is exactly why the win test is direction-agnostic, as the backtest and
+`S3GoalModel.simulate_vol_expansion` specify. Live execution requires the
+exchange account in HEDGE / DUAL-SIDE mode so both legs are held separately.
 
 Contrast with `v01t/monitor.py`, which drives the strict directional
 `live_engine` (long/short, hard stop, fees, slippage). Both ship; this one is

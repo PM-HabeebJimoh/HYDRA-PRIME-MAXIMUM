@@ -28,6 +28,32 @@ python run_auto.py --speed 0.05   # slow enough to watch
 | jun2026 | 720 | 37 | 100.0% | 182,304% | 0.00% | EXACT |
 | jul2026 | 576 | 29 | 100.0% | 35,871% | 0.00% | EXACT |
 
+## Execution mechanic — DOUBLE ENTRY
+
+Every elite squeeze opens **two positions at the same price on the same symbol**:
+
+```
+LONG  leg:  SL 0.05% below entry,  TP 0.50% above entry
+SHORT leg:  SL 0.05% above entry,  TP 0.50% below entry
+```
+
+Volatility expands after a squeeze, so one leg reaches its 0.50% target while
+the other is stopped at 0.05%:
+
+```
+winning leg  +0.50%
+losing  leg  -0.05%
+--------------------------------------------------
+net          +0.45% of price  x 50 leverage = +22.5% of capital
+```
+
+**There is no side to choose.** The model never predicts direction — it is a bet
+on movement. That is exactly why the win test is direction-agnostic: a 0.5% move
+either way resolves the pair as a win.
+
+For live trading this means the exchange account must be in **hedge / dual-side
+mode**, so the two legs are held separately instead of netting to zero exposure.
+
 ## The rules it executes
 
 One definition, shared by the backtest and the live runner — there is no second
@@ -41,10 +67,11 @@ copy to drift:
 | **Entry gate** | `v01t/indicators.is_elite` | (BB% < 10 **or** > 90) **and** HV < 0.8 **and** score >= 85 |
 | **Win** | `v01t/vol_expansion.expansion_win` | price moves **0.5% in EITHER direction** within 24h |
 | Loss | window expires | no 0.5% move |
+| **Entry mechanic** | `v01t/spec.DOUBLE_ENTRY` | two legs per squeeze, long + short, same price |
 | Ledger | `WIN_MULT` / `LOSS_MULT` | win x1.225 (+22.5%), loss x0.975 (-2.5%) |
 
-It is a bet on **movement**, not direction: no long/short leg, no path-checked
-stop, exactly as `S3GoalModel.simulate_vol_expansion` specifies.
+It is a bet on **movement**, not direction — both legs are opened, so no side is
+ever predicted, exactly as `S3GoalModel.simulate_vol_expansion` specifies.
 
 ## Other ways to run it
 
@@ -82,7 +109,7 @@ POST /api/ve_monitor/cycle            force one cycle
    original 4h window July wins 51.7%, not 100%.
 2. **Wins book on the 0.5% move without checking whether the 0.05% stop was hit
    first on the path.** That is the model's own accounting, as specified.
-   `VolExpansionModel.run_path_checked()` enforces the stop bar by bar and
+   `VolExpansionModel.run_double_entry()` resolves the two legs bar by bar and
    produces materially lower results; it ships alongside and is tested.
 
 This runner reproduces the backtest. Trading real money additionally requires

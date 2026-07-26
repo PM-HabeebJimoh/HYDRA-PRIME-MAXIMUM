@@ -52,13 +52,39 @@ TRADES_PER_DAY_LIMIT = 50
 TOTAL_TRADES = TRADES_PER_DAY_LIMIT * DAYS_IN_JANUARY                    # 1,550
 
 # ------------------------------------------------------------------ economics ---
+#
+# EXECUTION MECHANIC — DOUBLE ENTRY (this is what makes v01T direction-agnostic)
+#
+# Every elite squeeze opens TWO positions at the same price, on the same symbol:
+#
+#     LONG  leg:  SL 0.05% below entry,  TP 0.50% above entry
+#     SHORT leg:  SL 0.05% above entry,  TP 0.50% below entry
+#
+# Volatility expands after a squeeze, so one leg reaches its 0.50% target while
+# the other is stopped at 0.05%:
+#
+#     winning leg  +0.50%
+#     losing  leg  -0.05%
+#     -----------------------------------------------------------------
+#     net          +0.45% of price  x 50 leverage = +22.5% of capital
+#
+# There is NO side to choose. The model never predicts direction — it is a bet
+# on MOVEMENT. That is precisely why the win test in vol_expansion.py is
+# direction-agnostic: a 0.5% move EITHER WAY resolves the pair as a win.
+#
+# Live execution therefore requires an exchange account in HEDGE / DUAL-SIDE
+# mode, so the two legs are held as separate positions instead of netting to
+# zero exposure.
+
+DOUBLE_ENTRY = True       # both legs opened per squeeze; never a single side
+LEGS_PER_TRADE = 2
 
 INITIAL_CAPITAL = 10_000.0
 LEVERAGE = 50
 RISK_PCT = 0.025          # 2.5% risked per trade
-STOP_PCT = 0.0005         # 0.05% price stop
-TP_PCT = 0.005            # 0.50% price target
-NET_EDGE_PCT = 0.0045     # net +0.45% price after costs assumed in the spec
+STOP_PCT = 0.0005         # 0.05% price stop, applied to EACH leg
+TP_PCT = 0.005            # 0.50% price target, applied to EACH leg
+NET_EDGE_PCT = TP_PCT - STOP_PCT   # 0.0045 — winning leg minus the stopped leg
 WIN_MULTIPLIER = 1.0 + NET_EDGE_PCT * LEVERAGE   # 1.225  (+22.5% of capital)
 LOSS_MULTIPLIER = 1.0 - RISK_PCT                 # 0.975  (-2.5% of capital)
 

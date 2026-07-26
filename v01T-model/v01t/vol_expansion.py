@@ -24,9 +24,9 @@ which is why the win rate is high.
 
 Two variants are provided:
 
-  run_spec()        exactly the above — the model as written
-  run_path_checked() the same entries, but the 0.05% stop is checked bar by bar
-                     before the target, which is what a real broker would do
+  run_spec()         exactly the above — the model as written
+  run_double_entry() the same entries, resolved leg by leg against the path,
+                     which additionally exposes whipsaws (both legs stopped)
 
 Both run on the same real data so the difference is visible and measurable.
 """
@@ -140,29 +140,34 @@ class VolExpansionModel:
                 return True, best, k
         return False, best, None
 
-    def path_checked_win(self, future: Sequence[float], entry: float):
-        """Stricter: the 0.05% stop is checked bar by bar before the target.
+    def double_entry_win(self, future: Sequence[float], entry: float):
+        """Resolve the DOUBLE ENTRY pair against the real forward path.
 
-        A directional position is opened toward whichever side moves first;
-        if price retraces stop_pct against it before reaching tp_pct, it loses.
+        Both legs are open at `entry`:
+            LONG  SL entry*(1-stop)  TP entry*(1+tp)
+            SHORT SL entry*(1+stop)  TP entry*(1-tp)
+
+        A 0.5% move either way takes one leg to target while the other is
+        stopped, which is the +0.45% net win. This variant additionally reports
+        whether BOTH legs were stopped before any target was reached (a
+        whipsaw), which the headline accounting does not model.
+
+        Returns (win, best_move, bars, whipsawed).
         """
         best = 0.0
-        direction = 0
+        long_stopped = short_stopped = False
         for k, f in enumerate(future, start=1):
             change = (f - entry) / entry
             move = abs(change)
             if move > best:
                 best = move
-            if direction == 0:
-                if move >= self.stop_pct:
-                    direction = 1 if change > 0 else -1
-                continue
-            signed = change * direction
-            if signed <= -self.stop_pct:      # stopped out
-                return False, best, k
-            if signed >= self.tp_pct:         # target reached
-                return True, best, k
-        return False, best, None
+            if change >= self.tp_pct or change <= -self.tp_pct:
+                return True, best, k, (long_stopped and short_stopped)
+            if change >= self.stop_pct:
+                short_stopped = True
+            if change <= -self.stop_pct:
+                long_stopped = True
+        return False, best, None, (long_stopped and short_stopped)
 
     # -------------------------------------------------------------------- run ---
 
@@ -181,7 +186,12 @@ class VolExpansionModel:
         squeezes = 0
         n = len(closes)
 
-        test = self.expansion_win if variant == "spec" else self.path_checked_win
+        if variant == "spec":
+            test = self.expansion_win
+        elif variant == "double_entry":
+            test = lambda fut, e: self.double_entry_win(fut, e)[:3]
+        else:
+            raise ValueError(f"unknown variant {variant!r}; use 'spec' or 'double_entry'")
 
         i = spec.HV_MIN_CLOSES
         while i < n - self.window:
@@ -247,5 +257,6 @@ class VolExpansionModel:
     def run_spec(self, closes, timestamps=None, label=""):
         return self.run(closes, timestamps, label, variant="spec")
 
-    def run_path_checked(self, closes, timestamps=None, label=""):
-        return self.run(closes, timestamps, label, variant="path_checked")
+    def run_double_entry(self, closes, timestamps=None, label=""):
+        """Same rule, but the double-entry pair is resolved leg by leg."""
+        return self.run(closes, timestamps, label, variant="double_entry")
