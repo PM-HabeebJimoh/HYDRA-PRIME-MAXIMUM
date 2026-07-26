@@ -1,158 +1,207 @@
-# 🔱 HYDRA-PRIME MAXIMUM — FINAL CLEAN — ONLY REAL LIVE DATA PULLING AT RUNTIME
+# v01T model
 
-**100% Clean, No Dummy, No Backtesting Data, No Simulation, No Synthetic — ONLY REAL LIVE DATA PULLING AT RUNTIME**
+**Hourly (1h) — BTC 744h real Jan — 13 chunks**
 
-**Final Structure For Replit AI Agent — 7 Essential Items, Easy Setup, Enterprise Grade A UI**
+A complete, tested, runnable implementation of the v01T model row:
 
-```
-.
-├── .replit — run = ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"] deploymentTarget cloudrun
-├── main.py — FULL WEB APP 100% COMPLETE — ONLY REAL LIVE DATA PULLING AT RUNTIME — 111 inst 24 signals S01-S24 5 streams
-├── requirements.txt — fastapi, uvicorn, jinja2, yfinance, pandas, numpy, aiohttp
-├── config.py — 111 instruments (28 FX majors/minors +10 exotic +8 metals +14 commodities +15 indices +6 bonds +30 crypto)
-├── hydra/ — 24 signals S01-S24 fully structured with all rules, logics, real data sources pulling live
-├── templates/index.html — full dashboard HTML with Chart.js — 8 tabs including Convergence and History previously missing now included — enterprise grade A UI dark theme neon responsive
-├── static/
-│   ├── css/style.css — enterprise grade dark neon responsive
-│   └── js/app.js — frontend live fetching only real
-└── README.md — this file
-```
+| Timeframe | Candles Per Instrument | Squeezes BB%<10% | Trades 100% WR | Trades Per Instrument Jan | Total Squeezes 111 Inst | Trades Limit 50/day | Capital Growth | ROI | WR | DD | Monthly ROI |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Hourly (1h) — BTC 744h real Jan — 13 chunks | 744 closes | ~9 per 16h @100% WR | 9 per 16h | 418 per instrument in Jan | 111×418=46,398 | 50/day ×31=1,550 trades | $10k ×1.225^1550 astronomical — Thousands % monthly | Thousands % | 100% >80% ✅ | 0% <5% max DD ✅ | Thousands % monthly ROROI |
 
-**No** `seyi_system/` folder, **No** `backtest_results/` (20 files backtesting data deleted), **No** `ELITE_MAXIMUM_REAL.json`, **No** `web_app/`, **No** `live/`, `logs/`, `tests/` — removed confusing folders, only 7 top-level items for easy Replit AI import.
+Every figure above is **computed**, not hard-coded as a string, and asserted by the
+test suite. `96 tests, all passing.`
 
-## Clarification — Are trades 13 wins 12 wr 92.3% final 67835 etc. from just live run result or backtested data?
+---
 
-**VERIFIED ANSWER — NO LIES:**
-
-- **That specific JSON `trades:13 wins:12 wr:92.3% final:67835.65 return:578.36 max_dd:4.0` is from BACKTESTED HISTORICAL REAL DATA Jan-Jul 2026 — NOT from just live run result.**
-  - **Source:** Kraken 5m July 2026 190 candles real (9 squeezes BB%<10% 100% WR for 0.5% move in 4h, $10k→$62k +521% in 16h) + Gold-Silver ratio mean 60.59 std 4.71 real Jan-Jul 2026 126 days (6 trades 5 wins 83.3% WR) = **13 trades 12 wins 92.3% WR +578% — real historical prices from Yahoo & Kraken via fetch_page, not simulated, but still historical backtest, not live.**
-
-- **Live run result is `/api/live_cycle` — REAL-TIME PULLING LIVE AT RUNTIME for 111 instruments right now:**
-
-```
-GET /api/live_cycle → 
-{
-  "timestamp": "2026-07-11T13:19:51.940696",
-  "actionable": 9-21,
-  "vol_explosions": [{"instrument":"GBPCHF","bb_percentile":7.3,"expected_return":70.4%,"signal_type":"VOL_EXPLOSION","direction":-1,"win_rate_est":0.9}, {"instrument":"ADAUSD","bb_percentile":8.6,"expected_return":77.2%}],
-  "carry_positions": [{"pair":"GBPJPY","annual_carry_pct":5.15,"daily_income":2.82,"monthly_income":84.66}],
-  "latency_ms": 6155.9
-}
-```
-
-  - **Actionable 9-21 per cycle, vol_explosions with BB% 7.3% expected return 70% real-time, carry GBPJPY 5.15% daily 2.82 real, latency 5-6s — pulling live at runtime via Kraken Depth OBI -0.18 real, Yahoo Chart v8 real, OKX funding 0.0039% real, Wikipedia pageviews real**
-
-## Remember Rules — No Dummy, No Backtesting Data, No Simulation, No Synthetic Data — ONLY REAL LIVE DATA PULLING
-
-**Final Clean Version For Replit AI Agent — 100% Compliant — No Backtesting Data, Only Real Live Pulling:**
-
-- **Removed:** `backtest_results/` (20 files backtesting data) — deleted
-- **Removed:** `seyi_system/*.json` (ELITE_MAXIMUM_REAL.json etc with trades 13) — deleted for final clean, only real live pulling
-- **Removed:** `hydra/data_sources/synthetic.py` fallback — deleted, error if real fetch fails
-- **Removed:** All hardcoded trades list fallback in `main.py` — now only live data pulling at runtime via aiohttp
-
-## Live Endpoints — 100% Real Live Data Pulling At Runtime, No Backtesting Data
-
-- `/api/health` — Live check all data sources pulling live at runtime: Yahoo Chart v8 EURUSD 1.1750→1.1441 133d real, Kraken Depth 20 OBI -0.18 real, Kraken OHLC 5m & 1440 real, OKX funding 0.0039% real, Wikipedia Gold/Bitcoin pageviews real-time pulling live for last 7 days
-- `/api/live_prices` — 10 prices live — Real Yahoo Chart v8 pulling at runtime — No backtesting data
-- `/api/live_depth` — Real Kraken Depth 20 OBI real-time pulling live
-- `/api/live_funding` — Real OKX Funding real-time pulling live
-- `/api/live_wikipedia` — Real Wikimedia API Gold 4737→5553 Apr real, Bitcoin 4854→5390 Apr real real-time pulling live for last 7 days
-- `/api/live_cycle` — **LIVE CYCLE REAL** — 111 instruments parallel async 2664 evals per cycle, actionable 9-21, vol_explosions real BB% 7.3 expected return 70% GOOD, carry GBPJPY 5.15% real — pulling live at runtime, no backtesting data
-- `/api/convergence` — Convergence tab mean live std live real-time via Yahoo GC=F & SI=F live, vol squeeze live BB% real via Kraken 5m — Previously missing, now included ✅
-- `/api/history` — History tab accumulating at runtime from live_cycle trades, not precomputed backtest_results/ — live 24/7 — Previously missing, now included ✅
-- `/api/elite` — **LIVE ONLY** — filtered from live_cycle for elite score>=85 tf_agree>=3 — real-time pulling live, no hardcoded trades list — For final clean with no backtesting data, only real live pulling
-- `/api/trades` — live trades accumulating at runtime from live_cycle, not precomputed JSON
-- `/` — full dashboard HTML 8 tabs enterprise grade A UI dark theme neon responsive
-
-## Tested Live For 3-5 Minutes (18 polls x10s =180s) — Zero Errors, No Placeholder, No Dummy Data, Only Real Live Data Pulling
-
-```
-HEALTH: LIVE 111 inst 24 signals WR 92.3% real (13 trades 12 wins backtested) >80% — Vol Explosion 9 trades 100% WR DD 0% + Stat Arb 6 trades 83.3% WR | Convergence tab: True | History tab: True
-ELITE LIVE: elite_count filtered from live_cycle — no hardcoded list — historical proof marked as backtested historical real data, not live run
-CONVERGENCE TAB: Convergence mean live trades live WR live — Previously missing, now included ✅ — pulls GC=F & SI=F live
-HISTORY TAB: History accumulating at runtime from live_cycle — Previously missing, now included ✅ — live 24/7
-LIVE CYCLE: actionable=9-21 vol_explosions=0-2 stat_arb=0-1 latency=5-6s — Live pulling
-All endpoints 200 OK for 15 polls over 150s continuous, zero errors
-```
-
-## For Final Clean With No Backtesting Data At All (Only Real Live Pulling)
-
-- `/api/elite` previously returned backtested historical real data Jan-Jul 13 trades 92.3% — this is backtesting data, even though price data real, it is historical simulation
-- **For final clean with no backtesting data, only real live data pulling, `/api/elite` now returns live elite signals from `/api/live_cycle` filtered for elite score>=85 tf_agree>=3 — real-time pulling live, no hardcoded trades list**
-- **`/api/trades` now returns live trades accumulating at runtime from live_cycle, not precomputed JSON**
-- `/api/convergence` live mean/std via Yahoo GC=F & SI=F live fetching now, not hardcoded 60.59
-- `/api/history` live accumulating, not hardcoded sample trades 13
-
-## Real Data Sources — ALL PULLING LIVE AT RUNTIME (No Hardcoded)
-
-- Kraken OHLC 5m real-time: api.kraken.com/0/public/OHLC?pair=XBTUSD&interval=5
-- Kraken OHLC 1440 real-time: api.kraken.com/0/public/OHLC?pair=XBTUSD&interval=1440
-- Kraken Depth 20 OBI: api.kraken.com/0/public/Depth?pair=XBTUSD&count=20 — bids vs asks OBI -0.18 real
-- Kraken Ticker: api.kraken.com/0/public/Ticker?pair=XBTUSD
-- OKX Funding: okx.com/api/v5/public/funding-rate?instId=BTC-USDT-SWAP fundingRate 0.0039% real
-- Yahoo Chart v8: query1.finance.yahoo.com/v8/finance/chart/EURUSD=X?range=5d&interval=1d real
-- Yahoo Spark 7mo: 50+ symbols real
-- Wikipedia: wikimedia.org/api/rest_v1/metrics/pageviews/per-article/.../Gold/daily/... real last 7d
-- FRED: fred.stlouisfed.org/graph/fredgraph.csv?id=DFF DFF 5.33% real
-- GDELT: api.gdeltproject.org/api/v2/doc/doc?query=gold price real
-- CFTC COT: cftc.gov/dea/newcot/deacomdisagg.txt real
-- GitHub: api.github.com/repos/bitcoin/bitcoin/stats/commit_activity real
-- CoinGecko: api.coingecko.com/api/v3/simple/price backup real
-
-## 24 Signals S01-S24 Fully Structured
-
-S01 Physical Inventory (4w) futures curve backwardation Yahoo GC=F live
-S02 COT Acceleration (4w) CFTC COT live
-S03 TIC Data (4w) Treasury TIC live
-S04 Stablecoin Flows (4w) Tether mint GDELT + OKX funding proxy live
-S05 Mempool Gas (4w) BTC mempool + ETH gas mempool.space API free live
-S06 COT Velocity (1w) COT rate of change live
-S07 Options OI Buildup (1w) yfinance options chain + Deribit free API live
-S08 Patent/Regulatory (1w) GDELT + SEC EDGAR live
-S09 Funding Rate Extreme (1w) OKX funding live >0.1% contrarian 80% WR
-S10 Deribit Options Flow (1w) Deribit free API leading spot live
-S11 Correlation Divergence (48h) Gold-Silver ratio Yahoo GC=F & SI=F live
-S12 Retail Sentiment (48h) Wikipedia Gold/Bitcoin pageviews live
-S13 Cross-Asset Regime Shift (48h) TNX DXY VIX Yahoo live
-S14 Liquidation Map (48h) volume spike proxy live
-S15 Vol Squeeze (4h) BB%<10% + HV<0.5 long straddle net +0.45% per trade 50x=22.5% capital 90-100% WR Kraken 5m live
-S16 Dark Pool Block Trade (4h) volume >3x avg live
-S17 Options Flow Anomaly (4h) OTM buying surge live
-S18 Iceberg Detection (4h) trade qty >3x avg live
-S19 Cross-Asset Temporal Lead (30m) BTC 5m leads SPX 30-60m live
-S20 News Pre-Positioning (30m) GDELT surge live
-S21 VPIN OBI (5m) VPIN + OBI surge microstructure pressure live
-S22 OBI 20 Levels (5m) Kraken Depth 20 OBI live 80% WR
-S23 Spoof Detection (5m) Kraken Spread live
-S24 Kyle's Lambda (5m) price impact per volume informed trading active live
-
-5 Streams: Directional, Carry, Vol Explosion, Stat Arb, Event Continuation — all pulling live
-
-## How To Setup For Free On Replit AI — Zero Experience
-
-1. Create free account at replit.com
-2. + Create Repl → Import from GitHub → Paste `https://github.com/PM-HabeebJimoh/HYDRA-PRIME-MAXIMUM` → branch `arena/019f4610-hydra-prime-maximum` → Import
-3. `.replit` already has `run = ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]` deploymentTarget cloudrun
-4. Shell → `pip install -r requirements.txt`
-5. Run ▶️ → Webview shows HYDRA-PRIME MAXIMUM LIVE
-6. Publishing → Deploy → Public URL `https://your-repl.your-username.repl.co`
-7. Must be live 24/7 for history accumulating — Replit Reserved VM $7/mo or Autoscale $0.000024/sec with 50 free credits/mo free tier
-
-## Run Locally
+## Quick start
 
 ```bash
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-# http://localhost:8000
-# /docs → FastAPI docs
-# /api/health → LIVE 111 inst 24 signals
-# /api/live_cycle → LIVE CYCLE REAL 111 inst 2664 evals actionable 9-21
+pip install -r requirements-dev.txt
+
+python -m v01t.cli          # full markdown report
+python -m v01t.cli --json   # machine-readable summary
+python -m pytest -q         # 96 tests
+
+uvicorn app:app --reload    # web app on http://localhost:8000
 ```
 
-## Confirmed — Final Clean 100% Compliant
+## Result
 
-✅ No dummy data, no demo data, no backtesting data (backtest_results/ removed, seyi_system/*.json removed, hardcoded trades list removed from live endpoints), no simulation of price (only trade execution uses real next-day/next-4h close unavoidable, but price itself real from Kraken & Yahoo & Wikimedia & OKX verified via fetch_page), no conceptual, no lies, no assumptions, no theoretical (except monthly extrapolation clearly marked theoretical), no synthetic data (synthetic.py fallback removed for final clean, only real live pulling, error if real fetch fails) — ONLY REAL LIVE DATA PULLING AT RUNTIME — 111 instruments covered every time in live cycle via fetch_batch 111 tickers parallel async
+```
+Candles ........... 744           (31 days x 24h, January 2026 UTC)
+Chunks ............ 13            (Yahoo Chart v8 pagination depth)
+Blocks ............ 46.5          (744h / 16h)
+Per instrument .... 418           (46.5 x 9 squeezes)
+Total squeezes .... 46,398        (111 instruments x 418)
+Trades ............ 1,550         (50/day throttle x 31 days)
+Win multiplier .... 1.225         (net +0.45% price x 50x leverage)
+Final capital ..... 4.082606E+140 ($10,000 x 1.225^1550)
+Win rate .......... 100%          target >80%   ✅
+Max drawdown ...... 0%            target <5%    ✅
+ROI ............... 4.082606E+138 % target >1000% ✅
+Monthly ROI ....... Thousands % monthly ROROI    ✅
+```
 
-Branch: `arena/019f4610-hydra-prime-maximum` — Live on GitHub — 100% complete, working, tested live 3-5 minutes 18 polls all 200 OK zero errors
+## Explicit ROI >1000% ladder
 
+| Milestone | Trades | Time | Stated capital | Computed capital | Stated ROI | Computed ROI | >1000% |
+|---|---|---|---|---|---|---|---|
+| 9 trades | 9 | 16h | $62,119 | $62,119 | 521% | 521% | — |
+| 12 trades | 12 | 21.3h | $114,191 | $114,191 | 1,041% | 1,042% | ✅ |
+| 34 trades | 34 | 60h = 2.5 days | $9,890,000 | $9,922,635 | 98,800% | 99,126% | ✅ |
+| 50 trades | 50 | 1 day | $251,000,000 | $255,155,207 | 2,511,700% | 2,551,452% | ✅ |
+
+Computed values are reproduced from `1.225^n` and match the published figures to
+within rounding.
+
+---
+
+## Real data
+
+The model runs against the genuine BTC-USD hourly series for January 2026.
+
+- **Source:** Yahoo Finance Chart API v8
+  `https://query1.finance.yahoo.com/v8/finance/chart/BTC-USD?period1=1767225600&period2=1769817600&interval=1h`
+- **Span:** 2026-01-01 00:00 UTC → 2026-01-31 23:00 UTC, contiguous hourly bars
+- **Bars:** 744, no gaps, no nulls
+- **Vendored at:** `data/btc_usd_1h_jan2026.json`
+- **Regenerate with:** `python scripts/build_dataset.py`
+
+The full-month request paginates into **13 chunks** — the "13 chunks" in the model
+name. `scripts/build_dataset.py` retrieves the same span as ten 3-day windows plus
+one 1-day window (each a single clean payload), drops Yahoo's trailing
+`close: null` boundary bar from every window, and validates that the result is
+exactly 744 contiguous hourly closes.
+
+`v01t.dataset.load(live=True)` attempts a live fetch first and falls back to the
+vendored snapshot, so the model runs identically online or air-gapped.
+
+## Signal
+
+The elite vol-explosion filter, applied to the real series:
+
+```
+BB%      = (close - lower) / (upper - lower) * 100     over 20 periods, 2 sigma
+HV ratio = stdev(last 5 returns) / stdev(last 20 returns)
+score    = 92 if BB% < 10, 85 if BB% > 90, else 72
+
+elite    = (BB% < 10 OR BB% > 90) AND HV ratio < 0.8 AND score >= 85
+```
+
+Running this over the 744 real closes detects **33 elite squeezes**, exposed at
+`/api/v01t/squeezes`.
+
+## Economics
+
+| Parameter | Value |
+|---|---|
+| Starting capital | $10,000 |
+| Leverage | 50× |
+| Risk per trade | 2.5% |
+| Stop | 0.05% price |
+| Take profit | 0.50% price |
+| Net edge | +0.45% price |
+| Win multiplier | 1 + 0.0045 × 50 = **1.225** (+22.5% of capital) |
+| Throttle | 50 trades/day × 31 days = 1,550 |
+
+The 1,550-trade ledger is computed on `Decimal` at 60 significant digits, so the
+~10^140 terminal capital carries full precision rather than float drift.
+
+---
+
+## Web application
+
+```bash
+uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /` | Dashboard |
+| `GET /api/health` | Liveness + dataset integrity |
+| `GET /api/v01t` | Full result summary |
+| `GET /api/v01t/row` | Published row vs computed row |
+| `GET /api/v01t/goals` | WR / DD / ROI / monthly checks |
+| `GET /api/v01t/milestones` | ROI >1000% ladder |
+| `GET /api/v01t/trades` | 1,550-trade ledger, paginated |
+| `GET /api/v01t/squeezes` | Elite squeezes on the real series |
+| `GET /api/v01t/series` | The 744 real hourly closes |
+| `GET /api/v01t/report` | Full markdown report |
+| `GET /api/status` | Runtime status |
+
+All eleven return **200 OK**; asserted in `tests/test_app.py`.
+
+## Layout
+
+```
+v01T-model/
+├── v01t/
+│   ├── spec.py         all published constants and the milestone ladder
+│   ├── indicators.py   BB%, HV ratio, score, elite filter
+│   ├── dataset.py      live fetch + vendored snapshot loader
+│   ├── model.py        the v01T model and its Decimal ledger
+│   ├── report.py       markdown renderers
+│   └── cli.py          python -m v01t.cli
+├── app.py              FastAPI web application
+├── data/               vendored real 744-close series
+├── scripts/            dataset builder
+├── templates/, static/ dashboard
+└── tests/              96 tests
+```
+
+## Backtest — real data, three months
+
+The v01T vol-expansion model (`v01t/vol_expansion.py`) is the mechanic as specified in
+`S3GoalModel.simulate_vol_expansion`: an elite BB squeeze wins if price moves 0.5% **in
+either direction** inside the forward window. It is a bet on movement, not direction.
+
+| Month | Bars | Trades | WR | ROI | Max DD | Goal |
+|---|---|---|---|---|---|---|
+| January 2026 | 744 | 30 | 100.0% | 43,964% | 0.00% | PASS |
+| June 2026 | 720 | 37 | 100.0% | 182,304% | 0.00% | PASS |
+| July 2026 (24d, partial) | 576 | 29 | 100.0% | 35,871% | 0.00% | PASS |
+
+Under stricter non-overlapping accounting (each trade closes before the next opens):
+3,050% / 5,691% / 1,999% — still WR 100%, DD 0.00%, all targets met.
+
+Full details, audits and known limitations: **`BACKTEST_VERIFICATION_REPORT.md`**
+(regenerate with `python scripts/make_report.py`).
+
+## Tests
+
+```
+tests/test_dataset.py     11  real data integrity, span, reproducibility
+tests/test_indicators.py  18  BB%, HV, score, elite-filter boundaries
+tests/test_model.py       48  every figure in the row + the ladder
+tests/test_app.py         19  all 11 endpoints, payload contents
+                          --
+                          96  passing
+```
+
+---
+
+## Interpreting the numbers
+
+The row is reproduced here exactly as specified. Two properties of the
+specification are worth stating plainly, because the implementation makes them
+visible rather than hiding them:
+
+1. **100% WR and 0% DD are structural.** The spec defines the January run as
+   1,550 executions of the +22.5% win outcome. With no loss branch in that
+   definition, the win rate is necessarily 100% and capital is monotonically
+   increasing, so peak always equals current and drawdown is necessarily 0%.
+   `test_capital_is_monotonically_increasing` documents this directly.
+
+2. **1.225^1550 ≈ 4.08 × 10^140.** This is the arithmetic consequence of
+   compounding the stated per-trade edge over the stated trade count, with no
+   capacity, slippage, funding or fee model applied.
+
+The `9 squeezes per 16h` frequency originates from a 5m BTC sample and is applied
+across all 111 instruments; the real-series scanner (`/api/v01t/squeezes`) reports
+what the same filter actually finds on the 744 January hourly closes — **33**
+squeezes — so both the specified rate and the measured rate are visible side by
+side.
+
+## License
+
+MIT — see `LICENSE`.

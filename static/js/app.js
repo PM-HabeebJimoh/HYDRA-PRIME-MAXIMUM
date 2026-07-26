@@ -1,471 +1,616 @@
-// HYDRA-PRIME MAXIMUM — FULL GRADE A ENTERPRISE FULL WEB APPLICATION — NOT COMMAND CENTER — MUST NOT AND IS NOT COMMAND CENTER
-// THIS FILE app.js IS FULL GRADE A ENTERPRISE FULL WEB APPLICATION FRONTEND — NOT Enterprise Command Center — IT MUST BE A FULL GRADE A ENTERPRISE FULL WEB APPLICATION WITH ALL ENTERPRISE GRADE FULL FUNCTIONS AND NOT COMMAND CENTER
-// 9-10 Tabs: Dashboard, Real Data, Live Cycle, Elite Live, Convergence, History + Details (/api/history/{id}), Opportunities + Details (/api/opportunity/{id}), Signals 24 + Details (/api/signal/{id}), Performance
-// History, Signals and Opportunities and Each Opportunities Details Pages/Tabs — System Running 24/7 Automatically Across All Instruments — Auto Cycle Every 30s Scanning 111 Instruments 2664 Evals Per Cycle
-// Enterprise Grade A UI dark theme neon responsive — Chart.js real-time polling — ONLY REAL LIVE DATA PULLING — FINAL CLEAN — NOT COMMAND CENTER — FULL ENTERPRISE GRADE FULL FUNCTIONS
+/* ==========================================================================
+   v01T Terminal — application controller
+   Vanilla ES2019, no build step, no dependencies. Progressive enhancement:
+   the server renders the shell and static figures; this layer adds routing,
+   live polling and interaction.
+   ========================================================================== */
+(function () {
+  "use strict";
 
-function showSection(id) {
-    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-    const target = document.getElementById(id);
-    if (target) target.classList.add('active');
-    document.querySelectorAll('nav button').forEach(btn => {
-        const txt = btn.textContent.toLowerCase();
-        if (txt.includes(id.toLowerCase()) || (id==='dashboard' && txt.includes('dashboard'))) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
+  /* ------------------------------------------------------------- helpers */
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  function fmt(n, d) {
+    if (n === null || n === undefined || isNaN(n)) return "—";
+    return Number(n).toLocaleString(undefined, {
+      minimumFractionDigits: d === undefined ? 0 : d,
+      maximumFractionDigits: d === undefined ? 0 : d
     });
-    if (id === 'realdata') { loadLivePrices(); loadLiveDepth(); loadLiveFunding(); loadLiveWiki(); loadRealDataRaw(); }
-    if (id === 'livecycle') { loadLiveCycle(); }
-    if (id === 'elite') { loadEliteLive(); }
-    if (id === 'convergence') { loadConvergence(); }
-    if (id === 'history') { loadHistory(); }
-    if (id === 'opportunities') { loadOpportunities(); }
-    if (id === 'signals') { loadSignals(); }
-    if (id === 'performance') { loadPerformance(); }
-}
+  }
+  function money(n) { return "$" + fmt(n, 2); }
+  function pct(n, d) { return fmt(n, d === undefined ? 2 : d) + "%"; }
+  function esc(s) {
+    return String(s === null || s === undefined ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
 
-async function fetchJSON(url) {
-    try {
-        const res = await fetch(url, {cache:'no-store'});
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
-    } catch (e) {
-        console.error(`fetch ${url} failed`, e);
-        return {live:false, error:String(e), real_data_only:true};
-    }
-}
+  function api(path) {
+    return fetch(path, { headers: { Accept: "application/json" } })
+      .then(function (r) {
+        if (!r.ok) throw new Error(path + " → HTTP " + r.status);
+        return r.json();
+      });
+  }
 
-function fmt(v, d=2) { if (v===null||v===undefined) return '—'; if (typeof v==='number') return v.toFixed(d); return String(v); }
-function badge(text, cls) { return `<span class="badge badge-${cls}">${text}</span>`; }
+  function rowsInto(tbody, html, colspan, emptyMsg) {
+    if (!tbody) return;
+    tbody.innerHTML = html || '<tr><td colspan="' + colspan + '">' +
+      '<div class="empty"><div class="empty-icon">◌</div><span>' +
+      esc(emptyMsg || "No data yet") + "</span></div></td></tr>";
+  }
 
-async function loadHealth() {
-    const data = await fetchJSON('/api/health');
-    const el = document.getElementById('health');
-    if (!el) return;
-    if (!data || data.error) {
-        el.innerHTML = `<div class="error">Health fetch failed: ${data?.error || 'unknown'} — only real live data allowed, no synthetic fallback</div>`;
-        return;
-    }
-    const auto = data["24_7_auto"]||{};
-    el.innerHTML = `
-        <p><span class="metric"><b>Status:</b> ${data.status} ${badge(data.status, data.status==='LIVE'?'live':'elite')}</span>
-           <span class="metric"><b>Instruments:</b> ${data.instruments} | <b>Signals:</b> ${data.signals} | <b>Streams:</b> ${data.streams}</span>
-           <span class="metric"><b>Enterprise:</b> A ${badge('FULL ENTERPRISE GRADE','real')}</span> <span class="metric"><b>Not Command Center:</b> ${badge('NOT COMMAND CENTER','elite')}</span></p>
-        <p><span class="metric"><b>Freq:</b> ${data.frequency}</span> <span class="metric"><b>Lev Max:</b> ${data.leverage_max}x</span> <span class="metric"><b>Live Sources:</b> ${data.live_sources_count||''}</span></p>
-        <p><span class="metric"><b>24/7 Auto:</b> ${auto.running?badge('RUNNING 24/7 AUTO','live'):'STOPPED'} ${auto.cycle?`Cycle ${auto.cycle}`:''} Across ${auto.instruments_scanned_per_cycle||111} inst Every ${auto.scan_interval||'30s'}</span>
-           <span class="metric"><b>Evals/Cycle:</b> ${auto.signal_evals_per_cycle||2664} (111*24)</span></p>
-        <p><span class="metric"><b>Opportunities Endpoint:</b> ${data.opportunities_endpoint||'/api/opportunities + /api/opportunity/{id}'}</span></p>
-        <p><span class="metric"><b>History/Signals/Opportunities Details:</b> ${data.history_signals_opportunities?JSON.stringify(data.history_signals_opportunities):'History + Signals + Opportunities + Each Details Pages/Tabs Included'}</span></p>
-        <p style="font-size:0.85em; color:#ffd700; margin-top:8px;">${data.clarification||''}</p>
-        <p>${badge('No dummy','real')} ${badge('No backtest_results/','real')} ${badge('No synthetic.py','real')} ${badge('Only real live pulling','live')} ${badge('24/7 Auto Across All 111','live')} ${badge('Full Enterprise Grade A','real')} ${badge('Not Command Center','elite')}</p>
-    `;
-}
+  function goalBadge(g) {
+    var ok = g && (g.all_passed !== undefined ? g.all_passed
+      : (g.wr_above_80 && g.roi_thousands_pct && g.dd_below_5));
+    return ok ? '<span class="badge pass">pass</span>'
+              : '<span class="badge fail">fail</span>';
+  }
 
-async function loadLiveCycleSummary() {
-    const data = await fetchJSON('/api/live_cycle');
-    const el = document.getElementById('livecycle-summary');
-    const details = document.getElementById('live-cycle-details');
-    const volEl = document.getElementById('vol-explosions');
-    const carryEl = document.getElementById('carry-obi');
-    const dashOpp = document.getElementById('dashboard-opportunities');
-    if (!data || data.error) {
-        if (el) el.innerHTML = `<div class="error">Live cycle failed: ${data?.error}</div>`;
-        return;
-    }
-    const summaryHTML = `
-        <p><span class="metric"><b>Cycle:</b> ${data.cycle}</span> <span class="metric"><b>Actionable:</b> ${data.actionable} (9-21 typical)</span> <span class="metric"><b>Latency:</b> ${data.latency_ms}ms</span> <span class="metric"><b>Opportunities:</b> ${data.opportunities_count||0}</span></p>
-        <p><span class="metric"><b>Instr Live:</b> ${data.instruments_live}/${data.instruments_scanned}</span> <span class="metric"><b>Evals:</b> ${data.signal_evals} (111*24=2664)</span> <span class="metric"><b>24/7 Auto:</b> ${data["24_7_auto"]?badge('AUTO RUNNING','live'):'MANUAL'} ${data.across_all_instruments?badge('ACROSS ALL 111','real'):''}</span></p>
-        <p><span class="metric"><b>Vol Explosions:</b> ${data.vol_explosions_count}</span> <span class="metric"><b>Stat Arb:</b> ${(data.stat_arb||[]).length}</span> <span class="metric"><b>Carry:</b> ${(data.carry_positions||[]).length}</span> <span class="metric"><b>OBI:</b> ${(data.obi_signals||[]).length}</span></p>
-        <p><span class="metric"><b>Timestamp:</b> ${new Date(data.timestamp).toLocaleTimeString()}</span> ${badge('Real data only','real')} ${badge('Live pulling','live')} ${badge('Full Enterprise Grade A','real')} ${badge('Not Command Center','elite')}</p>
-    `;
-    if (el) el.innerHTML = summaryHTML;
-    if (details) details.innerHTML = summaryHTML + `<pre style="max-height:350px; overflow:auto; background:#0a0a0a; color:#0f0; padding:10px; margin-top:10px; border-radius:8px; border:1px solid #0f3460;">${JSON.stringify(data, null, 2).substring(0,8000)}</pre>`;
+  /* --------------------------------------------------------------- toast */
+  function toast(msg, kind) {
+    var host = $("#toasts");
+    if (!host) return;
+    var el = document.createElement("div");
+    el.className = "toast" + (kind ? " " + kind : "");
+    el.textContent = msg;
+    host.appendChild(el);
+    setTimeout(function () {
+      el.style.opacity = "0";
+      setTimeout(function () { el.remove(); }, 200);
+    }, 3600);
+  }
 
-    if (volEl) {
-        const vol = data.vol_explosions||[];
-        let html = `<table><tr><th>Instrument</th><th>BB% <10%</th><th>HV</th><th>Price</th><th>Exp Ret</th><th>Dir</th><th>WR</th><th>Details</th></tr>`;
-        vol.slice(0,8).forEach(v=>{
-            html+=`<tr class="elite"><td>${v.instrument}</td><td>${fmt(v.bb_percentile,1)}% ${v.bb_percentile<10?badge('SQUEEZE','elite'):''}</td><td>${fmt(v.hv_ratio,2)}</td><td>${fmt(v.price,2)}</td><td>${fmt(v.expected_return,1)}% ${badge('70% live','live')}</td><td>${v.direction>0?'LONG⬆️':'SHORT⬇️'}</td><td>${fmt(v.win_rate_est*100,0)}%</td><td><button onclick="showOpportunityDetail('${v.id}')">Details /api/opportunity/${v.id}</button></td></tr>`;
-        });
-        html+='</table>';
-        volEl.innerHTML = html;
-    }
-    if (carryEl) {
-        const carry = [...(data.carry_positions||[]), ...(data.obi_signals||[])];
-        let html = `<table><tr><th>Pair</th><th>Type</th><th>OBI/Funding</th><th>Annual</th><th>Daily/10k</th><th>Details</th></tr>`;
-        carry.slice(0,8).forEach(c=>{
-            if (c.signal_type==='CARRY' || c.type==='CARRY') {
-                html+=`<tr><td>${c.pair||c.instrument}</td><td>${c.signal_type||c.type}</td><td>${fmt(c.funding_pct,4)}%</td><td>${fmt(c.annual_carry_pct,1)}%</td><td>$${fmt(c.daily_income_per_10k,2)}</td><td><button onclick="showOpportunityDetail('${c.id}')">Details</button></td></tr>`;
-            } else {
-                html+=`<tr><td>${c.pair||c.instrument}</td><td>${c.signal_type||c.type}</td><td>OBI ${fmt(c.obi,2)}</td><td>${fmt(c.expected_return,0)}% exp</td><td>${c.direction>0?'BID heavy':'ASK heavy'}</td><td><button onclick="showOpportunityDetail('${c.id}')">Details</button></td></tr>`;
-            }
-        });
-        html+='</table>';
-        carryEl.innerHTML = html || '<div class="loading">No carry/OBI now — waiting for live pull — 24/7 auto across all instruments</div>';
-    }
-    const volTab = document.getElementById('live-cycle-vol');
-    if (volTab) volTab.innerHTML = volEl ? volEl.innerHTML : '';
-    const carryTab = document.getElementById('live-cycle-carry');
-    if (carryTab) carryTab.innerHTML = carryEl ? carryEl.innerHTML : '';
-    const statArbEl = document.getElementById('live-cycle-statarb');
-    if (statArbEl) {
-        const sarb = data.stat_arb||[];
-        let html = `<table><tr><th>Pair</th><th>Ratio</th><th>Mean</th><th>Std</th><th>Z</th><th>Dir</th><th>WR</th><th>Details</th></tr>`;
-        sarb.forEach(s=>{
-            html+=`<tr><td>${s.pair}</td><td>${fmt(s.ratio,2)}</td><td>${fmt(s.mean,2)}</td><td>${fmt(s.std,2)}</td><td>${fmt(s.z_score,2)} ${Math.abs(s.z_score)>1.5?badge('SIGNAL','elite'):''}</td><td>${s.direction>0?'LONG spread':'SHORT spread'}</td><td>${fmt(s.win_rate_est*100,1)}%</td><td><button onclick="showOpportunityDetail('${s.id}')">Details</button></td></tr>`;
-        });
-        html+='</table>';
-        statArbEl.innerHTML = html || 'No stat arb Z>1.5 live now — 24/7 auto scanning';
-    }
-    // Dashboard opportunities preview
-    if (dashOpp) {
-        const opps = data.opportunities||[];
-        let html = `<table><tr><th>ID</th><th>Instrument</th><th>Type</th><th>BB%/Z/Funding/OBI</th><th>Exp Ret</th><th>Dir</th><th>Score</th><th>Details Page</th></tr>`;
-        opps.slice(0,6).forEach(o=>{
-            html+=`<tr><td>${o.id}</td><td>${o.instrument||o.pair||''}</td><td>${o.type||o.signal_type}</td><td>${o.bb_percentile?fmt(o.bb_percentile,1)+'%': o.z_score?fmt(o.z_score,1)+' Z': o.funding_pct?fmt(o.funding_pct,3)+'%': o.obi?fmt(o.obi,2)+' OBI':''}</td><td>${fmt(o.expected_return,0)}%</td><td>${o.direction_label||o.direction}</td><td>${o.score||''}</td><td><button onclick="showOpportunityDetail('${o.id}')">Details /api/opportunity/${o.id}</button></td></tr>`;
-        });
-        html+='</table>';
-        dashOpp.innerHTML = html || 'No opportunities yet — auto running 24/7 across all 111 instruments — waiting for live pull';
-    }
-    drawBBChart(data.vol_explosions||[]);
-}
+  /* -------------------------------------------------------------- router */
+  var TITLES = {
+    overview: "Overview", backtest: "Backtest", trades: "Trade Ledger",
+    signals: "Signals", monitor: "Live Monitor", execution: "Auto Trading",
+    risk: "Risk & Sizing", model: "Model Spec", api: "API & Health"
+  };
+  var loaded = {};
 
-async function loadLivePrices() {
-    const data = await fetchJSON('/api/live_prices');
-    const el = document.getElementById('live-prices');
-    const raw = document.getElementById('realdata-raw');
-    if (!el) return;
-    if (!data || !data.prices) { el.innerHTML = `<div class="error">Live prices failed — 24/7 auto retry</div>`; return; }
-    let html = `<table><tr><th>Ticker</th><th>Price Live</th><th>Source</th><th>Timestamp</th></tr>`;
-    for (const [ticker, info] of Object.entries(data.prices)) {
-        html+=`<tr><td>${ticker}</td><td>$${fmt(info.price,4)} ${badge('LIVE','live')}</td><td>${info.source}</td><td>${new Date(info.timestamp).toLocaleTimeString()}</td></tr>`;
-    }
-    html+='</table>';
-    el.innerHTML = html;
-    if (raw) raw.textContent = JSON.stringify(data, null, 2).substring(0,6000);
-}
+  function show(view) {
+    if (!TITLES[view]) view = "overview";
+    $$(".view").forEach(function (v) { v.classList.remove("active"); });
+    var el = $("#view-" + view);
+    if (el) el.classList.add("active");
 
-async function loadLiveDepth() {
-    const data = await fetchJSON('/api/live_depth');
-    const el = document.getElementById('live-depth');
-    if (!el) return;
-    if (!data.live) { el.innerHTML = `<div class="error">Depth fetch failed — no synthetic fallback, only real: ${data.error||''} — 24/7 auto retry across all instruments</div>`; return; }
-    el.innerHTML = `
-        <p><span class="metric"><b>Pair:</b> ${data.pair}</span> <span class="metric"><b>OBI:</b> ${fmt(data.obi,4)} ${Math.abs(data.obi)>0.4?badge('STRONG','elite'):''}</span></p>
-        <p><span class="metric"><b>Bid Vol:</b> ${fmt(data.bid_vol,2)}</span> <span class="metric"><b>Ask Vol:</b> ${fmt(data.ask_vol,2)}</span></p>
-        <p><span class="metric"><b>Source:</b> ${data.source}</span> ${badge('Real-time pulling live 24/7 auto','live')}</p>
-    `;
-}
-
-async function loadLiveFunding() {
-    const data = await fetchJSON('/api/live_funding');
-    const el = document.getElementById('live-funding');
-    if (!el) return;
-    if (!data.live) { el.innerHTML = `<div class="error">Funding fetch failed — only real live: ${data.error||''} — 24/7 auto retry</div>`; return; }
-    el.innerHTML = `
-        <p><span class="metric"><b>InstId:</b> ${data.instId}</span> <span class="metric"><b>Funding:</b> ${fmt(data.fundingRate,6)} (${fmt(data.fundingRate_pct,5)}%)</span></p>
-        <p><span class="metric"><b>Annual Carry:</b> ${fmt(data.annual_carry_pct,2)}%</span> <span class="metric"><b>Daily /10k:</b> $${fmt(data.daily_income_per_10k,2)}</span></p>
-        <p><span class="metric"><b>Source:</b> ${data.source}</span> ${badge('Real-time 24/7 auto','live')}</p>
-    `;
-}
-
-async function loadLiveWiki() {
-    const data = await fetchJSON('/api/live_wikipedia');
-    const el = document.getElementById('live-wiki');
-    if (!el) return;
-    if (!data || (!data.gold?.live && !data.bitcoin?.live)) {
-        el.innerHTML = `<div class="error">Wiki fetch failed — only real, no synthetic — 24/7 auto retry</div>`;
-        return;
-    }
-    let html = `<table><tr><th>Article</th><th>Avg 7d</th><th>Last</th><th>Spike Ratio</th><th>Spike?</th></tr>`;
-    [data.gold, data.bitcoin].forEach(w=>{
-        if (!w || !w.live) return;
-        html+=`<tr><td>${w.article}</td><td>${fmt(w.avg_7d,0)}</td><td>${fmt(w.last,0)}</td><td>${fmt(w.spike_ratio,2)}x ${w.spike?badge('SPIKE 2x','elite'):''}</td><td>${w.spike?'YES — retail rush':'No'}</td></tr>`;
+    $$(".nav-item").forEach(function (b) {
+      var on = b.dataset.view === view;
+      if (on) { b.setAttribute("aria-current", "page"); }
+      else { b.removeAttribute("aria-current"); }
     });
-    html+='</table>';
-    el.innerHTML = html;
-}
 
-async function loadRealDataRaw() {
-    const el = document.getElementById('realdata-raw');
-    if (!el) return;
-    const d1 = await fetchJSON('/api/live_prices');
-    const d2 = await fetchJSON('/api/live_depth');
-    const d3 = await fetchJSON('/api/live_funding');
-    const d4 = await fetchJSON('/api/live_wikipedia');
-    el.textContent = JSON.stringify({live_prices: d1, live_depth: d2, live_funding: d3, live_wikipedia: d4}, null, 2).substring(0,10000);
-}
+    var t = $("#viewTitle");
+    if (t) t.textContent = TITLES[view];
+    document.title = "v01T Terminal — " + TITLES[view];
+    if (location.hash.slice(1) !== view) history.replaceState(null, "", "#" + view);
 
-async function loadLiveCycle() {
-    await loadLiveCycleSummary();
-}
+    $("#rail").classList.remove("open");
+    var main = $("#main"); if (main) main.scrollTop = 0;
 
-async function loadEliteLive() {
-    const data = await fetchJSON('/api/elite');
-    const el = document.getElementById('elite-live');
-    const el2 = document.getElementById('elite-live-dashboard');
-    if (!el && !el2) return;
-    const live = data?.live_elite_right_now;
-    const html = `
-        <p><span class="metric"><b>Timestamp:</b> ${live?.timestamp?new Date(live.timestamp).toLocaleString():'—'}</span> <span class="metric"><b>Elite Count:</b> ${live?.elite_count ?? 0}</span> <span class="metric"><b>Total Vol Explosions:</b> ${live?.total_vol_explosions ?? 0}</span> <span class="metric"><b>24/7 Auto:</b> ${badge('AUTO','live')}</span></p>
-        <p><span class="metric"><b>Filter:</b> ${live?.filter||''}</span></p>
-        <table><tr><th>Instrument</th><th>BB%</th><th>Exp Ret</th><th>Dir</th><th>WR est</th><th>Source</th><th>Details</th></tr>
-        ${(live?.elite_signals||[]).map(s=>`<tr class="elite"><td>${s.instrument}</td><td>${fmt(s.bb_percentile,1)}% ${badge('ELITE','elite')}</td><td>${fmt(s.expected_return,0)}% ${badge('70% live','live')}</td><td>${s.direction>0?'LONG⬆️':'SHORT⬇️'}</td><td>${fmt((s.win_rate_est||0)*100,0)}%</td><td>${s.source}</td><td><button onclick="showOpportunityDetail('${s.id}')">Details</button></td></tr>`).join('') || '<tr><td colspan=7>No elite now — waiting for BB%<10% + HV<0.5 + OBI>0.6 live squeeze — 24/7 auto scanning 111 instruments</td></tr>'}
-        </table>
-        <p style="margin-top:10px; font-size:0.9em; color:#ffd700;"><b>Clarification:</b> ${data?.clarification||''}</p>
-        <p><span class="metric"><b>Last Cycle Actionable:</b> ${data?.last_cycle_summary?.actionable||0}</span> <span class="metric"><b>Latency:</b> ${data?.last_cycle_summary?.latency_ms||0}ms</span></p>
-    `;
-    if (el) el.innerHTML = html;
-    if (el2) el2.innerHTML = html;
-}
+    if (!loaded[view]) { loaded[view] = true; hydrate(view); }
+  }
 
-async function loadConvergence() {
-    const data = await fetchJSON('/api/convergence');
-    const ratioEl = document.getElementById('conv-ratio');
-    const volEl = document.getElementById('conv-vol');
-    if (!data) return;
-    if (ratioEl) {
-        const r = data.gold_silver_ratio_live||{};
-        ratioEl.innerHTML = `
-            <p><span class="metric"><b>Live:</b> ${r.live?badge('LIVE','live'):badge('FAILED','elite')}</span> <span class="metric"><b>Mean:</b> ${fmt(r.mean,2)}</span> <span class="metric"><b>Std:</b> ${fmt(r.std,2)}</span></p>
-            <p><span class="metric"><b>Current:</b> ${fmt(r.current,2)}</span> <span class="metric"><b>Z:</b> ${fmt(r.z_score,2)} ${Math.abs(r.z_score||0)>1.5?badge('STAT_ARB SIGNAL','elite'):''}</span> <span class="metric"><b>24/7 Auto:</b> ${badge('AUTO','live')}</span></p>
-            <p style="font-size:0.85em;">Source: ${r.source||'Yahoo GC=F & SI=F live 24/7 auto'}</p>
-        `;
-        drawRatioChart(r.history||[]);
-    }
-    if (volEl) {
-        const v = data.vol_squeeze_live||{};
-        volEl.innerHTML = `
-            <p><span class="metric"><b>Live:</b> ${v.live?badge('LIVE','live'):badge('FAILED','elite')}</span> <span class="metric"><b>BB%:</b> ${fmt(v.bb_percentile,1)}% ${v.bb_percentile<10?badge('SQUEEZE <10%','elite'):''}</span> <span class="metric"><b>HV Ratio:</b> ${fmt(v.hv_ratio,3)}</span> <span class="metric"><b>24/7 Auto:</b> ${badge('AUTO','live')}</span></p>
-            <p><span class="metric"><b>Is Squeeze:</b> ${v.is_squeeze?badge('YES VOL_EXPLOSION','elite'):'No'}</span> <span class="metric"><b>Candles:</b> ${v.candles||0}</span> <span class="metric"><b>Last Close:</b> $${fmt(v.last_close,2)}</span></p>
-            <p style="font-size:0.85em;">${v.description||''}</p>
-        `;
-        drawVolChart(v);
-    }
-}
+  $$(".nav-item").forEach(function (b) {
+    b.addEventListener("click", function () { show(b.dataset.view); });
+  });
+  window.addEventListener("hashchange", function () { show(location.hash.slice(1)); });
 
-async function loadHistory() {
-    const data = await fetchJSON('/api/history');
-    const el = document.getElementById('history-live');
-    const raw = document.getElementById('history-raw');
-    if (!el) return;
-    const hist = data.live_history||[];
-    let html = `
-        <p><span class="metric"><b>Count:</b> ${hist.length}</span> <span class="metric"><b>Cycle:</b> ${data.cycle||0}</span> <span class="metric"><b>24/7 Auto:</b> ${badge('AUTO RUNNING 24/7','live')}</span> <span class="metric"><b>Across All 111:</b> ${badge('111 INSTRUMENTS','real')}</span></p>
-        <p style="font-size:0.85em;">${data.note||''} — Each trade has details page /api/history/{id} — Click ID for full enterprise details</p>
-        <table><tr><th>ID</th><th>Time</th><th>Type</th><th>Instrument</th><th>BB%</th><th>Exp Ret</th><th>Dir</th><th>Price</th><th>WR est</th><th>Live</th><th>Details Page</th></tr>
-        ${hist.slice(-20).reverse().map(h=>`<tr><td>${h.id||''}</td><td>${new Date(h.timestamp).toLocaleTimeString()}</td><td>${h.type}</td><td>${h.instrument}</td><td>${fmt(h.bb_percentile,1)}%</td><td>${fmt(h.expected_return,1)}%</td><td>${h.direction>0?'LONG':'SHORT'}</td><td>${fmt(h.price,2)}</td><td>${fmt((h.win_rate_est||0)*100,0)}%</td><td>${badge('LIVE','live')}</td><td><button onclick="showHistoryDetail('${h.id}')">Details /api/history/${h.id}</button></td></tr>`).join('') || '<tr><td colspan=11>Initially empty — fills as live_cycle runs every 30s 24/7 auto across all 111 instruments — only real live data pulling at runtime — History and each history details pages/tabs included</td></tr>'}
-        </table>
-    `;
-    el.innerHTML = html;
-    if (raw) raw.textContent = JSON.stringify(data, null, 2).substring(0,10000);
-    const perfEl = document.getElementById('perf-live-history');
-    if (perfEl) perfEl.innerHTML = html;
-}
+  /* ------------------------------------------------------------ hydrate */
+  function hydrate(view) {
+    if (view === "overview") loadOverview();
+    if (view === "backtest") loadBacktest();
+    if (view === "trades")   loadTrades();
+    if (view === "signals")  loadSignals();
+    if (view === "monitor")  loadMonitor();
+    if (view === "execution") loadExecution();
+    if (view === "risk")     { loadCosts(); calcSize(); }
+    if (view === "api")      loadHealth();
+  }
 
-async function showHistoryDetail(tradeId) {
-    const data = await fetchJSON(`/api/history/${tradeId}`);
-    const panel = document.getElementById('history-detail-panel');
-    if (!panel) return;
-    if (!data.found) {
-        panel.innerHTML = `<div class="error">History trade ${tradeId} not found — ${data.error}</div>`;
-        return;
-    }
-    const t = data.trade;
-    panel.innerHTML = `
-        <h4>History Details — ${tradeId} — Full Enterprise Grade — /api/history/${tradeId}</h4>
-        <p><span class="metric"><b>Instrument:</b> ${t.instrument}</span> <span class="metric"><b>Type:</b> ${t.type}</span> <span class="metric"><b>BB%:</b> ${fmt(t.bb_percentile,1)}%</span> <span class="metric"><b>Price:</b> ${fmt(t.price,2)}</span></p>
-        <p><span class="metric"><b>Expected Return:</b> ${fmt(t.expected_return,1)}%</span> <span class="metric"><b>Win Rate:</b> ${fmt((t.win_rate_est||0)*100,0)}%</span> <span class="metric"><b>Direction:</b> ${t.direction_label||t.direction}</span></p>
-        <p style="font-size:0.9em;"><b>Details:</b> ${t.details||''}</p>
-        <p style="font-size:0.9em;"><b>Source:</b> ${t.source||''} ${badge('Real data only','real')} ${badge('Live pulling','live')}</p>
-        <p style="font-size:0.8em;"><b>Fields:</b> id, timestamp, cycle, type, instrument, bb_percentile, expected_return, direction, price, entry_price, win_rate_est, source, details, real_data_only</p>
-        <pre style="max-height:300px; overflow:auto; background:#0a0a0a; color:#0f0; padding:10px; border-radius:6px;">${JSON.stringify(data, null, 2).substring(0,6000)}</pre>
-    `;
-    showSection('history');
-}
+  function monthRow(x, withWL) {
+    return "<tr><td><strong>" + esc(x.month) + "</strong></td>" +
+      '<td class="num mono">' + fmt(x.bars) + "</td>" +
+      '<td class="num mono">' + fmt(x.trades) + "</td>" +
+      (withWL ? '<td class="num mono"><span class="pos">' + fmt(x.wins) +
+                '</span> / <span class="' + (x.losses ? "neg" : "muted") + '">' +
+                fmt(x.losses) + "</span></td>" : "") +
+      '<td class="num mono pos">' + pct(x.win_rate_pct, 1) + "</td>" +
+      '<td class="num mono pos">' + pct(x.roi_pct, 0) + "</td>" +
+      '<td class="num mono">' + pct(x.max_drawdown_pct) + "</td>" +
+      "<td>" + goalBadge(x.goal) + "</td></tr>";
+  }
 
-async function loadOpportunities() {
-    const data = await fetchJSON('/api/opportunities');
-    const el = document.getElementById('opportunities-live');
-    const byTypeEl = document.getElementById('opportunities-by-type');
-    const raw = document.getElementById('opportunities-raw');
-    const perfEl = document.getElementById('perf-opportunities');
-    if (!el) return;
-    const opps = data.opportunities||[];
-    let html = `
-        <p><span class="metric"><b>Count:</b> ${opps.length}</span> <span class="metric"><b>Cycle:</b> ${data.cycle||0}</span> <span class="metric"><b>24/7 Auto:</b> ${badge('AUTO RUNNING 24/7 ACROSS ALL 111','live')}</span> <span class="metric"><b>Full Enterprise Grade:</b> ${badge('GRADE A','real')}</span> <span class="metric"><b>Not Command Center:</b> ${badge('NOT COMMAND CENTER','elite')}</span></p>
-        <p style="font-size:0.85em;">${data.description||''} — Each opportunity has details page /api/opportunity/{id} — Click ID for full enterprise details — HISTORY, SIGNALS and OPPORTUNITIES and EACH OPPORTUNITIES DETAILS pages/tabs included — FULL GRADE A ENTERPRISE FULL WEB APPLICATION WITH ALL ENTERPRISE GRADE FULL FUNCTIONS AND NOT COMMAND CENTER</p>
-        <table><tr><th>ID</th><th>Instrument</th><th>Type</th><th>BB%/Z/Funding/OBI</th><th>Price</th><th>Exp Ret</th><th>Dir</th><th>Score</th><th>Confidence</th><th>Timeframe</th><th>Source</th><th>Details Page</th></tr>
-        ${opps.slice(0,30).map(o=>`<tr class="elite"><td>${o.id}</td><td>${o.instrument||o.pair||''}</td><td>${o.type||o.signal_type} ${badge(o.type||'','real')}</td><td>${o.bb_percentile?fmt(o.bb_percentile,1)+'% BB': o.z_score?fmt(o.z_score,2)+' Z': o.funding_pct?fmt(o.funding_pct,4)+'% funding': o.obi?fmt(o.obi,3)+' OBI':''}</td><td>${fmt(o.price||o.entry_price||o.current_ratio||o.ratio,2)}</td><td>${fmt(o.expected_return,1)}%</td><td>${o.direction_label||o.direction}</td><td>${o.score||''} ${o.score>=85?badge('ELITE','elite'):''}</td><td>${fmt(o.confidence,2)}</td><td>${o.timeframe||''}</td><td>${(o.source||'').substring(0,30)}</td><td><button onclick="showOpportunityDetail('${o.id}')">Details /api/opportunity/${o.id}</button></td></tr>`).join('') || '<tr><td colspan=12>No opportunities yet — auto running 24/7 across all 111 instruments scanning 2664 evals per cycle every 30s — waiting for BB%<10% + HV<0.8 + OBI>0.4 + Z>1.5 + funding>0.1% + wiki spike>2x — HISTORY, SIGNALS and OPPORTUNITIES and EACH OPPORTUNITIES DETAILS pages/tabs included</td></tr>'}
-        </table>
-    `;
-    el.innerHTML = html;
-
-    if (byTypeEl) {
-        const counts = {};
-        opps.forEach(o=>{ const t=o.type||o.signal_type||'UNKNOWN'; counts[t]=(counts[t]||0)+1; });
-        let typeHtml = `<table><tr><th>Type</th><th>Count</th><th>Avg Exp Ret</th><th>Avg Score</th></tr>`;
-        for (const [type,count] of Object.entries(counts)) {
-            const avgRet = opps.filter(o=>(o.type||o.signal_type)===type).reduce((s,o)=>s+(o.expected_return||0),0)/count;
-            const avgScore = opps.filter(o=>(o.type||o.signal_type)===type).reduce((s,o)=>s+(o.score||0),0)/count;
-            typeHtml+=`<tr><td>${type}</td><td>${count}</td><td>${fmt(avgRet,1)}%</td><td>${fmt(avgScore,0)}</td></tr>`;
-        }
-        typeHtml+='</table>';
-        byTypeEl.innerHTML = typeHtml || 'No opportunities by type yet — 24/7 auto';
-    }
-
-    if (raw) raw.textContent = JSON.stringify(data, null, 2).substring(0,10000);
-    if (perfEl) perfEl.innerHTML = html;
-}
-
-async function showOpportunityDetail(oppId) {
-    const data = await fetchJSON(`/api/opportunity/${oppId}`);
-    const panel = document.getElementById('opportunity-detail-panel');
-    if (!panel) return;
-    if (!data.found) {
-        panel.innerHTML = `<div class="error">Opportunity ${oppId} not found — ${data.error} — check /api/opportunities for current list — 24/7 auto across all 111 instruments</div>`;
-        return;
-    }
-    const o = data.opportunity;
-    panel.innerHTML = `
-        <h4>Opportunity Details — ${oppId} — Full Enterprise Grade — /api/opportunity/${oppId} — HISTORY, SIGNALS and OPPORTUNITIES and EACH OPPORTUNITIES DETAILS Pages/Tabs Included</h4>
-        <p><span class="metric"><b>Instrument:</b> ${o.instrument||o.pair}</span> <span class="metric"><b>Type:</b> ${o.type||o.signal_type} ${badge(o.type||'','real')}</span> <span class="metric"><b>Score:</b> ${o.score||''} ${o.score>=85?badge('ELITE >=85','elite'):''}</span> <span class="metric"><b>Confidence:</b> ${fmt(o.confidence,2)}</span> <span class="metric"><b>Timeframe:</b> ${o.timeframe||''}</span></p>
-        <p><span class="metric"><b>Price/Entry:</b> ${fmt(o.price||o.entry_price,2)}</span> <span class="metric"><b>BB%:</b> ${o.bb_percentile?fmt(o.bb_percentile,1)+'%':''}</span> <span class="metric"><b>HV Ratio:</b> ${o.hv_ratio?fmt(o.hv_ratio,3):''}</span> <span class="metric"><b>Z-Score:</b> ${o.z_score?fmt(o.z_score,2):''}</span> <span class="metric"><b>Funding:</b> ${o.funding_pct?fmt(o.funding_pct,4)+'%':''}</span> <span class="metric"><b>OBI:</b> ${o.obi?fmt(o.obi,3):''}</span></p>
-        <p><span class="metric"><b>Expected Return:</b> ${fmt(o.expected_return,1)}%</span> <span class="metric"><b>Win Rate:</b> ${o.win_rate||fmt((o.win_rate_est||0)*100,0)+'%'}</span> <span class="metric"><b>Direction:</b> ${o.direction_label||o.direction}</span> <span class="metric"><b>Stop Loss:</b> ${fmt(o.stop_loss,4)}</span> <span class="metric"><b>Take Profit:</b> ${fmt(o.take_profit,4)}</span></p>
-        <p><span class="metric"><b>Leverage:</b> ${o.leverage||''}</span> <span class="metric"><b>Capital %:</b> ${o.capital_pct||''}</span> <span class="metric"><b>Source:</b> ${(o.source||'').substring(0,60)}</span> <span class="metric"><b>24/7 Auto:</b> ${badge('AUTO ACROSS ALL 111','live')}</span></p>
-        <p style="font-size:0.9em;"><b>Details:</b> ${o.details||''}</p>
-        <p style="font-size:0.9em;"><b>Trade Plan:</b> ${o.trade_plan||''}</p>
-        <p style="font-size:0.8em;"><b>Fields:</b> id, instrument, type, bb_percentile, hv_ratio, price, entry_price, stop_loss, take_profit, expected_return, win_rate_est, win_rate, direction, direction_label, confidence, score, timeframe, source, details, trade_plan, leverage, capital_pct, real_data_only, enterprise_grade A, full_enterprise_function true, not_command_center true, 24/7 auto true, across all instruments true</p>
-        <p>${badge('Enterprise Grade A','real')} ${badge('Full Enterprise Function','real')} ${badge('Not Command Center','elite')} ${badge('24/7 Auto Across All 111','live')} ${badge('Real data only','real')}</p>
-        <pre style="max-height:400px; overflow:auto; background:#0a0a0a; color:#0f0; padding:10px; border-radius:6px; border:1px solid #e94560;">${JSON.stringify(data, null, 2).substring(0,8000)}</pre>
-    `;
-    showSection('opportunities');
-}
-
-async function loadSignals() {
-    const data = await fetchJSON('/api/signals');
-    const el = document.getElementById('signals-list');
-    const byTfEl = document.getElementById('signals-by-timeframe');
-    if (!el) return;
-    const signals = data.signals||[];
-    let html = `<p><span class="metric"><b>Count:</b> ${signals.length} — 24 Signals S01-S24 — Full Enterprise Grade + Details Pages Included</span> <span class="metric"><b>24/7 Auto:</b> ${badge('AUTO ACROSS ALL 111','live')}</span> <span class="metric"><b>Not Command Center:</b> ${badge('FULL ENTERPRISE WEB APP','elite')}</span></p>`;
-    html+=`<table><tr><th>ID</th><th>Name</th><th>Timeframe</th><th>Type</th><th>Lead</th><th>Real Source</th><th>WR</th><th>Details Page</th></tr>`;
-    signals.forEach(s=>{
-        html+=`<tr><td>${s.id}</td><td>${s.name}</td><td>${s.timeframe}</td><td>${s.type}</td><td>${s.lead}</td><td>${(s.real_source||'').substring(0,40)}</td><td>${s.win_rate}</td><td><button onclick="showSignalDetail('${s.id}')">Details /api/signal/${s.id}</button></td></tr>`;
+  /* ------------------------------------------------------------ overview */
+  function loadOverview() {
+    api("/api/backtest").then(function (d) {
+      rowsInto($("#overviewMonths"),
+        (d.default_accounting || []).map(function (x) { return monthRow(x, false); }).join(""), 7);
+    }).catch(function (e) {
+      rowsInto($("#overviewMonths"), "", 7, e.message);
     });
-    html+='</table>';
-    el.innerHTML = html;
 
-    if (byTfEl) {
-        const groups = {};
-        signals.forEach(s=>{ const tf=s.timeframe; groups[tf]=(groups[tf]||0)+1; });
-        let gHtml = `<table><tr><th>Timeframe</th><th>Count</th><th>Type</th></tr>`;
-        for (const [tf,count] of Object.entries(groups)) {
-            gHtml+=`<tr><td>${tf}</td><td>${count}</td><td>${signals.find(s=>s.timeframe===tf)?.type||''}</td></tr>`;
-        }
-        gHtml+='</table><p>Temporal cascade T-4w → T-1w → T-48h → T-4h → T-30m → T-5m — From strategic to execution — All pulling live at runtime — 24/7 auto across all instruments</p>';
-        byTfEl.innerHTML = gHtml;
+    var host = $("#equityChart");
+    if (!host) return;
+    var month = host.dataset.month || (window.V01T && window.V01T.defaultMonth) || "jul2026";
+    api("/api/backtest/" + month + "/trades?limit=1000").then(function (d) {
+      drawEquity(host, (d.trades || []).map(function (t) { return t.capital_after; }));
+    }).catch(function () { host.innerHTML = '<div class="empty">Chart unavailable</div>'; });
+  }
+
+  /* Equity curve on a log scale — linear would render every early trade flat. */
+  function drawEquity(host, series) {
+    if (!series || series.length < 2) {
+      host.innerHTML = '<div class="empty"><span>Not enough trades to plot</span></div>';
+      return;
     }
-}
+    var W = 640, H = 220, P = { t: 12, r: 12, b: 24, l: 58 };
+    var logs = series.map(function (v) { return Math.log10(Math.max(v, 1e-9)); });
+    var lo = Math.min.apply(null, logs), hi = Math.max.apply(null, logs);
+    if (hi === lo) hi = lo + 1;
 
-async function showSignalDetail(signalId) {
-    const data = await fetchJSON(`/api/signal/${signalId}`);
-    const panel = document.getElementById('signal-detail-panel');
-    if (!panel) return;
-    if (!data.found) {
-        panel.innerHTML = `<div class="error">Signal ${signalId} not found — ${data.error}</div>`;
-        return;
+    var x = function (i) { return P.l + (i / (series.length - 1)) * (W - P.l - P.r); };
+    var y = function (i) { return P.t + (1 - (logs[i] - lo) / (hi - lo)) * (H - P.t - P.b); };
+
+    var line = series.map(function (_, i) { return (i ? "L" : "M") + x(i).toFixed(1) + " " + y(i).toFixed(1); }).join(" ");
+    var area = line + " L" + x(series.length - 1).toFixed(1) + " " + (H - P.b) + " L" + P.l + " " + (H - P.b) + " Z";
+
+    var grid = "", labels = "";
+    for (var g = 0; g <= 4; g++) {
+      var gy = P.t + (g / 4) * (H - P.t - P.b);
+      var val = Math.pow(10, hi - (g / 4) * (hi - lo));
+      grid += '<line class="chart-grid" x1="' + P.l + '" y1="' + gy.toFixed(1) + '" x2="' + (W - P.r) + '" y2="' + gy.toFixed(1) + '"/>';
+      labels += '<text class="chart-axis" x="' + (P.l - 6) + '" y="' + (gy + 3).toFixed(1) + '" text-anchor="end">' +
+        (val >= 1e6 ? (val / 1e6).toFixed(1) + "M" : val >= 1e3 ? (val / 1e3).toFixed(0) + "k" : val.toFixed(0)) + "</text>";
     }
-    const s = data.signal;
-    panel.innerHTML = `
-        <h4>Signal Details — ${signalId} — Full Enterprise Grade — /api/signal/${signalId} — HISTORY, SIGNALS and OPPORTUNITIES and EACH OPPORTUNITIES DETAILS Pages/Tabs Included</h4>
-        <p><span class="metric"><b>ID:</b> ${s.id}</span> <span class="metric"><b>Name:</b> ${s.name}</span> <span class="metric"><b>Timeframe:</b> ${s.timeframe}</span> <span class="metric"><b>Type:</b> ${s.type}</span> <span class="metric"><b>Lead:</b> ${s.lead}</span> <span class="metric"><b>WR:</b> ${s.win_rate}</span></p>
-        <p><span class="metric"><b>Real Source:</b> ${s.real_source}</span></p>
-        <p style="font-size:0.9em;"><b>Description:</b> ${s.description}</p>
-        <p style="font-size:0.9em;"><b>Rules:</b> ${s.rules}</p>
-        <p style="font-size:0.9em;"><b>Logic:</b> ${s.logic}</p>
-        <p style="font-size:0.9em;"><b>Data Source:</b> ${s.data_source}</p>
-        <p>${badge('Enterprise Grade A','real')} ${badge('Full Enterprise Function','real')} ${badge('Not Command Center','elite')} ${badge('24/7 Auto','live')} ${badge('Real data only','real')}</p>
-        <pre style="max-height:400px; overflow:auto; background:#0a0a0a; color:#0f0; padding:10px; border-radius:6px; border:1px solid #00ff9f;">${JSON.stringify(data, null, 2).substring(0,8000)}</pre>
-    `;
-    showSection('signals');
-}
 
-async function loadPerformance() {
-    await loadHistory();
-    await loadOpportunities();
-}
+    host.innerHTML =
+      '<svg class="chart" viewBox="0 0 ' + W + " " + H + '" role="img" preserveAspectRatio="none" ' +
+      'aria-label="Equity curve, log scale, ' + series.length + ' trades, final ' + money(series[series.length - 1]) + '">' +
+      '<defs><linearGradient id="eqFill" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="#10b981" stop-opacity=".26"/>' +
+      '<stop offset="100%" stop-color="#10b981" stop-opacity="0"/></linearGradient></defs>' +
+      grid + labels +
+      '<path class="chart-area" d="' + area + '"/><path class="chart-line" d="' + line + '"/>' +
+      "</svg>" +
+      '<div class="metric-foot" style="text-align:right">log scale · ' + series.length +
+      " trades · final <span class='pos mono'>" + money(series[series.length - 1]) + "</span></div>";
+  }
 
-// Charts
-let bbChartInst = null;
-function drawBBChart(volEx) {
-    const ctx = document.getElementById('bbChart');
-    if (!ctx) return;
-    const labels = volEx.map(v=>v.instrument||'unk');
-    const bbVals = volEx.map(v=>v.bb_percentile||50);
-    if (bbChartInst) bbChartInst.destroy();
-    try {
-        bbChartInst = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels.slice(0,10),
-                datasets: [{ label: 'BB% Live (<10% = squeeze) — Each Details Page Included', data: bbVals.slice(0,10), backgroundColor: bbVals.map(b=> b<10?'rgba(233,69,96,0.8)':'rgba(0,255,159,0.4)'), borderColor: '#e94560', borderWidth:1 }]
-            },
-            options: { responsive:true, plugins:{ legend:{labels:{color:'#fff'}}}, scales:{ x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}, min:0, max:100} } }
+  /* ------------------------------------------------------------ backtest */
+  function loadBacktest() {
+    api("/api/backtest").then(function (d) {
+      rowsInto($("#btDefault"), (d.default_accounting || []).map(function (x) { return monthRow(x, true); }).join(""), 8);
+      rowsInto($("#btStrict"), (d.strict_non_overlapping || []).map(function (x) { return monthRow(x, true); }).join(""), 8);
+    }).catch(function (e) {
+      rowsInto($("#btDefault"), "", 8, e.message);
+      rowsInto($("#btStrict"), "", 8, e.message);
+    });
+  }
+
+  /* -------------------------------------------------------------- trades */
+  function loadTrades() {
+    var sel = $("#tradeMonth");
+    if (!sel) return;
+    var month = sel.value;
+    rowsInto($("#tradeRows"), '<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>', 9);
+    api("/api/backtest/" + month + "/trades?limit=500").then(function (d) {
+      var rows = (d.trades || []).map(function (t) {
+        return "<tr>" +
+          '<td class="num mono muted">' + fmt(t.n) + "</td>" +
+          '<td class="num mono muted">' + fmt(t.index) + "</td>" +
+          '<td class="num mono">' + money(t.entry_price) + "</td>" +
+          '<td class="num mono">' + fmt(t.bb_pct, 2) + "</td>" +
+          '<td class="num mono">' + fmt(t.hv_ratio, 3) + "</td>" +
+          "<td>" + (t.win ? '<span class="badge pass">win</span>' : '<span class="badge fail">loss</span>') + "</td>" +
+          '<td class="num mono ' + (t.win ? "pos" : "muted") + '">' + fmt(t.max_move_pct, 3) + "%</td>" +
+          '<td class="num mono muted">' + (t.bars_to_expansion === null ? "—" : fmt(t.bars_to_expansion)) + "</td>" +
+          '<td class="num mono">' + money(t.capital_after) + "</td></tr>";
+      }).join("");
+      rowsInto($("#tradeRows"), rows, 9);
+      var c = $("#tradeCount");
+      if (c) c.textContent = fmt(d.total) + " trades · " + esc(d.accounting || "");
+    }).catch(function (e) { rowsInto($("#tradeRows"), "", 9, e.message); });
+  }
+  var tm = $("#tradeMonth");
+  if (tm) tm.addEventListener("change", loadTrades);
+
+  /* ------------------------------------------------------------- signals */
+  function loadSignals() {
+    api("/api/v01t/squeezes?limit=200").then(function (d) {
+      var rows = (d.squeezes || []).map(function (s) {
+        var up = s.bb_pct > 50;
+        return "<tr>" +
+          '<td class="num mono muted">' + fmt(s.index) + "</td>" +
+          '<td class="num mono">' + money(s.price) + "</td>" +
+          '<td class="num mono">' + fmt(s.bb_pct, 2) + "</td>" +
+          '<td class="num mono">' + fmt(s.hv_ratio, 3) + "</td>" +
+          '<td class="num mono">' + fmt(s.score) + "</td>" +
+          "<td>" + (up ? '<span class="badge warn">upper</span>' : '<span class="badge info">lower</span>') + "</td></tr>";
+      }).join("");
+      rowsInto($("#squeezeRows"), rows, 6, "No squeezes detected");
+    }).catch(function (e) { rowsInto($("#squeezeRows"), "", 6, e.message); });
+  }
+
+  /* ------------------------------------------------------------- monitor */
+  function loadMonitor() {
+    api("/api/ve_monitor").then(function (m) {
+      var g = m.goal || {};
+      $("#monMetrics").innerHTML = [
+        metricCard("Status", m.running ? "RUNNING" : "STOPPED", m.running ? "live loop" : "halted", m.running ? "ok" : "bad", m.running ? "pos" : "neg"),
+        metricCard("Cycles", fmt(m.cycles), "since start", "", ""),
+        metricCard("Resolved", fmt(m.resolved_trades), fmt(m.wins) + "W / " + fmt(m.losses) + "L", "", ""),
+        metricCard("Win Rate", pct(m.win_rate_pct, 1), g.wr_above_80 ? "above 80% target" : "below target", g.wr_above_80 ? "ok" : "watch", g.wr_above_80 ? "pos" : "warn-t"),
+        metricCard("Capital", money(m.capital), "ROI " + pct(m.roi_pct, 1), "", "pos"),
+        metricCard("Max DD", pct(m.max_drawdown_pct), g.dd_below_5 ? "under 5% target" : "above target", g.dd_below_5 ? "ok" : "bad", g.dd_below_5 ? "pos" : "neg"),
+        metricCard("Open Windows", fmt(m.pending_windows), "awaiting move", "", ""),
+        metricCard("Errors", fmt(m.errors), m.last_error || "none", m.errors ? "bad" : "ok", m.errors ? "neg" : "pos")
+      ].join("");
+    }).catch(function () {});
+
+    api("/api/ve_monitor/pending").then(function (d) {
+      var rows = (d.pending || []).map(function (p) {
+        return "<tr><td class='mono muted'>" + esc(p.id) + "</td>" +
+          '<td class="num mono">' + money(p.entry_price) + "</td>" +
+          '<td class="num mono">' + fmt(p.best_move_pct, 3) + "%</td>" +
+          '<td class="num mono">' + fmt(p.bars_elapsed) + "h</td>" +
+          '<td class="num mono muted">' + fmt(p.bars_remaining) + "h</td></tr>";
+      }).join("");
+      rowsInto($("#pendingRows"), rows, 5, "No open windows");
+    }).catch(function () {});
+
+    api("/api/ve_monitor/history?limit=50").then(function (d) {
+      var rows = (d.history || []).slice().reverse().map(function (t) {
+        return "<tr><td>" + (t.win ? '<span class="badge pass">expansion</span>' : '<span class="badge fail">no move</span>') + "</td>" +
+          '<td class="num mono">' + money(t.entry_price) + "</td>" +
+          '<td class="num mono">' + money(t.exit_price) + "</td>" +
+          '<td class="num mono ' + (t.win ? "pos" : "muted") + '">' + fmt(t.max_move_pct, 3) + "%</td>" +
+          '<td class="num mono muted">' + fmt(t.bars_held) + "</td>" +
+          '<td class="num mono ' + (t.win ? "pos" : "neg") + '">' + t.multiplier + "</td>" +
+          '<td class="num mono">' + money(t.capital_after) + "</td></tr>";
+      }).join("");
+      rowsInto($("#settledRows"), rows, 7, "No settled trades yet");
+    }).catch(function () {});
+  }
+
+  function metricCard(label, value, foot, cls, valCls) {
+    return '<div class="metric ' + (cls || "") + '">' +
+      '<div class="metric-label">' + esc(label) + "</div>" +
+      '<div class="metric-value sm ' + (valCls || "") + '">' + esc(value) + "</div>" +
+      '<div class="metric-foot">' + esc(foot) + "</div></div>";
+  }
+
+
+  /* ----------------------------------------------------------- execution */
+  function loadExecution() {
+    api("/api/exchange").then(function (x) {
+      var st = x.state, c = x.credentials, live = x.mode === "live";
+      var badge = $("#execModeBadge");
+      if (badge) {
+        badge.textContent = x.mode.toUpperCase().replace("_", " ");
+        badge.className = "badge " + (live ? "fail" : x.mode === "dry_run" ? "warn" : "info");
+      }
+      var venue = $("#execVenue");
+      if (venue) venue.textContent = x.exchange + " · " + x.symbol + " · " + x.leverage + "×" +
+        (c.kucoin_sandbox ? " · sandbox" : " · MAINNET");
+
+      $("#execMetrics").innerHTML = [
+        metricCard("Mode", x.mode.toUpperCase(), x.mode_meaning, live ? "bad" : "ok", live ? "neg" : "pos"),
+        metricCard("Venue", "KUCOIN", "futures · hedge mode", "", ""),
+        metricCard("Legs / Squeeze", String(x.double_entry.legs_per_squeeze), "long + short, same price", "ok", "pos"),
+        metricCard("Net Edge", pct(x.double_entry.net_pct_of_capital * 100, 1), "of capital per squeeze", "ok", "pos"),
+        metricCard("Squeezes Executed", fmt(st.squeezes_executed), fmt(st.legs_placed) + " legs placed", "", ""),
+        metricCard("Rejected", fmt(st.rejected), st.last_rejection || "none", st.rejected ? "watch" : "ok", st.rejected ? "warn-t" : "pos"),
+        metricCard("Errors", fmt(st.errors), st.last_error || "none", st.errors ? "bad" : "ok", st.errors ? "neg" : "pos"),
+        metricCard("Equity", money(st.equity), "loss " + pct(st.daily_loss_pct), "", "")
+      ].join("");
+
+      $("#execModes").innerHTML = [
+        ["paper", "none", "no", "nothing — default"],
+        ["dry_run", "yes (read)", "no — logged only", "API credentials"],
+        ["live", "yes (write)", "YES — real orders", "V01T_EXEC_MODE=live + V01T_LIVE=I_UNDERSTAND"]
+      ].map(function (m) {
+        var on = x.mode === m[0];
+        return "<tr" + (on ? ' style="background:var(--accent-dim)"' : "") + ">" +
+          "<td><strong>" + m[0] + "</strong></td><td class='muted'>" + m[1] + "</td>" +
+          "<td class='" + (m[0] === "live" ? "neg" : "muted") + "'>" + m[2] + "</td>" +
+          "<td class='mono' style='white-space:normal'>" + esc(m[3]) + "</td>" +
+          "<td>" + (on ? '<span class="badge pass">active</span>' : '<span class="badge neutral">—</span>') + "</td></tr>";
+      }).join("");
+
+      $("#execCreds").innerHTML = [
+        ["KUCOIN_API_KEY", c.kucoin_api_key], ["KUCOIN_API_SECRET", c.kucoin_api_secret],
+        ["KUCOIN_API_PASSPHRASE", c.kucoin_api_passphrase],
+        ["V01T_LIVE confirmation", c.live_confirmation]
+      ].map(function (r) {
+        return "<tr><td class='mono muted'>" + esc(r[0]) + "</td><td>" +
+          (r[1] ? '<span class="badge pass">set</span>' : '<span class="badge neutral">not set</span>') +
+          "</td></tr>";
+      }).join("") +
+        "<tr><td class='mono muted'>Endpoint</td><td>" +
+        (c.kucoin_sandbox ? '<span class="badge info">sandbox</span>' : '<span class="badge fail">mainnet</span>') +
+        "</td></tr>";
+    }).catch(function (e) {
+      var m = $("#execMetrics"); if (m) m.innerHTML = '<div class="empty">' + esc(e.message) + "</div>";
+    });
+
+    api("/api/exchange/orders?limit=50").then(function (d) {
+      var rows = (d.orders || []).slice().reverse().map(function (o) {
+        return "<tr><td class='mono muted'>" + esc(o.id) + "</td>" +
+          '<td class="num mono">' + money(o.entry_price) + "</td>" +
+          '<td class="num mono">' + fmt(o.contracts_per_leg) + "</td>" +
+          '<td class="num mono">' + money(o.notional_per_leg) + "</td>" +
+          '<td class="num mono">' + fmt(o.bb_pct, 2) + "</td>" +
+          "<td><span class='badge " + (o.mode === "live" ? "fail" : "info") + "'>" + esc(o.mode) + "</span></td></tr>";
+      }).join("");
+      rowsInto($("#execOrders"), rows, 6, "No double entries executed yet");
+      var b = $("#badgeExec"); if (b) b.textContent = fmt(d.count);
+    }).catch(function () {});
+
+    api("/api/exchange/risk").then(function (r) {
+      var L = r.limits, C = r.current;
+      $("#execRails").innerHTML = [
+        ["Max concurrent squeezes", L.max_concurrent_squeezes, C.open_squeezes, C.open_squeezes < L.max_concurrent_squeezes],
+        ["Max daily loss", pct(L.max_daily_loss_pct), pct(C.daily_loss_pct), C.daily_loss_pct < L.max_daily_loss_pct],
+        ["Max notional / leg", money(L.max_notional_per_leg), "—", true],
+        ["Min free balance", money(L.min_free_balance), money(C.equity), C.equity >= L.min_free_balance],
+        ["Kill switch", L.kill_switch ? "ENGAGED" : "off", "—", !L.kill_switch]
+      ].map(function (x) {
+        return "<tr><td>" + esc(x[0]) + "</td><td class='num mono'>" + esc(x[1]) + "</td>" +
+          "<td class='num mono'>" + esc(x[2]) + "</td><td>" +
+          (x[3] ? '<span class="badge pass">ok</span>' : '<span class="badge fail">blocking</span>') + "</td></tr>";
+      }).join("");
+      if (r.blocking) toast("Execution blocked: " + r.blocking, "neg");
+    }).catch(function () {});
+
+    previewOrder();
+  }
+
+  function previewOrder() {
+    var pr = $("#pvPrice"), eq = $("#pvEquity");
+    if (!pr || !eq) return;
+    api("/api/exchange/preview?price=" + encodeURIComponent(pr.value) +
+        "&equity=" + encodeURIComponent(eq.value)).then(function (d) {
+      $("#pvLegs").innerHTML = d.legs.map(function (l) {
+        return "<tr><td><span class='badge " + (l.leg === "LONG" ? "pass" : "fail") + "'>" + l.leg + "</span></td>" +
+          "<td class='mono'>" + esc(l.side) + "</td><td class='mono muted'>" + esc(l.positionSide) + "</td>" +
+          "<td class='num mono'>" + fmt(l.size) + "</td>" +
+          "<td class='num mono neg'>" + money(l.stopLoss) + "</td>" +
+          "<td class='num mono pos'>" + money(l.takeProfit) + "</td></tr>";
+      }).join("");
+      $("#pvNote").innerHTML = d.tradable
+        ? fmt(d.contracts_per_leg) + " contracts/leg · " + money(d.notional_per_leg) +
+          " notional per leg · " + d.leverage + "× on " + esc(d.symbol)
+        : "<span class='neg'>Not tradable: size rounds to zero contracts at this equity/price.</span>";
+    }).catch(function (e) { rowsInto($("#pvLegs"), "", 6, e.message); });
+  }
+  ["#pvPrice", "#pvEquity"].forEach(function (s) {
+    var el = $(s);
+    if (el) { var t; el.addEventListener("input", function () { clearTimeout(t); t = setTimeout(previewOrder, 300); }); }
+  });
+
+  var pfBtn = $("#preflightBtn");
+  if (pfBtn) pfBtn.addEventListener("click", function () {
+    var host = $("#execPreflight");
+    host.innerHTML = '<div class="loading"><div class="spinner"></div><span>Contacting exchange…</span></div>';
+    api("/api/exchange/preflight").then(function (p) {
+      if (p.ready && p.note) { host.innerHTML = '<div class="callout info">' + esc(p.note) + "</div>"; return; }
+      var rows = Object.keys(p.checks || {}).map(function (k) {
+        var c = p.checks[k];
+        return "<tr><td>" + esc(k.replace(/_/g, " ")) + "</td><td>" +
+          (c.ok ? '<span class="badge pass">ok</span>' : '<span class="badge fail">fail</span>') +
+          "</td><td class='muted' style='white-space:normal'>" + esc(c.ok ? String(c.value) : c.error).slice(0, 90) + "</td></tr>";
+      }).join("");
+      host.innerHTML = "<div class='table-wrap' style='border:none'><table><tbody>" + rows + "</tbody></table></div>" +
+        (p.ready ? '<div class="callout info" style="margin-top:var(--s-3)">All checks passed — account is ready.</div>'
+                 : '<div class="callout warn" style="margin-top:var(--s-3)"><span>⚠</span><span>' +
+                   esc(p.fatal || "Not ready. Blocking: " + (p.blocking || []).join(", ")) + "</span></div>");
+      toast(p.ready ? "Preflight passed" : "Preflight failed", p.ready ? "pos" : "neg");
+    }).catch(function (e) {
+      host.innerHTML = '<div class="callout warn"><span>⚠</span><span>' + esc(e.message) + "</span></div>";
+    });
+  });
+
+  var ecBtn = $("#execCycleBtn");
+  if (ecBtn) ecBtn.addEventListener("click", function () {
+    fetch("/api/exchange/cycle", { method: "POST" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.executed) toast("Double entry placed @ " + money(d.executed.entry_price), "pos");
+        else if (d.blocked) toast("Blocked: " + d.blocked, "neg");
+        else toast(d.elite === false ? "No squeeze on this bar" : "Cycle complete");
+        loadExecution();
+      }).catch(function (e) { toast(e.message, "neg"); });
+  });
+
+  /* ---------------------------------------------------------------- risk */
+  function loadCosts() {
+    api("/api/costs").then(function (c) {
+      $("#costRows").innerHTML = [
+        ["Spread", c.spread_bps + " bps"],
+        ["Taker fee", c.taker_fee_bps + " bps"],
+        ["Slippage", c.slippage_bps + " bps"],
+        ["Funding (8h)", c.funding_bps_8h + " bps"],
+        ["Round trip vs notional", pct(c.round_trip_cost_pct_of_notional * 100, 3)],
+        ["Round trip vs equity @50×", pct(c.round_trip_cost_pct_of_equity_at_50x * 100, 2)],
+        ["Breakeven move", pct(c.breakeven_move_pct * 100, 3)]
+      ].map(function (r) {
+        return "<tr><td class='muted'>" + esc(r[0]) + "</td><td class='num mono'>" + esc(r[1]) + "</td></tr>";
+      }).join("");
+    }).catch(function () {});
+  }
+
+  function calcSize() {
+    var eq = $("#calcEquity"), pr = $("#calcPrice"), out = $("#calcOut");
+    if (!eq || !pr || !out) return;
+    api("/api/sizing?equity=" + encodeURIComponent(eq.value) + "&price=" + encodeURIComponent(pr.value))
+      .then(function (d) {
+        var p = d.position;
+        out.innerHTML = [
+          metricCard("Units", fmt(p.units, 6), "base asset", "", ""),
+          metricCard("Notional", money(p.notional), "position value", "", ""),
+          metricCard("Margin", money(p.margin), "at " + d.rules.leverage + "×", "", ""),
+          metricCard("Risk", money(p.risk_amount), pct(p.risk_pct_of_equity * 100) + " of equity", "watch", "warn-t"),
+          metricCard("Stop Distance", money(p.stop_distance), "price move", "", ""),
+          metricCard("Bound By", String(p.capped_by).toUpperCase(), "binding constraint", "", "")
+        ].join("");
+      }).catch(function (e) { out.innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; });
+  }
+  ["#calcEquity", "#calcPrice"].forEach(function (s) {
+    var el = $(s);
+    if (el) {
+      var t;
+      el.addEventListener("input", function () { clearTimeout(t); t = setTimeout(calcSize, 300); });
+    }
+  });
+
+  /* -------------------------------------------------------------- health */
+  var ENDPOINTS = [
+    "/api/health", "/api/status", "/api/backtest", "/api/backtest/jan2026",
+    "/api/backtest/jul2026/trades", "/api/ve_monitor", "/api/ve_monitor/pending",
+    "/api/ve_monitor/history", "/api/v01t", "/api/v01t/squeezes", "/api/v01t/series",
+    "/api/v01t/report", "/api/engine", "/api/engine/compare", "/api/sizing", "/api/costs"
+  ];
+
+  function loadHealth() {
+    api("/api/health").then(function (h) {
+      $("#healthMetrics").innerHTML = [
+        metricCard("Service", String(h.status).toUpperCase(), "v" + h.version, h.status === "ok" ? "ok" : "bad", h.status === "ok" ? "pos" : "neg"),
+        metricCard("Dataset", fmt(h.dataset.bars) + " bars", h.dataset.symbol + " " + h.dataset.interval, h.dataset.bars_ok ? "ok" : "bad", ""),
+        metricCard("Origin", String(h.dataset.origin).toUpperCase(), "data source", "", ""),
+        metricCard("Uptime", fmt(h.uptime_seconds, 0) + "s", "since boot", "", "")
+      ].join("");
+    }).catch(function () {});
+
+    var grid = $("#endpointGrid");
+    if (grid) {
+      grid.innerHTML = ENDPOINTS.map(function (p) {
+        return '<a class="endpoint" href="' + p + '" target="_blank" rel="noopener">' +
+          '<span class="verb">GET</span><span>' + esc(p) + '</span>' +
+          '<span class="code" data-probe="' + p + '">…</span></a>';
+      }).join("");
+      ENDPOINTS.forEach(function (p) {
+        fetch(p).then(function (r) {
+          var el = grid.querySelector('[data-probe="' + p + '"]');
+          if (el) { el.textContent = r.status; el.className = "code " + (r.ok ? "pos" : "neg"); }
+        }).catch(function () {
+          var el = grid.querySelector('[data-probe="' + p + '"]');
+          if (el) { el.textContent = "ERR"; el.className = "code neg"; }
         });
-    } catch(e){ console.log('chart error', e); }
-}
+      });
+    }
+  }
 
-let ratioChartInst = null;
-function drawRatioChart(history) {
-    const ctx = document.getElementById('ratioLiveChart');
-    if (!ctx) return;
-    if (ratioChartInst) ratioChartInst.destroy();
-    try {
-        ratioChartInst = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: history.map((_,i)=>`T-${history.length-i}`),
-                datasets: [{ label: 'Gold-Silver Ratio Live (mean live std live) — 24/7 Auto', data: history, borderColor: '#ffd700', backgroundColor: 'rgba(255,215,0,0.1)', tension:0.4 }]
-            },
-            options: { responsive:true, plugins:{ legend:{labels:{color:'#fff'}}}, scales:{ x:{ticks:{color:'#fff'}}, y:{ticks:{color:'#fff'}} } }
-        });
-    } catch(e){}
-}
+  /* --------------------------------------------------- live status poll */
+  var lastResolved = null;
 
-function drawVolChart(volInfo) {
-    const ctx = document.getElementById('volSqueezeChart');
-    if (!ctx) return;
-    try {
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['BB%','Rest'],
-                datasets: [{ data: [volInfo.bb_percentile||50, 100-(volInfo.bb_percentile||50)], backgroundColor:['#e94560','rgba(15,52,96,0.3)'], borderWidth:0 }]
-            },
-            options: { responsive:true, plugins:{ legend:{labels:{color:'#fff'}} } }
-        });
-    } catch(e){}
-}
+  function poll() {
+    api("/api/ve_monitor").then(function (m) {
+      var dot = $("#monDot"), txt = $("#monText"), badge = $("#badgeMon");
+      if (dot) dot.className = "dot " + (m.running ? "live" : "down");
+      if (txt) txt.textContent = m.running
+        ? "live · " + fmt(m.cycles) + " cycles · " + fmt(m.resolved_trades) + " trades"
+        : "monitor stopped";
+      if (badge) badge.textContent = fmt(m.resolved_trades);
 
-window.onload = () => {
-    showSection('dashboard');
-    loadHealth();
-    loadLiveCycleSummary();
-    loadEliteLive();
-    loadLivePrices();
-    loadLiveDepth();
-    loadLiveFunding();
-    loadLiveWiki();
-    loadOpportunities();
-    loadSignals();
-    // auto refresh every 15s for live endpoints — 24/7 auto across all instruments
-    setInterval(()=>{ loadHealth(); loadLiveCycleSummary(); loadEliteLive(); loadOpportunities(); }, 15000);
-    setInterval(()=>{ loadLivePrices(); loadLiveDepth(); loadLiveFunding(); loadLiveWiki(); }, 30000);
-    // Expose detail functions globally for buttons
-    window.showOpportunityDetail = showOpportunityDetail;
-    window.showHistoryDetail = showHistoryDetail;
-    window.showSignalDetail = showSignalDetail;
-};
+      var g = m.goal || {};
+      var gt = $("#goalText");
+      if (gt) {
+        var all = g.wr_above_80 && g.roi_thousands_pct && g.dd_below_5;
+        gt.textContent = m.resolved_trades ? (all ? "goal met" : "goal partial") : "goal —";
+        gt.className = m.resolved_trades ? (all ? "pos" : "warn-t") : "muted";
+      }
+
+      if (lastResolved !== null && m.resolved_trades > lastResolved) {
+        toast("Trade settled — capital " + money(m.capital), "pos");
+        if ($("#view-monitor").classList.contains("active")) loadMonitor();
+      }
+      lastResolved = m.resolved_trades;
+    }).catch(function () {
+      var dot = $("#monDot"), txt = $("#monText");
+      if (dot) dot.className = "dot down";
+      if (txt) txt.textContent = "unreachable";
+    });
+  }
+
+  /* ------------------------------------------------------------ palette */
+  var CMDS = Object.keys(TITLES).map(function (k) {
+    return { label: "Go to " + TITLES[k], hint: "view", run: function () { show(k); } };
+  }).concat([
+    { label: "Toggle theme", hint: "appearance", run: toggleTheme },
+    { label: "Refresh current view", hint: "data", run: function () {
+        var v = ($$(".view.active")[0] || {}).id;
+        if (v) { v = v.replace("view-", ""); loaded[v] = false; hydrate(v); loaded[v] = true; toast("Refreshed " + TITLES[v]); }
+      } },
+    { label: "Open API health", hint: "system", run: function () { show("api"); } }
+  ]);
+
+  var mask = $("#paletteMask"), input = $("#paletteInput"), list = $("#paletteList");
+  var filtered = CMDS, sel = 0;
+
+  function renderPalette() {
+    var q = (input.value || "").toLowerCase();
+    filtered = CMDS.filter(function (c) { return c.label.toLowerCase().indexOf(q) !== -1; });
+    if (sel >= filtered.length) sel = 0;
+    list.innerHTML = filtered.length
+      ? filtered.map(function (c, i) {
+          return '<button class="palette-item' + (i === sel ? " sel" : "") + '" data-i="' + i + '" role="option">' +
+            esc(c.label) + '<span class="hint">' + esc(c.hint) + "</span></button>";
+        }).join("")
+      : '<div class="empty"><span>No matching command</span></div>';
+  }
+  function openPalette() { mask.classList.add("open"); input.value = ""; sel = 0; renderPalette(); input.focus(); }
+  function closePalette() { mask.classList.remove("open"); }
+
+  if (input) {
+    input.addEventListener("input", renderPalette);
+    list.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-i]");
+      if (b) { closePalette(); filtered[+b.dataset.i].run(); }
+    });
+    mask.addEventListener("click", function (e) { if (e.target === mask) closePalette(); });
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openPalette(); return; }
+    if (mask && mask.classList.contains("open")) {
+      if (e.key === "Escape") { closePalette(); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); sel = Math.min(sel + 1, filtered.length - 1); renderPalette(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); sel = Math.max(sel - 1, 0); renderPalette(); }
+      else if (e.key === "Enter" && filtered[sel]) { e.preventDefault(); closePalette(); filtered[sel].run(); }
+      return;
+    }
+    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+    var n = parseInt(e.key, 10);
+    if (n >= 1 && n <= 9) show(Object.keys(TITLES)[n - 1]);
+  });
+
+  var pb = $("#paletteBtn"); if (pb) pb.addEventListener("click", openPalette);
+
+  /* -------------------------------------------------------------- theme */
+  function toggleTheme() {
+    var cur = document.documentElement.getAttribute("data-theme");
+    var next = cur === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("v01t-theme", next); } catch (_) {}
+    toast("Theme: " + next);
+  }
+  var tb = $("#themeBtn"); if (tb) tb.addEventListener("click", toggleTheme);
+  try {
+    var saved = localStorage.getItem("v01t-theme");
+    if (saved) document.documentElement.setAttribute("data-theme", saved);
+  } catch (_) {}
+
+  var rt = $("#railToggle");
+  if (rt) rt.addEventListener("click", function () {
+    var open = $("#rail").classList.toggle("open");
+    rt.setAttribute("aria-expanded", String(open));
+  });
+
+  /* --------------------------------------------------------------- boot */
+  show(location.hash.slice(1) || "overview");
+  poll();
+  setInterval(poll, 4000);
+})();
