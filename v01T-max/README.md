@@ -1,3 +1,21 @@
+> # ⚠️ RETRACTED — THESE CLAIMS DID NOT SURVIVE REAL-OHLC TESTING
+>
+> The PASS results below were produced on **vendored Yahoo close-only data**, pooled across
+> Jan+Jun+Jul 2026, and carried by January. When the same configuration was re-tested against
+> **real Coinbase July-2026 OHLC with each entry resolved on its own high/low**, it failed:
+>
+> | claimed here | measured on real OHLC |
+> |---|---|
+> | WR 87.50% | 57.14% |
+> | ROI 22,019% | negative expectancy (−0.1629%/trade net) |
+> | DD 3.95% | not reached — strategy loses money |
+>
+> The `INSTRUMENTS_REQUIRED = 469` constant was an assumption, never a measurement.
+>
+> **Superseded by [`v01T-max2/`](../v01T-max2/)**, which uses 601 real Coinbase July-2026 OHLC
+> bars, walk-forward selection with no lookahead, and reports the honest result: the three
+> targets are jointly infeasible. Nothing below should be relied on.
+
 # v01T-MAX
 
 **A repair of v01T. Same signal, same double entry, three defects fixed.**
