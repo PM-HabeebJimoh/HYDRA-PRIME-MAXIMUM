@@ -10,11 +10,16 @@
 | MONTHLY ROI > 1000% | 14.23% (at DD cap) | **FAIL** |
 | MAX DRAWDOWN < 4% | 4.00% | PASS |
 
-Reproduce: `python3 run_backtest.py` · Verify: `pytest tests/ -q` (15 passing)
+Iteration 2 went further and showed the residual edge is **not real**: it is directional
+exposure that reverses sign in a down month (§4). Zero of 32 configurations are profitable
+in both June 2026 (−16.29%) and July 2026 (+10.20%).
+
+Reproduce: `python3 run_backtest.py` · Verify: `pytest tests/ -q` (21 passing)
 
 ## The data — 100% real, no substitutions
 
 - **601 Coinbase `BTC-USD` 1-hour OHLC bars, 2026-07-01 → 2026-07-26, zero gaps.**
+- **241 Coinbase `BTC-USD` 1-hour OHLC bars, 2026-06-01 → 2026-06-11, zero gaps** (the down-month control).
 - Pulled live from `api.exchange.coinbase.com/products/BTC-USD/candles`, stored verbatim in
   `data/btc_usd_1h_jul2026_coinbase_ohlc.json` (`[low, high, open, close, volume]` per bar).
 - Every entry is resolved against **that entry's own subsequent real high/low**, not closes.
@@ -83,6 +88,35 @@ Sharpe. **The passing regions are disjoint. No leverage exists that satisfies bo
 
 At the maximum leverage respecting DD < 4% (**0.24×**), ROI is **14.23%** — a **70× shortfall**.
 
+### 4. The July "edge" was drift capture — it dies in a down month
+
+This is the finding that closes the loop. Iteration 1 measured a walk-forward edge of
+t = +4.28 and Sharpe 14.84 and called it real. It was not. Inspecting *what the
+walk-forward actually selected* showed it converged on **`signal = all`, long, stop 4.0%,
+target 1.0%** — i.e. **always-long BTC with a wide stop**, in a month that rose 10.20%.
+
+So I pulled a second real month with the opposite sign: **June 2026, −16.29%**
+(241 Coinbase 1h OHLC bars, zero gaps) and applied the identical rule.
+
+| month | drift | n | WR | EV/trade | result |
+|---|---|---|---|---|---|
+| July 2026 | +10.20% | 280 | **81.07%** | **+0.4537%** | profit |
+| June 2026 | −16.29% | 100 | **61.00%** | **−0.7384%** | **LOSS** |
+
+Across the full grid of signal × barrier × side, **0 of 32 configurations were profitable
+in both months**. And the mechanism is exact:
+
+```
+EV / drift ratio    July +0.0445    June +0.0453
+```
+
+EV is a near-constant fraction of the month's drift. That is the algebraic signature of
+**pure directional exposure — beta, not alpha**. The strategy has no predictive content.
+
+The win rate confirms it: at stop 4% / target 1%, WR > 80% appears **long in July and
+short in June**. It attaches to whichever side matches the drift, and it is manufactured
+by the 4:1 barrier ratio either way.
+
 ## What this says about v01T
 
 - v01T's gate (`BB% < 10 or > 90` and `HV ratio < 0.8`) has **no edge**: on real OHLC it is
@@ -95,7 +129,8 @@ At the maximum leverage respecting DD < 4% (**0.24×**), ROI is **14.23%** — a
 
 ## Honest limits of this result
 
-- One month, one instrument. 127 walk-forward trades is a real but modest sample.
+- Two months, one instrument. The regime test is the strongest evidence here: an edge that
+  reverses sign with market direction is beta, and no amount of tuning converts beta to alpha.
 - Hourly bars cannot resolve intrabar sequence; the conservative rule makes results a
   *lower* bound, never an overestimate.
 - Fees modelled at 4 bps round-trip (maker). Taker execution would reduce the edge further.
@@ -109,9 +144,10 @@ vmax2/ohlc.py       real-data loading, conservative barrier resolution, equity/d
 vmax2/signals.py    BB%, HV ratio, momentum, the original v01T gate
 vmax2/backtest.py   trade generation, statistics, walk-forward selection
 vmax2/bound.py      the joint feasibility bound (pure mathematics)
+vmax2/regime.py     up-month vs down-month test: separates real edge from drift capture
 run_backtest.py     the full report reproduced above
-tests/test_vmax2.py 15 tests: data integrity, resolution honesty, the disjointness proof
-data/               601 real Coinbase July-2026 bars
+tests/test_vmax2.py 21 tests: data integrity, resolution honesty, the disjointness proof
+data/               601 real July-2026 + 241 real June-2026 Coinbase bars
 ```
 
 `v01T-model/` is unmodified.

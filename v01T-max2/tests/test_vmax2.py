@@ -98,3 +98,55 @@ def test_v01t_gate_not_better_than_baseline():
     g = stats(generate(BARS, sigs['v01t_gate'], 0.010, 0.0025, 40, len(BARS)))
     b = stats(generate(BARS, sigs['all'],       0.010, 0.0025, 40, len(BARS)))
     assert g['ev'] <= b['ev'] + 1e-6
+
+# ---------- regime test: the decisive check on whether edge is real ----------
+from vmax2.regime import load_month, drift, trades, ev, win_rate, JUL, JUN
+
+JULB = load_month(JUL)
+JUNB = load_month(JUN)
+
+def test_june_data_is_real_and_contiguous():
+    assert len(JUNB) == 241
+    ts = [b['t'] for b in JUNB]
+    assert all(b - a == 3600 for a, b in zip(ts, ts[1:]))
+    for b in JUNB:
+        assert b['l'] <= b['o'] <= b['h'] and b['l'] <= b['c'] <= b['h']
+
+def test_the_two_months_are_opposite_regimes():
+    assert drift(JULB) > 0.05     # July rose
+    assert drift(JUNB) < -0.10    # June fell
+
+def test_july_winning_config_loses_in_june():
+    """The config walk-forward picked on July has NEGATIVE expectancy in June."""
+    j = trades(JULB, lambda i: True, 0.04, 0.01, 1)
+    n = trades(JUNB, lambda i: True, 0.04, 0.01, 1)
+    assert ev(j) > 0 and ev(n) < 0
+    assert win_rate(j) > 80 and win_rate(n) < 70
+
+def test_no_config_survives_both_regimes():
+    """Zero of the tested rules are profitable in both an up and a down month."""
+    from vmax2.signals import make
+    sj, *_ = make(JULB); sn, *_ = make(JUNB)
+    surv = tot = 0
+    for name in sj:
+        for sp, tp in [(0.010,0.0025),(0.020,0.005),(0.040,0.010),(0.008,0.004)]:
+            for side in (1, -1):
+                a = trades(JULB, sj[name], sp, tp, side)
+                b = trades(JUNB, sn[name], sp, tp, side)
+                if len(a) < 15 or len(b) < 12: continue
+                tot += 1
+                if ev(a) > 0 and ev(b) > 0: surv += 1
+    assert tot >= 30
+    assert surv == 0, f"{surv} configs claimed to survive both regimes"
+
+def test_ev_is_proportional_to_drift():
+    """EV/drift is nearly identical across opposite months => pure beta, no alpha."""
+    rj = ev(trades(JULB, lambda i: True, 0.04, 0.01, 1)) / drift(JULB)
+    rn = ev(trades(JUNB, lambda i: True, 0.04, 0.01, 1)) / drift(JUNB)
+    assert rj > 0 and rn > 0
+    assert abs(rj - rn) / max(rj, rn) < 0.10   # within 10% of each other
+
+def test_high_win_rate_appears_on_both_sides():
+    """WR>80% is a barrier artifact: it shows up long in July and short in June."""
+    assert win_rate(trades(JULB, lambda i: True, 0.04, 0.01,  1)) > 80
+    assert win_rate(trades(JUNB, lambda i: True, 0.04, 0.01, -1)) > 80

@@ -55,7 +55,31 @@ for label, ok, got in [("WIN RATE > 80%", wr_ok, f"{rep['win_rate']:.2f}%"),
                        ("MAX DRAWDOWN < 4%", dd_ok, f"{rep['dd_at_cap']:.2f}%")]:
     print(f"  {label:<24} {'PASS' if ok else 'FAIL':<5} (got {got})")
 
-print("\n--- 5. WHY: ROI>1000% and DD<4% hold on DISJOINT leverage ranges ---")
+print("\n--- 5. REGIME TEST: does the July edge survive a DOWN month? ---")
+from vmax2.regime import load_month, drift, trades, ev, win_rate, JUL, JUN
+from vmax2.signals import make as mk
+jul_b, jun_b = load_month(JUL), load_month(JUN)
+print(f"  July 2026 {drift(jul_b)*100:+.2f}%   June 2026 {drift(jun_b)*100:+.2f}%  (real Coinbase 1h OHLC)")
+print(f"  Config that walk-forward SELECTED on July: long, stop 4.0%, target 1.0%")
+print(f"  {'month':>7} {'n':>5} {'WR%':>8} {'EV/trade%':>11} {'verdict':>10}")
+for lbl, bb in (("JULY", jul_b), ("JUNE", jun_b)):
+    tr = trades(bb, lambda i: True, 0.04, 0.01, 1)
+    print(f"  {lbl:>7} {len(tr):>5} {win_rate(tr):>8.2f} {ev(tr)*100:>+11.4f} "
+          f"{'profit' if ev(tr)>0 else 'LOSS':>10}")
+sj, *_ = mk(jul_b); sn, *_ = mk(jun_b); surv = 0; tot = 0
+for name in sj:
+    for sp, tp in [(0.010,0.0025),(0.020,0.005),(0.040,0.010),(0.008,0.004)]:
+        for side in (1,-1):
+            a = trades(jul_b, sj[name], sp, tp, side); b = trades(jun_b, sn[name], sp, tp, side)
+            if len(a) < 15 or len(b) < 12: continue
+            tot += 1
+            if ev(a) > 0 and ev(b) > 0: surv += 1
+print(f"\n  configs profitable in BOTH regimes: {surv} of {tot}")
+print(f"  EV/drift ratio  July {ev(trades(jul_b,lambda i:True,0.04,0.01,1))*100/(drift(jul_b)*100):+.4f}"
+      f"   June {ev(trades(jun_b,lambda i:True,0.04,0.01,1))*100/(drift(jun_b)*100):+.4f}")
+print("  => EV is a near-constant fraction of month drift: directional exposure, not alpha.")
+
+print("\n--- 6. WHY: ROI>1000% and DD<4% hold on DISJOINT leverage ranges ---")
 print(f"  {'lev':>6} {'ROI%':>12} {'DD%':>8} {'ROI ok':>7} {'DD ok':>6} {'BOTH':>6}")
 L = 0.1
 while L <= 20:
