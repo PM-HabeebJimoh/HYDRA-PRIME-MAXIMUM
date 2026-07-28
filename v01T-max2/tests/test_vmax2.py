@@ -304,3 +304,71 @@ def test_funding_cannot_reach_the_targets():
     need = math.log(11) / trades
     lev = need / math.log(1 + edge)
     assert lev * move_sd_8h > 0.04         # one 1-sd bar breaches the 4% DD cap
+
+# ---------- iteration 5: cross-venue mechanical forcing ----------
+from vmax2 import crossvenue as XV
+
+def test_cross_venue_data_is_timestamp_matched():
+    ts, C, K, V = XV.load_matched()
+    assert len(ts) == 100
+    assert all(b - a == 60 for a, b in zip(ts, ts[1:])), "must be contiguous 1m bars"
+    assert len(C) == len(K) == len(V) == len(ts)
+    assert all(x > 0 for x in C + K + V)
+
+def test_dislocation_is_small_and_two_sided():
+    ts, C, K, V = XV.load_matched()
+    S = XV.dislocation_bp(C, K)
+    assert max(S) > 0 and min(S) < 0        # both venues take turns being rich
+    assert max(abs(x) for x in S) < 10.0    # efficient market: gap stays tiny
+
+def test_gap_is_mechanically_forced_closed():
+    """The real finding: strong, fast mean reversion of the cross-venue gap."""
+    ts, C, K, V = XV.load_matched()
+    mr = XV.mean_reversion(XV.dislocation_bp(C, K))
+    assert mr['t'] < -5.0, f"expected strong reversion, got {mr}"
+    assert -1 < mr['decay'] < 0
+    assert mr['half_life_bars'] < 2.0       # gap closes inside ~1 bar
+
+def test_convergence_edge_is_real_and_strong():
+    """This edge is genuine - unlike every prior iteration's."""
+    ts, C, K, V = XV.load_matched()
+    S = XV.dislocation_bp(C, K)
+    s = XV.summary(XV.convergence_trades(S, 1.0))
+    assert s['win_rate'] > 80
+    assert s['t_stat'] > 4.0
+    assert s['mean_bp'] > 0
+
+def test_edge_survives_vwap_respecification():
+    """Not a close-print artifact: it holds when Kraken VWAP replaces the close."""
+    ts, C, K, V = XV.load_matched()
+    s = XV.summary(XV.convergence_trades(XV.dislocation_bp(C, V), 1.0))
+    assert s['t_stat'] > 4.0 and s['win_rate'] > 80
+
+def test_both_legs_rarely_fill():
+    """THE KILLER: the dual-maker assumption fails on real data."""
+    f = XV.fill_feasibility(1.0)
+    assert f['episodes'] >= 20
+    assert f['both_pct'] < 20.0, f"dual fill should be rare, got {f}"
+    assert f['one_leg'] > f['both']
+
+def test_taker_costs_destroy_the_edge():
+    ts, C, K, V = XV.load_matched()
+    S = XV.dislocation_bp(C, K)
+    for thr in (1.0, 1.5, 2.0):
+        gross = XV.summary(XV.convergence_trades(S, thr))['mean_bp']
+        assert gross < XV.full_round_trip_taker_bp() / 10
+        assert XV.net_after_costs(gross, ('kraken',)) < 0      # even ONE crossed leg
+        assert XV.net_after_costs(gross, ('coinbase', 'kraken')) < 0
+
+def test_roi_ceiling_below_target_even_at_zero_cost():
+    """Grant free execution - physically impossible - and 1000%/mo is still out of reach."""
+    ts, C, K, V = XV.load_matched()
+    S = XV.dislocation_bp(C, K)
+    span_min = (ts[-1] - ts[0]) / 60
+    best = 0.0
+    for thr in (1.0, 1.5, 2.0):
+        s = XV.summary(XV.convergence_trades(S, thr))
+        per_month = s['n'] / span_min * 60 * 24 * 30
+        roi = (1 + s['mean_bp']/10000) ** per_month - 1
+        best = max(best, roi * 100)
+    assert best < 1000.0, f"zero-cost ceiling {best:.1f}% unexpectedly clears target"

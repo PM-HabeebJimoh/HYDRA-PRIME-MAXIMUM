@@ -23,6 +23,11 @@ aggressor flags, the data that is causally upstream of the print. Flow's price i
 real and contemporaneous (positive in all 4 windows) but has **no forward lead** (sign
 flips), and the 26bp taker fee is 40x the entire measured signal (§6).
 
+Iteration 5 found a **genuinely real edge** — cross-venue mechanical forcing between
+Coinbase and Kraken: 92.31% win rate, t = +6.03, surviving VWAP re-specification. It
+fails anyway: both passive legs fill only 3.8% of the time, one crossed leg costs 26bp
+against a 1.3bp edge, and even at zero cost the ceiling is 350%/month (§7).
+
 Iteration 5 reached **Deribit** (previously assumed unreachable) and tested funding — real
 positioning data. The headline r=-0.487/t=-3.66 was a false positive caused by +0.962
 funding autocorrelation; corrected to non-overlapping windows it is n=12, t=-1.27, not
@@ -36,6 +41,7 @@ Reproduce: `python3 run_backtest.py` · Verify: `pytest tests/ -q` (40 passing)
 - **241 Coinbase `BTC-USD` 1-hour OHLC bars, 2026-06-01 → 2026-06-11, zero gaps** (the down-month control).
 - **130 aligned ETH-USD + BTC-USD 6-hour bars, 2026-06-24 → 2026-07-27, zero gaps** (the market-neutral pair).
 - **184 real Kraken BTC/USD ticks with aggressor flags + 100 Kraken 1m VWAP bars** (the order-flow test).
+- **100 timestamp-matched Coinbase + Kraken 1m bars, 2026-07-28** (the cross-venue test).
 - **106 real Deribit BTC-PERPETUAL hourly funding + index prints, July 2026** (the positioning test).
 - Pulled live from `api.exchange.coinbase.com/products/BTC-USD/candles`, stored verbatim in
   `data/btc_usd_1h_jul2026_coinbase_ohlc.json` (`[low, high, open, close, volume]` per bar).
@@ -254,6 +260,68 @@ budget, on one bar.
 Tests encode the trap itself (`test_overlapping_windows_inflate_significance`,
 `test_funding_is_highly_autocorrelated`) so this false positive cannot recur.
 
+### 7. Iteration 5 — cross-venue mechanical forcing: a REAL edge, killed by execution
+
+Iterations 1–4 hunted for *statistical tendencies*. This one hunts a **mechanical
+constraint**: when Coinbase and Kraken disagree on BTC at the same instant, arbitrage
+capital **must** close the gap. That is enforced by economics, not by a pattern.
+
+Data: **100 timestamp-matched 1-minute bars**, real Coinbase BTC-USD and real Kraken
+XBT/USD, 2026-07-28 02:55–04:34 UTC. Cross-venue gap: mean −0.13bp, sd 1.03bp, range
+−2.94 to +3.16bp.
+
+**The gap is forced closed, exactly as the physics predicts:**
+
+```
+regress Δgap on gap level:  r = -0.6305   t = -8.00
+decay coefficient -0.8048   half-life 0.42 bars (~25 seconds)
+```
+
+**And fading it works:**
+
+| threshold | n | win rate | mean gross | t |
+|---|---|---|---|---|
+| 1.0 bp | 26 | **92.31%** | +1.3258 bp | **+6.03** |
+| 1.5 bp | 14 | **100.00%** | +1.9057 bp | +6.48 |
+| 2.0 bp | 6 | **100.00%** | +2.5630 bp | +6.37 |
+
+**This is the first genuine edge in the entire repo.** It is not drift (the gap is
+two-sided and zero-mean), not beta (both legs are the same asset), and not a close-print
+artifact — it *survives* re-specification against Kraken VWAP at **t = +7.79**.
+
+**So why is the answer still FAIL? Execution — measured, not assumed.**
+
+*1. The dual-maker assumption fails.* Capturing 1.3bp requires posting passively on both
+venues and having **both** legs fill. On real data, of 26 episodes with a >1bp gap:
+
+| outcome | count | share |
+|---|---|---|
+| **both** legs moved favourably | 1 | **3.8%** |
+| only **one** leg moved | 24 | **92.3%** |
+| neither | 1 | 3.8% |
+
+92.3% of the time you get one fill and hold **naked directional risk** on the unhedged
+leg — reintroducing precisely the beta that killed iterations 1–3.
+
+*2. Costs exceed the edge by 20–100×.* Public entry-tier taker fees:
+
+```
+gross edge                        1.33 bp
+ONE crossed leg (Kraken 26bp)   -24.67 bp
+full taker round trip (132bp)  -130.67 bp
+```
+
+*3. Even free execution misses the target.* Granting 0bp cost — physically impossible —
+the 1bp threshold fires ~11,345 times/month at 1.33bp, compounding to **350%/month**,
+still short of 1000%, and that ignores capacity entirely (the gap is ~1bp deep; size it
+up and you *are* the gap).
+
+**What this proves.** "Know the direction before the market reacts" is real and I found
+it: the lagging venue is mechanically pulled to the leader, with a 25-second half-life
+and 92% reliability. It is unmonetisable at retail because the information is worth
+1.3bp and the cheapest way to act on it costs 26bp. The edge exists; it is *already
+owned* by whoever has co-located infrastructure and zero-fee maker tiers.
+
 ## What this says about v01T
 
 - v01T's gate (`BB% < 10 or > 90` and `HV ratio < 0.8`) has **no edge**: on real OHLC it is
@@ -284,6 +352,7 @@ vmax2/bound.py      the joint feasibility bound (pure mathematics)
 vmax2/regime.py     up-month vs down-month test: separates real edge from drift capture
 vmax2/neutral.py    market-neutral ETH/BTC spread: removes beta by construction
 vmax2/orderflow.py  Kraken tape with aggressor flags: impact vs prediction, and fees
+vmax2/crossvenue.py Coinbase-vs-Kraken matched bars: real edge, execution-infeasible
 vmax2/funding.py    Deribit funding: positioning signal, and the autocorrelation trap
 run_backtest.py     the full report reproduced above
 tests/test_vmax2.py 40 tests: data integrity, resolution honesty, the disjointness proof
