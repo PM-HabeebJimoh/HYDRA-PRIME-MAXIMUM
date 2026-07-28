@@ -14,12 +14,17 @@ Iteration 2 went further and showed the residual edge is **not real**: it is dir
 exposure that reverses sign in a down month (§4). Zero of 32 configurations are profitable
 in both June 2026 (−16.29%) and July 2026 (+10.20%).
 
-Reproduce: `python3 run_backtest.py` · Verify: `pytest tests/ -q` (21 passing)
+Iteration 3 then removed beta *by construction* with a market-neutral ETH/BTC spread
+(residual beta −0.034). The edge vanished with it: best t = +1.10, ROI 11.64% at the DD
+cap (§5). Three independent architectures now converge on the same ≈12–15%/month ceiling.
+
+Reproduce: `python3 run_backtest.py` · Verify: `pytest tests/ -q` (27 passing)
 
 ## The data — 100% real, no substitutions
 
 - **601 Coinbase `BTC-USD` 1-hour OHLC bars, 2026-07-01 → 2026-07-26, zero gaps.**
 - **241 Coinbase `BTC-USD` 1-hour OHLC bars, 2026-06-01 → 2026-06-11, zero gaps** (the down-month control).
+- **130 aligned ETH-USD + BTC-USD 6-hour bars, 2026-06-24 → 2026-07-27, zero gaps** (the market-neutral pair).
 - Pulled live from `api.exchange.coinbase.com/products/BTC-USD/candles`, stored verbatim in
   `data/btc_usd_1h_jul2026_coinbase_ohlc.json` (`[low, high, open, close, volume]` per bar).
 - Every entry is resolved against **that entry's own subsequent real high/low**, not closes.
@@ -117,6 +122,43 @@ The win rate confirms it: at stop 4% / target 1%, WR > 80% appears **long in Jul
 short in June**. It attaches to whichever side matches the drift, and it is manufactured
 by the 4:1 barrier ratio either way.
 
+### 5. Iteration 3 — removing beta by construction also removes the "edge"
+
+Iteration 2 showed the edge was directional beta. So iteration 3 built a strategy where
+**beta cannot exist**: trade ETH against a beta-weighted BTC hedge, so the common dollar
+move cancels algebraically instead of by luck. Data: 130 aligned 6h Coinbase bars
+(ETH-USD and BTC-USD, 2026-06-24 → 07-27), hedge ratio from a rolling 40-bar OLS using
+**only past returns**.
+
+The hedge works exactly as intended:
+
+| | beta vs BTC |
+|---|---|
+| raw ETH | **+1.19** |
+| hedged spread | **−0.034** |
+
+And with beta gone, so is the profit. Every variant collapses to noise:
+
+| rule | hold | n | WR | EV/trade | t |
+|---|---|---|---|---|---|
+| z < −1.0 long | 4 | 10 | 60.00% | +0.3129% | **+1.10** |
+| z > +1.0 short | 4 | 9 | 33.33% | −0.1030% | −0.27 |
+| z < −1.0 long | 1 | 13 | 53.85% | −0.0644% | −0.53 |
+
+Best case t = +1.10 — indistinguishable from zero. The spread is not mean-reverting
+either: lag-1/2/3 autocorrelations are −0.039, −0.005, −0.071, all |t| < 1.
+
+At the DD < 4% cap this yields **+11.64% ROI** and a **60.00% win rate**. That ceiling
+(≈12–15%/month) is now the *third independent* architecture to land in the same place.
+
+**A bug I made and fixed.** My first neutral backtest showed −0.95%/trade on *both*
+directions, with t = −9.47. A symmetric strategy cannot lose both ways — that is
+arithmetically impossible from the market, so it had to be my code. It was: the z-score
+included the entry bar's own return, so the signal peeked at the bar it traded. Fixed to
+use bars strictly before entry, and the false −0.95% became honest noise. Two tests
+(`test_hedge_beta_uses_no_lookahead`, `test_zscore_uses_no_lookahead`) now corrupt the
+entry bar and assert the signal is unchanged, so this cannot silently return.
+
 ## What this says about v01T
 
 - v01T's gate (`BB% < 10 or > 90` and `HV ratio < 0.8`) has **no edge**: on real OHLC it is
@@ -145,8 +187,9 @@ vmax2/signals.py    BB%, HV ratio, momentum, the original v01T gate
 vmax2/backtest.py   trade generation, statistics, walk-forward selection
 vmax2/bound.py      the joint feasibility bound (pure mathematics)
 vmax2/regime.py     up-month vs down-month test: separates real edge from drift capture
+vmax2/neutral.py    market-neutral ETH/BTC spread: removes beta by construction
 run_backtest.py     the full report reproduced above
-tests/test_vmax2.py 21 tests: data integrity, resolution honesty, the disjointness proof
+tests/test_vmax2.py 27 tests: data integrity, resolution honesty, the disjointness proof
 data/               601 real July-2026 + 241 real June-2026 Coinbase bars
 ```
 

@@ -150,3 +150,56 @@ def test_high_win_rate_appears_on_both_sides():
     """WR>80% is a barrier artifact: it shows up long in July and short in June."""
     assert win_rate(trades(JULB, lambda i: True, 0.04, 0.01,  1)) > 80
     assert win_rate(trades(JUNB, lambda i: True, 0.04, 0.01, -1)) > 80
+
+# ---------- iteration 3: market-neutral construction ----------
+from vmax2 import neutral as NEU
+
+def test_neutral_data_real_and_aligned():
+    ts, ec, bc = NEU.aligned()
+    assert len(ts) == 130
+    assert all(b - a == 21600 for a, b in zip(ts, ts[1:]))
+    assert all(x > 0 for x in ec) and all(x > 0 for x in bc)
+
+def test_hedge_actually_removes_beta():
+    """The whole point of iteration 3: beta must be ~0 by construction."""
+    ts, ec, bc = NEU.aligned()
+    re_, rb = NEU.rets(ec), NEU.rets(bc)
+    raw = NEU.hedge_beta(rb, re_, len(rb))        # full-sample ETH beta
+    res = NEU.residual_beta(rb, re_)              # after hedging
+    assert raw > 0.8, "ETH should have large raw beta to BTC"
+    assert abs(res) < 0.10, f"hedge failed, residual beta {res}"
+
+def test_hedge_beta_uses_no_lookahead():
+    ts, ec, bc = NEU.aligned()
+    re_, rb = NEU.rets(ec), NEU.rets(bc)
+    k = 60
+    b_now = NEU.hedge_beta(rb, re_, k)
+    re2 = list(re_); re2[k] = re2[k] * 100        # corrupt the ENTRY bar
+    rb2 = list(rb);  rb2[k] = rb2[k] * 100
+    assert NEU.hedge_beta(rb2, re2, k) == b_now   # unchanged => no lookahead
+
+def test_zscore_uses_no_lookahead():
+    ts, ec, bc = NEU.aligned()
+    re_, rb = NEU.rets(ec), NEU.rets(bc)
+    k = 60
+    z = NEU.zscore_prev(rb, re_, k)
+    re2 = list(re_); re2[k] *= 100
+    assert NEU.zscore_prev(rb, re2, k) == z
+
+def test_neutral_edge_is_not_significant():
+    """Once beta is removed the edge vanishes into noise."""
+    for side in (1, -1):
+        for hold in (1, 2, 4):
+            s = NEU.summary(NEU.backtest(side, 1.0, hold))
+            if s and s['n'] >= 8:
+                assert abs(s['t_stat']) < 2.0, f"unexpected significance {s}"
+
+def test_neutral_fails_the_targets():
+    from vmax2.ohlc import equity_path, max_leverage_within_dd
+    tr = NEU.backtest(1, 1.0, 4)
+    s = NEU.summary(tr)
+    L = max_leverage_within_dd(tr, 0.04)
+    roi, dd = equity_path(tr, L)
+    assert s['win_rate'] < 80        # WR target missed
+    assert roi * 100 < 1000          # ROI target missed by orders of magnitude
+    assert dd <= 0.0401
