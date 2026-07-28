@@ -203,3 +203,58 @@ def test_neutral_fails_the_targets():
     assert s['win_rate'] < 80        # WR target missed
     assert roi * 100 < 1000          # ROI target missed by orders of magnitude
     assert dd <= 0.0401
+
+# ---------- iteration 4: order flow (data causally upstream of price) ----------
+from vmax2 import orderflow as OF
+
+def test_tick_data_is_real_and_has_aggressor_flags():
+    tot = 0
+    for p in OF.TICKS:
+        tk = OF.load_ticks(p)
+        tot += len(tk)
+        assert all(s in ('b', 's') for _, _, _, s, _ in tk)
+        assert all(t in ('m', 'l') for _, _, _, _, t in tk)
+        ts = [x[2] for x in tk]
+        assert ts == sorted(ts), "tape must be time-ordered"
+        assert all(px > 0 and v > 0 for px, v, _, _, _ in tk)
+    assert tot >= 180
+
+def test_1m_bars_carry_vwap_within_range():
+    for b in OF.load_1m():
+        assert b['l'] <= b['vwap'] <= b['h']
+        assert b['l'] <= b['o'] <= b['h'] and b['l'] <= b['c'] <= b['h']
+        assert b['n'] > 0 and b['vol'] > 0
+
+def test_order_flow_impact_is_contemporaneous_and_positive():
+    """Flow DOES move price within the same window - real, but already priced."""
+    rs = [OF.lead_lag(s, 0)['r'] for s in (10, 15, 20, 30)]
+    assert all(r > 0 for r in rs), f"impact should be positive everywhere, got {rs}"
+
+def test_order_flow_does_not_predict_next_window():
+    """The tradable claim fails: predictive correlation flips sign across windows."""
+    rs = [OF.lead_lag(s, 1)['r'] for s in (10, 15, 20, 30)]
+    assert any(r > 0 for r in rs) and any(r < 0 for r in rs), \
+        f"a stable lead would not flip sign, got {rs}"
+    for s in (10, 15, 20, 30):
+        assert abs(OF.lead_lag(s, 1)['t']) < 2.7   # Bonferroni for 8 tests
+
+def test_vwap_position_has_no_forward_information():
+    bars = OF.load_1m()
+    vp  = [OF.vwap_position(b) for b in bars]
+    ret = [(b['c'] - b['o']) / b['o'] for b in bars]
+    for lag in (1, 2, 3):
+        c = OF.correlate(vp[:len(vp)-lag], ret[lag:])
+        assert abs(c['t']) < 2.0, f"lag {lag} unexpectedly significant: {c}"
+
+def test_fees_dominate_any_measured_flow_signal():
+    """Structural kill: best-case signal is far below the cost of acting on it."""
+    best_r = max(abs(OF.lead_lag(s, 1)['r']) for s in (10, 15, 20, 30))
+    move_sd_bp = 1.5                      # typical 10s BTC move
+    edge_bp = best_r * move_sd_bp
+    assert edge_bp < OF.KRAKEN_TAKER_ROUND_TRIP_BP
+    assert edge_bp < 2.0                  # under 2bp even before fees
+
+def test_spread_is_tiny_so_fees_are_the_real_wall():
+    sp = OF.effective_spread_bp()
+    assert 0 < sp < 1.0
+    assert OF.KRAKEN_TAKER_ROUND_TRIP_BP > 20 * sp

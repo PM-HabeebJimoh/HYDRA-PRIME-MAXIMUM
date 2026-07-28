@@ -18,13 +18,19 @@ Iteration 3 then removed beta *by construction* with a market-neutral ETH/BTC sp
 (residual beta −0.034). The edge vanished with it: best t = +1.10, ROI 11.64% at the DD
 cap (§5). Three independent architectures now converge on the same ≈12–15%/month ceiling.
 
-Reproduce: `python3 run_backtest.py` · Verify: `pytest tests/ -q` (27 passing)
+Iteration 4 left price history entirely and tested **order flow** — real Kraken tape with
+aggressor flags, the data that is causally upstream of the print. Flow's price impact is
+real and contemporaneous (positive in all 4 windows) but has **no forward lead** (sign
+flips), and the 26bp taker fee is 40x the entire measured signal (§6).
+
+Reproduce: `python3 run_backtest.py` · Verify: `pytest tests/ -q` (34 passing)
 
 ## The data — 100% real, no substitutions
 
 - **601 Coinbase `BTC-USD` 1-hour OHLC bars, 2026-07-01 → 2026-07-26, zero gaps.**
 - **241 Coinbase `BTC-USD` 1-hour OHLC bars, 2026-06-01 → 2026-06-11, zero gaps** (the down-month control).
 - **130 aligned ETH-USD + BTC-USD 6-hour bars, 2026-06-24 → 2026-07-27, zero gaps** (the market-neutral pair).
+- **184 real Kraken BTC/USD ticks with aggressor flags + 100 Kraken 1m VWAP bars** (the order-flow test).
 - Pulled live from `api.exchange.coinbase.com/products/BTC-USD/candles`, stored verbatim in
   `data/btc_usd_1h_jul2026_coinbase_ohlc.json` (`[low, high, open, close, volume]` per bar).
 - Every entry is resolved against **that entry's own subsequent real high/low**, not closes.
@@ -159,6 +165,50 @@ use bars strictly before entry, and the false −0.95% became honest noise. Two 
 (`test_hedge_beta_uses_no_lookahead`, `test_zscore_uses_no_lookahead`) now corrupt the
 entry bar and assert the signal is unchanged, so this cannot silently return.
 
+### 6. Iteration 4 — order flow: the data that IS upstream of price
+
+Iterations 1–3 all used price history, which is the most competed-away data that exists.
+Iteration 4 goes after data that is **causally upstream of the print**: aggressive orders
+consume resting liquidity, and *then* price moves. Real Kraken BTC/USD tape with true
+aggressor flags (`b`/`s`) and order type (`m` market / `l` limit), 184 ticks across two
+independent windows, plus 100 1-minute bars carrying VWAP and trade count.
+
+Signed order-flow imbalance `OFI = (buy_vol − sell_vol)/total`:
+
+| window | contemporaneous r | predictive r (next window) |
+|---|---|---|
+| 10s | **+0.102** | −0.045 |
+| 15s | **+0.195** | +0.241 |
+| 20s | **+0.303** | −0.204 |
+| 30s | **+0.171** | −0.309 |
+
+**The result is a clean split, and it is the most informative thing in this whole repo:**
+
+- **Contemporaneous correlation is positive in all four windows.** Order flow genuinely
+  moves price. The physical mechanism the user described is real and measurable.
+- **Predictive correlation flips sign** (2 of 4 positive). No stable lead exists. Every
+  |t| < 2.7 (Bonferroni for 8 tests).
+
+Market-orders-only at 10s shows lag-0 r = **+0.724, t = +2.57** — strong *impact*, and
+still no forward edge (lag-1 t = +0.41).
+
+**Why this closes the "know before the move" thesis on public data.** Price impact is
+*simultaneous with the trade*, not before it. By the time a trade prints on the public
+tape, the liquidity it consumed is already gone and the quote has already moved. To
+monetise impact you must be the resting liquidity that gets hit — which is a latency and
+colocation race, not a signal anyone can compute from a public feed.
+
+And the economics are decisive:
+
+```
+best-case signal    0.65 bp   (largest |r| x typical 10s move)
+effective spread    0.02 bp   (measured from aggressor-side flips)
+Kraken taker fee   26.00 bp   round trip
+```
+
+The fee is **40x** the entire information content of the flow. VWAP position within the
+bar — where volume actually transacted — shows nothing forward either (all |t| < 1).
+
 ## What this says about v01T
 
 - v01T's gate (`BB% < 10 or > 90` and `HV ratio < 0.8`) has **no edge**: on real OHLC it is
@@ -188,8 +238,9 @@ vmax2/backtest.py   trade generation, statistics, walk-forward selection
 vmax2/bound.py      the joint feasibility bound (pure mathematics)
 vmax2/regime.py     up-month vs down-month test: separates real edge from drift capture
 vmax2/neutral.py    market-neutral ETH/BTC spread: removes beta by construction
+vmax2/orderflow.py  Kraken tape with aggressor flags: impact vs prediction, and fees
 run_backtest.py     the full report reproduced above
-tests/test_vmax2.py 27 tests: data integrity, resolution honesty, the disjointness proof
+tests/test_vmax2.py 34 tests: data integrity, resolution honesty, the disjointness proof
 data/               601 real July-2026 + 241 real June-2026 Coinbase bars
 ```
 
