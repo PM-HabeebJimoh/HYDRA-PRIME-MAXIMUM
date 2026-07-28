@@ -23,7 +23,12 @@ aggressor flags, the data that is causally upstream of the print. Flow's price i
 real and contemporaneous (positive in all 4 windows) but has **no forward lead** (sign
 flips), and the 26bp taker fee is 40x the entire measured signal (§6).
 
-Reproduce: `python3 run_backtest.py` · Verify: `pytest tests/ -q` (34 passing)
+Iteration 5 reached **Deribit** (previously assumed unreachable) and tested funding — real
+positioning data. The headline r=-0.487/t=-3.66 was a false positive caused by +0.962
+funding autocorrelation; corrected to non-overlapping windows it is n=12, t=-1.27, not
+significant (§7).
+
+Reproduce: `python3 run_backtest.py` · Verify: `pytest tests/ -q` (40 passing)
 
 ## The data — 100% real, no substitutions
 
@@ -31,6 +36,7 @@ Reproduce: `python3 run_backtest.py` · Verify: `pytest tests/ -q` (34 passing)
 - **241 Coinbase `BTC-USD` 1-hour OHLC bars, 2026-06-01 → 2026-06-11, zero gaps** (the down-month control).
 - **130 aligned ETH-USD + BTC-USD 6-hour bars, 2026-06-24 → 2026-07-27, zero gaps** (the market-neutral pair).
 - **184 real Kraken BTC/USD ticks with aggressor flags + 100 Kraken 1m VWAP bars** (the order-flow test).
+- **106 real Deribit BTC-PERPETUAL hourly funding + index prints, July 2026** (the positioning test).
 - Pulled live from `api.exchange.coinbase.com/products/BTC-USD/candles`, stored verbatim in
   `data/btc_usd_1h_jul2026_coinbase_ohlc.json` (`[low, high, open, close, volume]` per bar).
 - Every entry is resolved against **that entry's own subsequent real high/low**, not closes.
@@ -209,6 +215,45 @@ Kraken taker fee   26.00 bp   round trip
 The fee is **40x** the entire information content of the flow. VWAP position within the
 bar — where volume actually transacted — shows nothing forward either (all |t| < 1).
 
+### 7. Iteration 5 — funding/positioning, and a false discovery I caught in myself
+
+The thesis is *knowing direction before the market reacts*. The strongest candidate in
+public data is **positioning**, because forced liquidations are mechanically determined:
+when price touches a level, those orders **must** execute. Funding rate reads leverage
+imbalance directly — positive funding means longs pay shorts, i.e. crowded long and
+vulnerable to a forced unwind.
+
+I had previously claimed these APIs were unreachable. That was an assumption, not a test.
+**Deribit is reachable.** Real BTC-PERPETUAL hourly funding + index price, July 2026,
+two contiguous 53-hour segments (106 rows).
+
+**The first result looked like the discovery of the whole project:**
+
+```
+funding(t) vs index return over next 8h:   r = -0.487,  t = -3.66
+```
+
+Negative, exactly as the crowded-long thesis predicts, and apparently significant.
+
+**It is an artifact.** Funding has lag-1 autocorrelation **+0.962** — it barely changes
+hour to hour. So overlapping 8-hour windows are not 90 independent observations; they are
+the same observation counted ~8 times, which inflates the t-statistic by roughly √8 ≈ 2.8.
+
+| test | n | r | t |
+|---|---|---|---|
+| overlapping, 1 segment | 45 | −0.487 | **−3.66** |
+| overlapping, both segments | 90 | −0.282 | −2.76 |
+| **non-overlapping (honest)** | **12** | −0.372 | **−1.27** |
+| non-overlapping, k=4 | 26 | −0.001 | −0.00 |
+
+Corrected, there is no significant effect. And even at face value the economics fail:
+0.279%/8h gross → 24%/month at 1×; reaching +1000% needs **11.2× leverage**, where a
+single adverse 1-sigma 8-hour move costs **8% of equity** — double the entire 4% drawdown
+budget, on one bar.
+
+Tests encode the trap itself (`test_overlapping_windows_inflate_significance`,
+`test_funding_is_highly_autocorrelated`) so this false positive cannot recur.
+
 ## What this says about v01T
 
 - v01T's gate (`BB% < 10 or > 90` and `HV ratio < 0.8`) has **no edge**: on real OHLC it is
@@ -239,8 +284,9 @@ vmax2/bound.py      the joint feasibility bound (pure mathematics)
 vmax2/regime.py     up-month vs down-month test: separates real edge from drift capture
 vmax2/neutral.py    market-neutral ETH/BTC spread: removes beta by construction
 vmax2/orderflow.py  Kraken tape with aggressor flags: impact vs prediction, and fees
+vmax2/funding.py    Deribit funding: positioning signal, and the autocorrelation trap
 run_backtest.py     the full report reproduced above
-tests/test_vmax2.py 34 tests: data integrity, resolution honesty, the disjointness proof
+tests/test_vmax2.py 40 tests: data integrity, resolution honesty, the disjointness proof
 data/               601 real July-2026 + 241 real June-2026 Coinbase bars
 ```
 

@@ -258,3 +258,49 @@ def test_spread_is_tiny_so_fees_are_the_real_wall():
     sp = OF.effective_spread_bp()
     assert 0 < sp < 1.0
     assert OF.KRAKEN_TAKER_ROUND_TRIP_BP > 20 * sp
+
+# ---------- iteration 5: funding / positioning ----------
+from vmax2 import funding as FND
+
+def test_funding_data_is_real_and_contiguous():
+    d, segs = FND.segments()
+    assert len(d) >= 100
+    assert all(len(s) >= 50 for s in segs)
+    for s in segs:
+        assert all(b - a == 3600000 for a, b in zip(s, s[1:]))
+    for v in d.values():
+        assert v[0] > 0            # index price positive
+        assert -0.01 < v[1] < 0.01 # funding is a small rate
+
+def test_funding_is_highly_autocorrelated():
+    """This is WHY overlapping windows inflate significance."""
+    assert FND.funding_autocorr() > 0.9
+
+def test_overlapping_windows_inflate_significance():
+    """The trap: overlap makes a non-result look like a discovery."""
+    ov = FND.predict(8, overlapping=True)
+    no = FND.predict(8, overlapping=False)
+    assert abs(ov['t']) > abs(no['t']), "overlap should inflate the t-stat"
+    assert ov['n'] > 5 * no['n']       # 90 vs 12 nominal observations
+
+def test_funding_signal_is_not_significant_when_honest():
+    """Non-overlapping - the only valid test - fails to reject the null."""
+    for k in (4, 8):
+        c = FND.predict(k, overlapping=False)
+        assert abs(c['t']) < 2.0, f"k={k} unexpectedly significant: {c}"
+
+def test_effective_sample_size_correction():
+    ov = FND.predict(8, overlapping=True)
+    assert FND.effective_n(ov['n'], 8) < 12   # ~11 independent points, not 90
+
+def test_funding_cannot_reach_the_targets():
+    """Even taking the point estimate at face value, DD blows up."""
+    r = abs(FND.predict(8, overlapping=False)['r'])
+    move_sd_8h = 0.0075
+    edge = r * move_sd_8h - 0.0004        # net of 4bp maker
+    trades = 90                            # 8h spacing, one month
+    monthly_1x = (1 + edge) ** trades - 1
+    assert monthly_1x < 1.0                # nowhere near +1000% at 1x
+    need = math.log(11) / trades
+    lev = need / math.log(1 + edge)
+    assert lev * move_sd_8h > 0.04         # one 1-sd bar breaches the 4% DD cap
