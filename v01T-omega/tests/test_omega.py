@@ -229,3 +229,63 @@ def test_emit4_entry_is_two_bars_after_signal():
               min_edge_mult=0.0, min_cov=0.0)
     assert len(ev) > 0
     assert all(st == sig + 2 for st, _, _, _, sig in ev)
+
+
+# --- straddle double-stop fix ----------------------------------------------
+
+from omega.straddle_fix import (true_range, atr_fraction, barriers,
+                                resolve_straddle)
+
+
+def test_true_range_first_is_undefined():
+    h = np.array([2.0, 3.0]); l = np.array([1.0, 2.0]); c = np.array([1.5, 2.5])
+    tr = true_range(h, l, c)
+    assert np.isnan(tr[0]) and np.isfinite(tr[1])
+
+
+def test_atr_fraction_is_causal():
+    """ATR at bar i must not use bar i's own range."""
+    n = 60
+    h = np.full(n, 1.01); l = np.full(n, 0.99); c = np.ones(n)
+    h[50] = 5.0                      # a huge bar at index 50
+    a = atr_fraction(h, l, c, 20)
+    before, after = a[50], a[51]
+    assert np.isfinite(before) and np.isfinite(after)
+    assert after > before            # the shock only shows up afterwards
+
+
+def test_barriers_reject_bad_atr():
+    assert barriers(np.nan) is None
+    assert barriers(0.0) is None
+    s, t = barriers(0.01, 1.5, 1.75)
+    assert np.isclose(s, 0.015) and np.isclose(t, 0.0175)
+
+
+def test_resolve_straddle_tie_is_adverse():
+    """A bar spanning both barriers stops both legs; never a double win."""
+    high = np.array([110.0]); low = np.array([90.0])
+    rl, rs, both = resolve_straddle(high, low, 100.0, 0.02, 0.05)
+    assert rl == -0.02 and rs == -0.02 and both
+
+
+def test_resolve_straddle_clean_up_move():
+    """A clean move up: long takes target, short takes stop, not both stopped."""
+    high = np.array([100.5, 106.0]); low = np.array([99.9, 105.0])
+    rl, rs, both = resolve_straddle(high, low, 100.0, 0.02, 0.05)
+    assert rl == 0.05 and rs == -0.02 and not both
+
+
+def test_wide_atr_stop_beats_tight_fixed_stop_on_whipsaw():
+    """The mechanism of the fix, isolated.
+
+    A whipsaw path dips 30bp then rallies 30bp without ever travelling far.
+    A 5bp stop is inside that noise so BOTH legs die. A 1.5xATR-style stop
+    (here 2%) sits outside the noise, so neither leg is stopped and the
+    position survives to trade the eventual expansion.
+    """
+    path = np.array([100.0, 99.70, 100.30, 99.75, 100.25, 100.0])
+    high, low = path * 1.0005, path * 0.9995
+    _, _, both_tight = resolve_straddle(high, low, 100.0, 0.0005, 0.005)
+    _, _, both_wide = resolve_straddle(high, low, 100.0, 0.02, 0.05)
+    assert both_tight, "5bp stop should be taken out by 30bp noise on both sides"
+    assert not both_wide, "2% stop should survive 30bp noise"

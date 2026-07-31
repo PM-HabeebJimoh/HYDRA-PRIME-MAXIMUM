@@ -720,3 +720,98 @@ entry remains structurally flat regardless of which pair is chosen.
 
 **TRX is the best practical compromise**: 39.28% TP-before-SL (1.8x BTC), 23.5%
 coverage, and by far the deepest volume of the high-ranking pairs.
+
+---
+
+# Iteration 16 — solving v01T's double-stop problem
+
+## Root cause, measured
+
+On XLM hourly, 2018-2020, v01T's 1,134 elite squeezes:
+
+```
+median 1-bar up-excursion    28.9 bp
+median 1-bar down-excursion  34.2 bp
+v01T stop distance            5.0 bp
+```
+
+The 5 bp stop sits roughly **5.8x inside a single bar's normal range**.
+**42.06% of all double-stops occur inside the FIRST BAR after entry** — before
+any directional move can possibly develop. At that distance the stop is not a
+risk control, it is a noise detector.
+
+Baseline double-stop rates, v01T as written: **53.6% (XLM) to 82.2% (EOS).**
+
+## Three obvious fixes, all tested, all fail
+
+| fix | double-stop | EV | verdict |
+|---|---|---|---|
+| Widen fixed stop to 2.00% | **0.44%** | **−21.47 bp** | rate solved, EV destroyed |
+| Single leg, mean-revert | n/a | −5.47 bp | no directional edge |
+| Single leg, breakout | n/a | −7.94 bp | no directional edge |
+| No stops, close both legs together | 0% | **+0.00 bp** | flat by identity |
+
+That last row is the key structural insight. A spot straddle closed
+simultaneously is **exactly zero** — long P&L plus short P&L cancels on any
+path. The only reason v01T's straddle is not identically flat is the
+**asymmetry in when each leg exits**. The stop is the engine of the strategy,
+not a defect. So the fix cannot remove the stop; it must make the stop survive
+ordinary noise while preserving that asymmetry.
+
+## The fix: scale barriers by the instrument's own volatility
+
+Replace the fixed 0.05%/0.50% with `stop = 1.5 x ATR20`, `target = 1.75 x ATR20`,
+window 48 bars. ATR is computed on bars strictly before entry, so it is causal.
+
+### Result — 13 real pairs, 2018-2020
+
+| pair | v01T both-stopped | **ATR both-stopped** | reduction | ATR EV |
+|---|---|---|---|---|
+| XLM | 53.62% | **6.45%** | **8.3x** | +4.17 bp |
+| TRX | 60.77% | **7.68%** | 7.9x | −1.45 bp |
+| XTZ | 54.93% | **8.44%** | 6.5x | −5.04 bp |
+| BSV | 65.75% | **6.73%** | 9.8x | +2.58 bp |
+| XMR | 70.15% | **8.01%** | 8.8x | −3.18 bp |
+| NEO | 71.10% | **6.54%** | **10.9x** | +2.94 bp |
+| ETC | 70.69% | **7.10%** | 10.0x | −1.25 bp |
+| LTC | 77.53% | **7.77%** | 10.0x | −5.10 bp |
+| BTC | 78.22% | **8.09%** | 9.7x | +1.44 bp |
+| ETH | 79.58% | **8.28%** | 9.6x | +1.25 bp |
+| XRP | 81.13% | **7.36%** | **11.0x** | −5.68 bp |
+| EOS | 82.21% | **7.89%** | 10.4x | −2.55 bp |
+| IOT | 73.43% | **9.48%** | 7.7x | −13.22 bp |
+
+**Every pair falls to 6-9%. Reduction of 6.5x to 11x.**
+
+### Stable year by year
+
+| pair | 2018 v01T → ATR | 2019 v01T → ATR | 2020 v01T → ATR |
+|---|---|---|---|
+| XLM | 59.5% → **4.5%** | 49.2% → **8.1%** | 53.3% → **6.4%** |
+| TRX | 70.4% → **7.8%** | 55.2% → **7.8%** | 57.0% → **7.5%** |
+| BSV | 75.5% → **3.8%** | 62.9% → **5.7%** | 68.0% → **8.1%** |
+| NEO | 80.4% → **6.3%** | 65.5% → **6.7%** | 67.7% → **6.7%** |
+| BTC | 78.6% → **8.7%** | 75.6% → **6.9%** | 80.4% → **8.8%** |
+| ETH | 75.9% → **8.0%** | 80.3% → **9.0%** | 82.9% → **7.8%** |
+
+No year, no pair exceeds 9.5%.
+
+## Why ATR scaling works
+
+The 0.05% stop is a **fixed** distance applied to instruments whose bar ranges
+differ by an order of magnitude. On BTC a 5 bp stop is ~0.4 bar-ranges; on XLM
+it is ~0.17. Either way it is inside the noise. Scaling by ATR places the stop
+at a **constant multiple of each instrument's own noise**, so the barrier means
+the same thing everywhere — 1.5 average bars of adverse movement, which
+ordinary chop cannot reach but a genuine expansion can.
+
+## What this does and does not solve
+
+**Solved:** the whipsaw. Double-stop rate cut 6.5-11x, to 6-9% universally,
+stable across three years and thirteen instruments.
+
+**Not solved:** profitability. EV remains positive on some pairs
+(XLM +4.17, NEO +2.94, BSV +2.58 bp) and negative on others (XRP −5.68,
+IOT −13.22 bp), and none of these figures include execution cost. Fixing the
+whipsaw removes a large source of avoidable loss; it does not manufacture a
+directional edge that the squeeze does not contain.
