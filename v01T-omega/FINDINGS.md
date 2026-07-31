@@ -526,3 +526,111 @@ Adding four symbols and 39 additional directed pairs produced **zero** new
 profitable streams. The lever I had assumed would work does not: the effect is
 specific to BTC leading USDT-quoted alts, and every other pairing is either
 noise or mechanically inverted. Breadth is not available in this data.
+
+---
+
+# Iteration 14 — going back to v01T's own simple logic
+
+I had drifted into lead-lag machinery. Stripping back to exactly what
+`core/v01t_model.py` describes: **Bollinger squeeze plus volatility
+compression, then a 0.5% expansion.**
+
+## The v01T gates reproduce on real Binance data
+
+Applied verbatim (`BB% < 10 or > 90`, `HV < 0.8`, `score >= 85`) to real
+1-minute bars built from Binance ticks across 4 symbols:
+
+```
+bars examined     754,926
+elite squeezes     47,620   (6.31%)
+0.5% move within 60m: 76.38% hit rate
+```
+
+The gates work as advertised. The selectivity is real and the expansion is
+real. **v01T's Gate 1-4 are not fantasy.**
+
+## But the squeeze predicts VOLATILITY, not DIRECTION
+
+At **zero cost**, comparing the three possible directional bets on the same
+squeezes:
+
+| stop / target | mean-revert | breakout | **random sign** |
+|---|---|---|---|
+| 0.50% / 0.50% | −0.75 bp | +0.65 bp | −0.10 bp |
+| 0.50% / 0.50% (120m) | −0.37 bp | +0.27 bp | 0.00 bp |
+| 1.00% / 0.50% | +2.09 bp | +2.94 bp | **+2.57 bp** |
+| 0.20% / 0.40% | −0.10 bp | +0.28 bp | −0.01 bp |
+
+Mean-revert, breakout, and a **coin flip** all give the same answer. The
+squeeze contains no directional information whatsoever. This is the
+fundamental physics truth underneath v01T: it is a **volatility** predictor.
+
+And it predicts volatility very well — max excursion within 120 minutes after
+a squeeze:
+
+| percentile | move |
+|---|---|
+| p25 | 72 bp |
+| **p50** | **122 bp** |
+| p75 | 208 bp |
+| p95 | 451 bp |
+
+98.2% of squeezes produce a move larger than the round-trip cost.
+
+## Why the double entry cannot monetise it
+
+v01T's answer to having no direction is to enter **both** ways: long and short
+simultaneously, 0.05% stops, 0.50% targets, claiming +0.45% net per trade.
+
+Run on real bars:
+
+```
+n = 47,523 squeezes
+both legs stopped : 74.36% of the time
+net per squeeze   : +2.14 bp   (v01T claims +45 bp)
+win rate          : 21.71%     (v01T claims 100%)
+```
+
+### The identity that makes it impossible
+
+A simultaneous long and short of equal size in the **same spot instrument** is
+a position with **exactly zero net exposure**. Verified numerically: long P&L
+plus short P&L over any price path sums to 0.0000000000.
+
+v01T's +0.45% assumes the long is stopped at −0.05% *and* the short reaches
++0.50%, netting +0.45%. But those describe the same price path moving down
+0.50%: the short's gain and the long's loss are the **same move**, and the long
+loses the full 0.50%, not 0.05% — unless its stop fills first, in which case
+the position is no longer a straddle.
+
+Capturing volatility without direction requires **convexity**, which spot
+cannot provide. It requires options. There is no options data in any real
+dataset reachable here.
+
+## What survives, honestly
+
+Scanning every stop/target/horizon combination over 94,870 real squeeze events
+with true cost (11.52 bp/leg): **every configuration is net negative.**
+
+The best-looking result, a wide-stop straddle at +30.22 bp, was an artifact —
+it marked the losing leg at its *final* price rather than its adverse path.
+Marking honestly at the worst excursion turns +30.22 bp into **−7.55 bp**.
+
+| accounting | EV |
+|---|---|
+| loser marked at final price | +30.22 bp |
+| **loser marked honestly at worst excursion** | **−7.55 bp** |
+
+That is the sixth artifact of this class I have found and removed.
+
+## The verdict on v01T's own logic
+
+- Gates 1-3 (squeeze detection): **real and reproducible** — 6.31% selectivity
+- Gate 4 (0.5% expansion): **real** — 76.38% hit rate, median move 122 bp
+- The direction: **does not exist** — revert = breakout = random
+- The double entry: **mathematically flat** — zero net exposure by construction
+- The +0.45%/trade: **an accounting error** — both legs cannot win the same move
+
+v01T identified something genuine: **volatility is predictable after a
+squeeze.** Its error is monetising that with a spot straddle, which is
+identically flat. The physics is sound; the instrument is wrong.
