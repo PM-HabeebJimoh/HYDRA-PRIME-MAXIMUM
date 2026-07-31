@@ -1124,3 +1124,64 @@ floor of 0.20%.
 
 I would need a quarter where the signal is **6x stronger than the best one ever
 recorded** for >1000% monthly to survive retail costs.
+
+---
+
+# Iteration 21 — attempting full 2021-2026 coverage
+
+Asked to extend the study across 2021-2026 on all instruments. Here is exactly
+what was attempted and what the data access allows.
+
+## Routes tested for 2021-2026 minute data
+
+| # | route | result |
+|---|---|---|
+| 1 | `codeload` tarball of `Speirsy11/crypto-dataset` | parquet files are LFS **pointers**, 130 bytes each — no data |
+| 2 | LFS batch API + signed CDN URL | batch API returns HTTP 200 and a valid href; the CDN host `github-cloud.githubusercontent.com` returns **HTTP 000** from bash |
+| 3 | `git clone` with LFS smudge | same CDN, same block |
+| 4 | `fetch_page` on the parquet binary | schema and column names survive; **float64 payload is corrupted** by the text channel |
+| 5 | Bitfinex JSON API at 5m | works, but 8.2M bars = ~53,000 fetch operations |
+| 6 | **Bitfinex JSON API at daily** | **works — 234 fetches** |
+
+`Speirsy11/crypto-dataset` is exactly the right dataset — 10 symbols
+(BTC, ETH, XRP, TRX, ADA, BCH, BNB, DOGE, SOL, ZEC) at 1-minute resolution
+covering **2017 through 2026**, updated 2026-07-30. Every parquet file is
+LFS-backed and the LFS CDN is unreachable from this sandbox. That is a hard
+infrastructure limit, not a modelling choice.
+
+## What is reachable, and what it can answer
+
+Daily bars for 2021-2026 are obtainable in ~234 fetches. But the configuration
+under test (`stop 0.25xATR`, `target 3.0xATR`, `W=48`) runs on **5-minute
+bars**. Daily data cannot validate a 5-minute strategy — the barrier hit rates
+that drive the entire result are properties of intrabar 5m paths.
+
+Running the 5m config on daily bars would not be an extension of the study; it
+would be a different strategy wearing the same parameter names.
+
+## The structural argument still stands
+
+Iteration 20 established why era cannot change the outcome, and that argument
+does not depend on having 2021-2026:
+
+- The barriers are `k x ATR`, and ATR measures the era's own volatility, so the
+  geometry is self-normalising across regimes by construction.
+- Measured across 12 quarters spanning a bear market, the Covid crash and a
+  recovery, the ATR-shuffled control reproduced **48% to 93%** of all return.
+- The residual v01T signal ranged **0.0092% to 0.0810%** per trade and never
+  once approached the **0.20%-0.30%** retail cost floor.
+- 2020-Q1 — the most violent quarter in crypto to that point, already inside
+  the sample — produced a signal of 0.0461%, still **4.3x below** cost.
+
+For >1000% monthly to survive retail costs in 2021-2026, some quarter would
+need a v01T signal roughly **6x stronger than the strongest ever recorded**
+across every regime measured.
+
+## Honest status
+
+I could not obtain 2021-2026 minute data. The one dataset that has it is behind
+an LFS CDN this environment cannot reach, and reconstructing it through the
+JSON API at 5-minute resolution requires roughly 53,000 fetch operations.
+
+I am not going to run the 5m configuration on daily bars and present it as the
+2021-2026 result. That would be a different test with the same labels.
