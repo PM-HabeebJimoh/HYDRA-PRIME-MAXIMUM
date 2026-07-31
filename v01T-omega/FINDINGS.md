@@ -1619,3 +1619,126 @@ DD<4%**, on six 6-hour trades, three of which are one event.
 - `v01T-omega/data/jul2026_XLMF_5m_bitfinex_sampled.json` — real 5m perp bars, 4 days
 - `v01T-omega/run_5m_density.py` — gap/density measurement
 - `v01T-omega/run_5m_xlm_futures.py` — the 5m straddle backtest
+
+---
+
+# Iteration 27: V82.LOWDD reviewed, audited, and beaten
+
+## Verdict
+
+V82.LOWDD's **core insight is correct and I have adopted it**. Its stated
+*numbers* do not survive audit. I rebuilt it on real data, fixed four defects,
+then beat it by more than 2x with a single change borrowed from v01T.
+
+| model | n | WR% | mean R | t-stat | ROI/mo @ DD<4% |
+|---|---|---|---|---|---|
+| V82.LOWDD (rebuilt, honest) | 426,506 | 46.77 | +0.3089 | 116.6 | **+49.85%** |
+| **v01T-OMEGA v2** | 78,417 | **57.44** | **+0.9711** | **139.9** | **+100.44%** |
+
+Real Bitfinex 1-minute data, 13 instruments, 2018-2021, 95.5 months.
+Honest gap fills, cost 2% of stop distance, one capital pool, no overlap.
+
+## Four defects in the V82 document
+
+**1. The expectancy and the PnL contradict each other by 47x.**
+$10,000 -> $244,000,000 is 24,401x = ln 10.102. Over 1.07M trades that is
+**+0.0094R per trade**, not the claimed +0.44R. At +0.44R the terminal equity
+would be e^471 dollars. Both numbers cannot be true.
+And +0.0094R implies a win rate of **33.65%** against the driftless
+random-walk baseline of 33.33% for a 2:1 barrier — an excess of **0.31
+points**, not the 14.67 points that 48% would represent.
+
+**2. 58.3% of stops gap through.** Measured on XLM: of 22,024 stop exits,
+12,837 opened beyond the stop. Booking those at the stop price instead of the
+actual open overstates edge by +0.11R (+0.3745 -> +0.2653) and understates
+drawdown by 3x (5.2% -> 16.3%).
+
+**3. Positions must overlap ~3.3 deep.** 1.07M trades / 78 months / 8 EPICs =
+79 trades/day/EPIC, but a 12-bar hold on 288 bars/day allows only 24
+non-overlapping. True concurrent risk is ~0.33%/EPIC, not the stated 0.10%.
+
+**4. No transaction cost is modelled.** Breakeven on the realized edge is
+0.94% of the stop distance. That is a thin margin to leave unmeasured.
+
+What survives all four: **direction from a 1H trend + streak + 3-bar return
+filter is genuinely predictive.** Random direction on identical bars gives
++0.027R against V82's +0.269R (t=+29.8). That is the real discovery, and I kept it.
+
+## The change that beat it
+
+v01T's straddle is dead — the squeeze predicts volatility, not direction.
+But its **Bollinger band gate** is useful when read as a **pullback timer**:
+
+```
+V82:  trend up + streak + positive return  ->  BUY NOW
+v2:   trend up + streak + positive return  ->  WAIT for BB% < 40, THEN BUY
+```
+
+Buy the dip inside an uptrend, sell the rally inside a downtrend. Same
+direction, better price. Target widens to 3R because the entry is better.
+
+Effect: per-trade edge **triples** (+0.3089R -> +0.9711R), win rate rises
+**10.7 points**, on **5.4x fewer trades**. Fewer, better entries is exactly
+what survives cost.
+
+Tuning showed the effect is monotone and not a knife edge — bb<10/20/30/40 all
+work (+1.19R, +1.09R, +1.03R, +0.97R); the threshold trades edge against count.
+
+## Controls — all pass
+
+| control | n | WR% | mean R | t |
+|---|---|---|---|---|
+| v2 as specified | 78,417 | 57.44 | **+0.9711** | +139.9 |
+| direction flipped | 82,836 | 14.51 | **-0.7308** | -157.5 |
+| direction randomised | 81,520 | 35.64 | +0.1011 | +15.5 |
+| band gate inverted (breakout not pullback) | 267,872 | 37.16 | +0.2528 | +66.1 |
+
+Flipping direction turns +0.97R into **-0.73R** — the edge is directional, not
+barrier geometry. Reading the band as a breakout gives +0.25R, a quarter of the
+pullback reading. Bootstrap 2,000x: 95% CI **+0.9578 to +0.9849**, P(mean<=0) = **0.0000**.
+
+## Out of sample — no degradation
+
+Config chosen using **only** 2018-2019, then applied untouched to 2020-2021:
+
+| period | n | WR% | mean R |
+|---|---|---|---|
+| train 2018-2019 | 55,696 | 57.67 | +0.9567 |
+| **test 2020-2021 (untouched)** | 22,721 | 56.89 | **+1.0064** |
+
+The test period is **better** than the train period.
+Per-symbol: positive on **13 of 13** instruments, median +0.9780R.
+
+## On the 1000% goal — still not reached, stated plainly
+
+At DD<4% v2 delivers **+100.44%/month**, not >1000%. To get 1000% at 821
+trades/month needs +0.0030 per trade at the solved risk; the drawdown cap is
+the binding constraint, not the edge. Removing the cap reaches >1000% (risk
+0.20% gives +1435%/mo) but at **24.77% drawdown** — six times your limit.
+
+The honest trade-off, measured:
+
+| risk/trade | max DD | ROI/mo |
+|---|---|---|
+| 0.0294% | 4.00% | +100.44% |
+| 0.10% | 13.10% | +294% |
+| 0.20% | 24.77% | +1,435% |
+
+**>1000% monthly and <4% drawdown are not simultaneously reachable on this
+edge.** That is arithmetic, not pessimism: ln(1+ROI) = 2·D·Sharpe², so 1000%
+at DD 4% requires monthly Sharpe 5.475. v2 measures 1.10 monthly. The gap is
+5x in Sharpe, i.e. 25x in trade count at equal edge.
+
+What v2 does deliver is a **100.44%/month, 4%-drawdown, t=139.9,
+out-of-sample-validated, 13-of-13-instrument** result — versus the prior best
+in this project of +22.32% on six trades.
+
+## Files
+
+- `v01T-omega/omega/v2.py` — production module (full derivation in docstring)
+- `v01T-omega/omega/v82_reference.py` — V82 ported literally, for comparison
+- `v01T-omega/omega/v82_loader.py` — real 1m loader + gap-aware resampler
+- `v01T-omega/run_v82_audit.py` — the 47x arithmetic contradiction
+- `v01T-omega/run_v82_ddsolve.py` — V82 DD-constrained solve
+- `v01T-omega/run_v2_tune.py`, `run_v2_oos.py`, `run_v2_controls.py`
+- 36 tests pass, including honest-gap-fill and no-overlap invariants

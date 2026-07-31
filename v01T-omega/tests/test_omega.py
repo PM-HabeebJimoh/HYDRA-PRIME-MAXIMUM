@@ -289,3 +289,75 @@ def test_wide_atr_stop_beats_tight_fixed_stop_on_whipsaw():
     _, _, both_wide = resolve_straddle(high, low, 100.0, 0.02, 0.05)
     assert both_tight, "5bp stop should be taken out by 30bp noise on both sides"
     assert not both_wide, "2% stop should survive 30bp noise"
+
+
+# --- v2 tests ---------------------------------------------------------------
+import numpy as np
+from omega.v2 import forecast_1h, atr_causal, resolve, solve_dd, signals
+
+
+def _mk(n, seed=3):
+    rng = np.random.default_rng(seed)
+    c = 100 * np.exp(np.cumsum(rng.normal(0, 0.001, n)))
+    o = np.concatenate([[c[0]], c[:-1]])
+    hi = np.maximum(o, c) * 1.001
+    lo = np.minimum(o, c) * 0.999
+    t = np.arange(n) * 300_000.0
+    return np.column_stack([t, o, c, hi, lo, np.ones(n)])
+
+
+def test_v2_atr_is_causal():
+    f = _mk(300)
+    a = atr_causal(f)
+    assert np.isnan(a[0])
+    # bar i's ATR must not change if bars > i are altered
+    g = f.copy()
+    g[200:, 3] *= 5.0
+    assert np.allclose(atr_causal(g)[:200], a[:200], equal_nan=True)
+
+
+def test_v2_forecast_streak_bounds():
+    h = _mk(400)
+    tu, td, r3, st = forecast_1h(h)
+    ok = np.isfinite(st)
+    assert st[ok].min() >= 0 and st[ok].max() <= 3
+    assert not np.any(tu & td)          # cannot be up and down at once
+
+
+def test_v2_resolve_honest_gap_fill():
+    """If the bar opens beyond the stop, the fill must be the OPEN (worse),
+    never the stop price. This is the artifact V82's doc leaves in."""
+    f = np.array([
+        [0.0, 100.0, 100.0, 100.5, 99.5, 1.0],
+        [1.0,  90.0,  90.0,  90.5, 89.5, 1.0],   # gaps far below the stop
+    ])
+    R, _ = resolve(f, 0, 1, 1.0, tmult=3.0, cost=0.0)
+    assert R < -1.0, "gap-through must fill worse than -1R"
+    assert abs(R - (-10.0)) < 1e-9
+
+
+def test_v2_resolve_respects_target():
+    f = np.zeros((3, 6))
+    f[:, 1] = [100.0, 100.0, 100.0]
+    f[:, 2] = [100.0, 100.0, 100.0]
+    f[:, 3] = [100.0, 104.0, 100.0]
+    f[:, 4] = [100.0, 99.9, 100.0]
+    R, _ = resolve(f, 0, 1, 1.0, tmult=3.0, cost=0.0)
+    assert abs(R - 3.0) < 1e-9
+
+
+def test_v2_solve_dd_respects_cap():
+    rng = np.random.default_rng(5)
+    ev = [(float(i), float(i) + 1.0, float(x))
+          for i, x in enumerate(rng.normal(0.5, 2.0, 4000))]
+    r = solve_dd(ev, target_dd=0.04)
+    assert r["max_dd"] <= 0.0401
+    assert r["risk_per_trade"] > 0
+
+
+def test_v2_no_overlapping_positions():
+    f, h = _mk(4000), _mk(400)
+    h[:, 0] = np.arange(400) * 3_600_000.0
+    ev = signals(f, h)
+    for a, b in zip(ev, ev[1:]):
+        assert b[0] >= a[1], "a trade opened before the previous one closed"
