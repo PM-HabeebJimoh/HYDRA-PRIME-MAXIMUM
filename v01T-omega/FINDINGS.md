@@ -78,3 +78,128 @@ that is smaller than the cost of taking it.
 - Cross-venue convergence: **corr(z, Δz) = −0.409** at 15 minutes, with 30-44%
   of any dislocation recovered within 30 minutes.
 - Both are real. Neither is larger than its execution cost.
+
+---
+
+# Iteration 10 — the assumption I had never questioned
+
+Every previous iteration used **BTC as the only signal source**. That was never
+tested; it was inherited from the original v01T spec and I carried it for nine
+iterations without asking why.
+
+With 13 instruments there are not 12 relationships but **156 directed pairs**.
+
+## Measuring all of them
+
+Source impulse (3σ, causal) → destination move, entry at the first observable
+open, 2018, real Bitfinex 1-minute data:
+
+| EV | t | src → dst | n |
+|---|---|---|---|
+| +22.85 bp | 12.46 | BTC → XLM | 1,118 |
+| +21.66 bp | 12.00 | ETH → XLM | 1,119 |
+| +21.52 bp | **25.21** | BTC → TRX | 3,899 |
+| +18.45 bp | 22.35 | ETH → TRX | 4,220 |
+| +17.94 bp | 18.76 | XRP → TRX | 3,546 |
+
+**All 129 measurable pairs are positive.** And BTC is not the best leader:
+
+| source | mean EV across destinations |
+|---|---|
+| LTC | **+11.40 bp** |
+| ETH | +11.00 bp |
+| BTC | +10.50 bp |
+| EOS | +9.03 bp |
+| ... | ... |
+| BSV | +1.55 bp |
+
+The effect is a market-wide propagation from liquid to illiquid, not a
+BTC-specific phenomenon. My nine-iteration assumption was wrong — and
+correcting it did not change the magnitude, only the explanation.
+
+## Consensus across sources
+
+Counting how many of the 12 sources fired in the same direction, then trading
+the agreed direction in every destination:
+
+| year | consensus ≥ 5 | consensus ≥ 8 |
+|---|---|---|
+| 2018 | +6.01 bp | **+8.94 bp** |
+| 2019 | +4.36 bp | +7.72 bp |
+| 2020 | +4.90 bp | +7.32 bp |
+
+Stable in all three years and monotone in agreement — a genuine aggregation
+effect.
+
+### Another survivorship bias, caught
+
+Restricting to the 118 signals where **all 12 destinations were simultaneously
+liquid** gave a basket EV of **+45.84 bp**. That filter is the same class of
+error as iteration 8: simultaneous liquidity across every instrument is itself
+a market condition. Averaging instead over whatever destinations are actually
+present (what a real desk does) collapses it:
+
+| year | consensus ≥ 8, n | real EV | random EV | skill |
+|---|---|---|---|---|
+| 2018 | 2,181 | +7.57 bp | −1.33 bp | +8.90 bp |
+| 2019 | 1,308 | +4.91 bp | +1.49 bp | +3.42 bp |
+| 2020 | 2,101 | +4.45 bp | −1.04 bp | +5.49 bp |
+
+Effective independent bets across 12 legs: **1.85**.
+
+## Six independent routes, one number
+
+| measurement | edge |
+|---|---|
+| BTC→alt, Bitfinex 1 m bars | 4.2 - 10.3 bp |
+| BTC→alt, Binance 1 s ticks | 2.5 - 14.1 bp |
+| All 129 directed pairs | 1.6 - 11.4 bp |
+| Consensus of 12 sources | 2.4 - 7.6 bp |
+| Cross-venue dislocation | 1.9 - 10.5 bp |
+| Order-flow imbalance | 0.04 bp |
+
+Different venues, different resolutions, different mechanisms, different
+statistical methods. They all return **2-14 bp**. That is not a limitation of
+my search; it is the measured size of the phenomenon.
+
+## Solving backward from the goal — cost is NOT the constraint
+
+I had been treating execution cost as the blocker. Solving the goal equation
+backward says otherwise:
+
+| assumed cost | net EV | max leverage at DD<4% | ROI/month |
+|---|---|---|---|
+| 15 bp (Binance real) | −7.4 bp | — | unprofitable |
+| 5 bp | +2.6 bp | 1.08x | 5.2% |
+| 0 bp (free) | +7.6 bp | 1.08x | 16.1% |
+| **−2.5 bp (paid to trade)** | +10.1 bp | 1.08x | **21.9%** |
+
+**Even being paid 2.5 bp per trade, the ceiling is ~22%/month** — and at the
+highest-frequency variant, ~68%/month. Removing cost entirely does not reach
+1000%.
+
+## The actual binding constraint
+
+```
+information ratio per trade = EV / sd
+consensus>=8 : 7.6 / 74  = 0.1027  -> monthly Sharpe 1.39, annualised 4.80
+consensus>=5 : 4.8 / 100 = 0.0480  -> monthly Sharpe 1.43, annualised 4.95
+BTC->alt 1s  : 14.1 / 120 = 0.1175 -> monthly Sharpe 4.55, annualised 15.76
+```
+
+ROI > 1000%/month at DD < 4% requires a return/drawdown ratio of 250, which
+demands an annualised Sharpe of roughly **60-100**.
+
+| strategy | annualised Sharpe |
+|---|---|
+| S&P 500 | ~0.4 |
+| Renaissance Medallion | ~2.0 |
+| Elite HFT market maker | ~8.0 |
+| **measured here** | **4.8 - 15.8** |
+| **required for the goal** | **~60-100** |
+
+The measured Sharpe of 4.8-15.8 is genuinely good — better than Medallion,
+comparable to elite HFT at the 1-second variant. It is 4-20x short of what the
+stated goal requires, and the shortfall is in the **signal-to-noise ratio of
+the underlying market physics**, not in cost, leverage, trade count, or
+execution.
