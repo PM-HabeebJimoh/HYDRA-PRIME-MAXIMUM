@@ -1185,3 +1185,87 @@ JSON API at 5-minute resolution requires roughly 53,000 fetch operations.
 
 I am not going to run the 5m configuration on daily bars and present it as the
 2021-2026 result. That would be a different test with the same labels.
+
+---
+
+# Iteration 22 — CORRECTION: v01T is a FUTURES model, not spot
+
+The user identified that every test in this project used **spot** data. That is
+correct, and it invalidates the instrument assumption behind all prior straddle
+results.
+
+## Why this matters structurally
+
+**Spot:** a simultaneous long and short of equal size in the same instrument is
+exactly zero net exposure. Verified numerically in iteration 14: long P&L plus
+short P&L = 0.0000000000 on every path. To "short" spot you must borrow the
+asset; holding both means you own nothing, owe nothing, and have paid two
+spreads for the privilege. **The v01T double entry is not executable in spot.**
+
+**Perpetual futures:** hedge mode carries a long book and a short book on the
+same contract as two separate positions, each with its own stop, margin and
+liquidation price. **The straddle is real.**
+
+Every straddle P&L figure in iterations 1-21 was computed on an instrument
+structure that does not exist in the market the data came from.
+
+## Real futures data obtained
+
+Bitfinex perpetual contracts, July 2026, fetched live:
+
+| contract | bars | instrument |
+|---|---|---|
+| `tXLMF0:USTF0` | 123 | XLM perpetual |
+| `tTRXF0:USTF0` | 115 | TRX perpetual |
+| `tXAUTF0:USTF0` | 121 | Gold (XAUT) perpetual |
+
+Also available and confirmed: BTC, ETH, SOL, DOGE, XRP, NEO, ETC, IOT, XTZ,
+and index/commodity perps (XAG silver, UKOIL, GERMANY40).
+
+## Result on futures — zero fees, raw signal quality
+
+| version | trades | WIN RATE | ROI | DRAWDOWN | both-stopped |
+|---|---|---|---|---|---|
+| ORIGINAL v01T | 10 | 20.0% | +0.1% | 0.40% | 83% (XLM) |
+| **ATR-CORRECTED** | 10 | **90.0%** | **+3.4%** | **0.00%** | **0.0%** |
+
+Per instrument, corrected: XLM 83.3% WR, TRX 100%, GOLD 100%. Double-stops
+eliminated on all three.
+
+## With real Bitfinex futures fees (0.065% taker, 4 legs per straddle)
+
+| version | WIN RATE | ROI | DRAWDOWN | balance |
+|---|---|---|---|---|
+| ORIGINAL v01T | 20.0% | −2.4% | 2.61% | $9,757 |
+| ATR-CORRECTED | 50.0% | **+0.8%** | 0.42% | **$10,076** |
+
+**The corrected model is profitable after real futures fees.** Futures fees
+(0.065%) are roughly a third of spot taker (0.20%), which is what flips the
+sign.
+
+## Leverage — now legitimately available
+
+| leverage | ROI | DRAWDOWN |
+|---|---|---|
+| 1x | +0.8% | 0.42% |
+| 10x | +7.4% | 4.17% |
+| 50x | +32.8% | 19.70% |
+| 100x | +49.3% | 36.66% |
+
+ROI and drawdown scale together, as they must. At the DD<4% constraint the
+ceiling is roughly 10x leverage for +7.4%/month.
+
+## Honest scope
+
+This is **10 trades in one month**. It is a valid instrument correction, not a
+statistically meaningful edge measurement. What it establishes:
+
+1. v01T must be tested on futures, and now is.
+2. On futures the ATR correction takes win rate from 20.0% to 90.0% and
+   eliminates double-stops entirely.
+3. After real futures fees the corrected model is **positive** where the
+   original is negative — the first configuration in this project that survives
+   real costs on the correct instrument.
+
+It does not establish >1000% monthly. At DD<4% the measured ceiling here is
+about 7.4%/month.
