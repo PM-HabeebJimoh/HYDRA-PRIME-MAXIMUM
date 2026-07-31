@@ -945,3 +945,48 @@ Cutting cost by 3x did not rescue it because the signal shrinks with the
 horizon needed to earn it: the BTC to altcoin impulse is worth roughly
 **4-14 bp**, full stop. That is the physical size of the effect.
 
+
+## Iteration 8b — order flow imbalance, tested at tick level and rejected
+
+The tick data carries real aggressor flags, so order-flow imbalance (a
+different signal from lead-lag) can be tested directly:
+
+```
+OFI_t = sum(signed_qty) / sum(qty)   over each 1-second bucket
+        +1 = buyer aggressor (lifted the ask), -1 = seller aggressor (hit the bid)
+```
+
+Correlation of OFI with forward returns on real BTC ticks is consistently
+**negative** at 1 second — aggressive flow mean-reverts:
+
+| day | h=1s | h=5s | h=30s |
+|---|---|---|---|
+| 2019-02-15 | −0.277 | −0.198 | −0.067 |
+| 2018-12-15 | −0.220 | −0.124 | −0.054 |
+| 2019-10-15 | −0.142 | −0.053 | −0.014 |
+
+### It is not bid-ask bounce
+
+Recomputing against a bounce-free mid (mean of ask-prints and bid-prints within
+each second, so the spread cancels) the effect **survives**: −0.303, −0.229,
+−0.074 at h=1s. The correlation is genuine.
+
+### But it is economically nil
+
+Converting to basis points — trading against extreme OFI (|imbalance| >= 0.8),
+entering the next second, exiting on mid:
+
+| day | n | gross | net after 15 bp |
+|---|---|---|---|
+| 2019-02-15 | 44,146 | **−0.036 bp** | −15.04 |
+| 2018-12-15 | 42,416 | **−0.073 bp** | −15.07 |
+| 2019-05-15 | 49,823 | **−0.221 bp** | −15.22 |
+| 2019-08-15 | 52,262 | **−0.149 bp** | −15.15 |
+| 2019-10-15 | 51,171 | **−0.072 bp** | −15.07 |
+
+A correlation of −0.30 that is worth **0.04 bp** is the clearest possible
+demonstration that statistical significance and economic significance are
+different things. With ~50,000 observations per day, a tiny mean is enormously
+significant and still worth nothing. The reversion is real, sub-tick, and
+entirely inside the spread.
+
