@@ -188,3 +188,44 @@ def test_gross_notional_definition():
     ev = [(0, 1, 0.10)]
     _, v, _, _ = simulate_w(ev, 2.0, 1)
     assert np.isclose(v[-1], 1.0 + 2.0 * 0.10)
+
+
+# --- iteration 4: the lookahead regression test ----------------------------
+
+def test_no_lookahead_signal_timing():
+    """r[k] = close[k+1]/close[k] is observable only after bar k+1 CLOSES.
+
+    Entering at open[k+1] is therefore lookahead: that open precedes the close
+    that produced the signal. The earliest honest entry is open[k+2].
+
+    This test pins the invariant by construction: a price series that is flat
+    until a single jump must produce no tradable entry before the jump bar has
+    closed.
+    """
+    from omega.emit4 import emit
+    n = 3000
+    close = np.full(n, 100.0)
+    close[2000:] = 110.0                      # one jump at bar 2000
+    ts = np.arange(n, dtype=np.int64) * 60000
+    o = np.full(n, 100.0); o[2000:] = 110.0
+    panel = {"A": dict(present=np.ones(n, dtype=bool), open=o,
+                       high=o * 1.001, low=o * 0.999, close=close)}
+    ev = emit(ts, close, panel, 3.5, 2.5, 1.75, 60, 6,
+              min_edge_mult=0.0, min_cov=0.0)
+    # every entry bar must be at least 2 bars after the signal-forming return
+    for st, _, _, _, sig in ev:
+        assert st >= sig + 2
+
+
+def test_emit4_entry_is_two_bars_after_signal():
+    from omega.emit4 import emit
+    rng = np.random.RandomState(0)
+    n = 4000
+    close = 100 * np.exp(np.cumsum(rng.randn(n) * 0.0005))
+    ts = np.arange(n, dtype=np.int64) * 60000
+    panel = {"A": dict(present=np.ones(n, dtype=bool), open=close,
+                       high=close * 1.002, low=close * 0.998, close=close)}
+    ev = emit(ts, close, panel, 2.0, 2.0, 2.0, 30, 0,
+              min_edge_mult=0.0, min_cov=0.0)
+    assert len(ev) > 0
+    assert all(st == sig + 2 for st, _, _, _, sig in ev)

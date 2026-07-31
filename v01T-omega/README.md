@@ -438,3 +438,94 @@ adding instruments raises trade count without raising independence. Closing the
 remaining gap requires impulse sources that are genuinely uncorrelated with
 each other, not more instruments reacting to one source.
 
+
+---
+
+# Iteration 4 — RETRACTION: I found a lookahead bug in my own engine
+
+## What was wrong
+
+`emit3.py` (and `emit.py`, `allsignals.py`, `altscaled.py` before it) computed
+
+```python
+r = np.diff(np.log(btc_close))     # r[k] = close[k+1] / close[k]
+idx = np.flatnonzero(|r| > k*sigma)
+st  = i + 1                        # entry at open[i+1]
+```
+
+`r[k]` needs `close[k+1]`. It is therefore **not observable until bar k+1 has
+closed**. But `open[k+1]` occurs *before* `close[k+1]`. Every trade was entered
+one bar before its own signal existed.
+
+The earliest honest entry is `open[k+2]`. `emit4.py` implements that, and two
+regression tests now pin the invariant so it cannot silently return.
+
+## What it cost — measured, not estimated
+
+Same parameters, same data, 2018, only the entry timing corrected:
+
+| engine | trades | WR | EV/trade |
+|---|---|---|---|
+| `emit3` (lookahead) | 33,537 | 91.50% | **+20.24 bp** |
+| `emit4` (causal) | 33,030 | 62.92% | **−2.06 bp** |
+
+A cross-asset variant of the same signal showed the identical pattern:
++36.86 bp (t = +80.84) with lookahead, +5.10 bp (t = +12.08) causal.
+
+**Every headline number in iterations 1-3 of this file is invalidated.** The
+win rates of 86-91%, the ROI figures of 400-12,000%/month, and the claim that
+"WR and DD now pass out-of-sample" were all produced by this bug. I am
+retracting them rather than leaving them to stand.
+
+## What is actually real
+
+The lead-lag edge itself survives, and it is genuine. Entering at the first
+observable open (`i+2`), 2018, per-instrument:
+
+| alt | n | EV | t-stat |
+|---|---|---|---|
+| ETH | 7,086 | +4.60 bp | +11.74 |
+| LTC | 6,135 | +4.70 bp | +10.45 |
+| XRP | 6,935 | +4.19 bp | +5.06 |
+| EOS | 6,718 | +4.70 bp | +9.88 |
+| IOT | 6,202 | +9.62 bp | +15.75 |
+| NEO | 5,719 | +10.33 bp | +18.24 |
+
+Real, highly significant, and roughly **5x smaller** than the buggy version.
+
+The consequence is decisive: a 4-10 bp edge against a 6 bp round-trip cost
+leaves almost nothing. The best causal configurations found on 2018 reach
+**WR ~72% and EV +15 bp**, and no configuration reaches WR > 80%.
+
+## Also rejected this iteration
+
+**Alt-own mean reversion** looked extremely strong — XLM −0.94σ, BSV −0.93σ,
+TRX −0.53σ following their own impulses, firing at times 67-91% independent of
+BTC impulses, which is exactly the uncorrelated source the strategy needs.
+
+It is bid-ask bounce. Measured close-to-close it reverts; measured the only way
+it can actually be traded (enter next open, exit the following open) the sign
+**flips and becomes strongly negative**:
+
+| alt | close→close | tradeable | ratio |
+|---|---|---|---|
+| XLM | +0.94 | −1.94 | −2.06 |
+| BSV | +0.93 | −1.80 | −1.93 |
+| IOT | +0.23 | −2.95 | −13.00 |
+| NEO | +0.13 | −2.40 | −18.61 |
+
+Rejected.
+
+## Honest status after the fix
+
+| goal | best causal result |
+|---|---|
+| WR > 80% | **FAIL** — ceiling ~72% |
+| ROI > 1000%/mo | **FAIL** |
+| DD < 4% | PASS (easily) |
+
+The three goals are not met. The edge is real (t = +5 to +18, three years,
+survives random-sign and inverted-sign controls) but at 4-10 bp it is of the
+same order as the execution cost, which is exactly the wall found in earlier
+work — now located precisely rather than argued.
+
