@@ -596,3 +596,54 @@ caps the leverage.
 `edge_per_month / worst_unlevered_DD` remains the single number to beat; it is
 still well under the required 62.5.
 
+
+## Iteration 5b — stand-down filter, and the exact arithmetic of the gap
+
+Adding the causal stand-down (skip trades after 1 consecutive loss, resume
+after a win) to the WR>80% configuration:
+
+| year | trades/mo | WR | worst streak | ROI/mo | DD | goals |
+|---|---|---|---|---|---|---|
+| 2018 (IS) | 3,139 | **88.83%** | 7 | 173.4% | 4.00% | PASS/FAIL/PASS |
+| 2019 (OOS) | 1,161 | **85.82%** | 7 | 31.7% | 4.00% | PASS/FAIL/PASS |
+| 2020 (OOS) | 1,297 | **87.54%** | 7 | 27.0% | 4.00% | PASS/FAIL/PASS |
+
+Worst losing streak drops from 11-16 to 7 in every year, win rate rises 4-6 pp,
+and ROI roughly triples. **This is the best honest configuration found: WR and
+DD pass in all three years, two of them fully out-of-sample.**
+
+### Why ROI still cannot reach 1000%
+
+The arithmetic is closed-form and leaves no room for interpretation.
+
+To compound 11x in a month over `N` trades, each trade must add `f` to equity:
+
+| trades/month | required f |
+|---|---|
+| 1,000 | 24.01 bp |
+| 2,000 | 12.00 bp |
+| 3,707 | 6.47 bp |
+| 10,000 | 2.40 bp |
+
+The drawdown cap sets a ceiling on that same `f`. With a worst losing run of
+`L` trades at stop/target ratio `R`, survival requires `L * f * R <= 4%`:
+
+| L | R | f_max |
+|---|---|---|
+| 5 | 10.7 | 7.48 bp |
+| 10 | 10.7 | 3.74 bp |
+| 20 | 10.7 | 1.87 bp |
+| 5 | 2.0 | 40.00 bp |
+| 10 | 2.0 | 20.00 bp |
+
+The two requirements collide. `R = 10.7` is what buys WR > 80%; at the measured
+streak of `L = 7` that allows `f_max ≈ 5.3 bp`, while `N = 3,139` trades/month
+needs `f ≈ 7.6 bp`. Short by ~1.4x. Dropping to `R = 2` would allow a much
+larger `f`, but then the win rate falls to ~67% and goal 1 fails.
+
+**WR > 80% and ROI > 1000% at DD < 4% are in direct structural conflict for
+this edge.** A high win rate is bought with a wide stop; a wide stop caps
+leverage; capped leverage caps ROI. The measured ratio
+`edge_per_month / worst_unlevered_DD` peaks at **1.59** against the **62.5**
+required — a 39x gap, and it is largest precisely at the R that gives WR > 80%.
+
