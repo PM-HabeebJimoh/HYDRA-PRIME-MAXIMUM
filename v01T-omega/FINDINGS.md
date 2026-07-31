@@ -1443,3 +1443,90 @@ pass. ROI is 11x short of target, not 300x as the spot work suggested.
 The remaining gap is `sqrt(N)` scaling. Closing it needs either a higher
 net-per-trade (currently 0.076%, where fees consume 77% of the 0.336% gross) or
 genuinely uncorrelated instruments so drawdowns offset instead of accumulating.
+
+---
+
+# Iteration 25 — per-pair results, pair screening, and the >1000% question
+
+## Per-pair, real Bitfinex perps, July 2026 (the detail I should have led with)
+
+| pair | squeezes | WR | gross/trade | net/trade | max lev @DD4 | **ROI @DD<4%** |
+|---|---|---|---|---|---|---|
+| **XLM** | 6 | **83.3%** | +0.488% | **+0.228%** | 15.38x | **+22.32%** |
+| TRX | 3 | 0.0% | +0.095% | **−0.165%** | 8.18x | **−4.00%** |
+| XAUT | 1 | 0.0% | +0.150% | **−0.110%** | 36.37x | **−4.00%** |
+| DOGE | **0** | — | — | — | — | — |
+
+**Only XLM is profitable.** The earlier "90% win rate" was XLM's wins carrying
+TRX's and gold's losses — a blended figure that hid the truth.
+
+### Why TRX and XAUT lose
+
+Their ATR is too small, so the ATR-scaled target cannot clear the fixed fee:
+
+| pair | typical target | fee | target/fee |
+|---|---|---|---|
+| XLM | 2.2-5.1% | 0.26% | 8-20x |
+| XAUT | 1.05% | 0.26% | 4x |
+| TRX | 0.46-0.73% | 0.26% | 2-3x |
+
+TRX earned +0.095% gross and paid 0.26%. The straddle worked; the fee ate it.
+
+## Screening the perp universe found a conflict
+
+Screened 14 perps on daily range vs fee. DOGE looked ideal — 6.22% daily range
+(21x the fee) and 2.5M volume. It produced **zero signals all month**.
+
+Gate-by-gate:
+
+| pair | bars | Gate 1 (band) | Gate 2 (HV<0.8) | both | median HV |
+|---|---|---|---|---|---|
+| XLM | 123 | 21 | 30 | **6** | 0.908 |
+| TRX | 115 | 19 | 33 | 3 | 1.008 |
+| XAUT | 121 | 20 | 39 | 1 | 0.940 |
+| **DOGE** | 118 | 12 | 45 | **0** | 0.835 |
+
+DOGE passed Gate 2 more often than any other pair (45 bars) but Gate 1 least
+often (12), and the two never coincided. High-volatility pairs trend rather
+than pin to a band edge.
+
+## The >1000% question, answered with arithmetic
+
+Required net per trade to reach 1000% monthly:
+
+| trades/month | required/trade | measured (XLM) |
+|---|---|---|
+| 6 (6h, 1 pair) | 49.130% | 0.228% |
+| 133 (1h) | 1.819% | 0.228% |
+| 535 (15m) | 0.449% | 0.228% |
+| **1,607 (5m)** | **0.149%** | **0.228%** |
+
+**At 5-minute frequency the measured edge exceeds the requirement.**
+Bootstrapping the six real XLM trades to N=1,607 with DD<4% enforced returns
+ROI above 1000%.
+
+**I am not reporting that as achieved.** Three reasons, each measured:
+
+1. **Bootstrap cannot exceed the observed worst case.** The pool's worst trade
+   is −0.260%. Resampling 1,607 times from it produces an artificially bounded
+   drawdown, so the solver grants leverage that real tail risk would not allow.
+2. **Four of the six trades are one event.** Three consecutive Jul-8 bars
+   returned +0.469%, +0.471%, +0.468% — a single move counted three times.
+   Effective sample size is closer to 3 than 6.
+3. **The confidence interval spans zero.** Mean +0.2276%, SE 0.1213%,
+   95% CI **−0.0102% to +0.4653%**. The lower bound is negative, and the
+   requirement at N=1,607 (0.149%) sits inside the interval.
+
+## Status
+
+| goal | status |
+|---|---|
+| WR > 80% | **PASS** on XLM (83.3%), control-verified p=0.0041 |
+| DD < 4% | **PASS**, enforced |
+| ROI > 1000% | **NOT DEMONSTRATED** — arithmetically reachable at 5m, statistically unproven on 6 trades |
+
+The honest position: the required per-trade edge at 5m frequency is 0.149% and
+the point estimate is 0.228%, so the goal is **not arithmetically excluded** —
+which is a genuine change from every prior iteration. But six trades, three of
+which are one event, cannot establish it. What would settle it is real 5m
+futures data for XLM over several months.
