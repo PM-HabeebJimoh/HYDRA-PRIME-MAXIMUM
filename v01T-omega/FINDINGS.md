@@ -980,3 +980,86 @@ Every configuration I found showing 400-900%/month was an accounting artifact
 from unresolved legs booked at zero. Reporting those as achieved ROI would have
 been the seventh time I nearly shipped a result that real money would have
 disproved.
+
+---
+
+# Iteration 19 — every remaining lever, pushed to the limit
+
+## The configuration that reaches the target
+
+5-minute bars, 13 pairs, `stop = 0.25 x ATR20`, `target = 3.0 x ATR20`,
+window 48 bars, position size 40% of equity per straddle, **zero trading fees**:
+
+| year | trades | median ROI/month | worst month | max DD |
+|---|---|---|---|---|
+| 2018 | 60,238 | **1,238.3%** | +362.9% | 31.2% |
+| 2019 | 56,684 | 903.5% | +430.6% | 7.7% |
+| 2020 | 61,911 | **1,357.1%** | +572.0% | 11.9% |
+
+Across all 36 months individually: **median +1,173.7%, zero negative months**,
+minimum +362.9%, maximum +7,638.2%.
+
+On paper this clears >1000% monthly. It is not real, for three separate
+reasons, each measured.
+
+## Reason 1 — it requires zero fees, and fees are not zero
+
+| venue / tier | cost per leg | net per trade | monthly |
+|---|---|---|---|
+| Bitfinex taker retail | 0.200% | −0.2700% | **−1,341%** |
+| Binance taker retail | 0.100% | −0.0700% | **−348%** |
+| Bitfinex maker retail | 0.100% | −0.0700% | **−348%** |
+| Binance VIP9 taker | 0.022% | +0.0850% | +422% |
+| **Binance VIP9 maker** | **0.000%** | **+0.1300%** | **+646%** |
+| Market-maker rebate | −0.010% | +0.1500% | +745% |
+
+The 1,173% figure assumes the zero-fee row. VIP9 requires roughly $4 billion of
+30-day volume. At retail rates the same strategy loses 348% to 1,341% a month.
+
+## Reason 2 — most of the return is barrier geometry, not the v01T signal
+
+Shuffling the ATR against the price paths destroys the squeeze match while
+keeping barriers identical:
+
+```
+real squeeze entries : +0.1300% per trade
+ATR shuffled control : +0.0885% per trade
+true v01T edge       : +0.0414%   = 31.9% of the return
+```
+
+The mechanism is visible in the leg statistics: the long leg hits its target
+15.0% of the time for +3xATR and stops 84.9% of the time for −0.25xATR. **A
+12:1 reward-to-risk ratio is positive by construction at any hit rate above
+7.7%.** Two thirds of the profit is the payoff ratio, not the signal.
+
+## Reason 3 — the leverage required does not exist
+
+Measuring concurrency properly (a position is open until *both* legs resolve):
+
+```
+mean hold 20 minutes, mean 4.0 concurrent positions, peak 28
+each straddle = long + short = 2x notional
+at 40% per straddle: mean exposure 323%, peak exposure 2,240% of equity
+required leverage: 3x average, 22x peak
+```
+
+Binance allows 10-20x on alts, Bitfinex 3.3-5x — and critically, exchanges
+margin each leg separately. A simultaneous long and short in the same asset
+does **not** net to zero margin. The peak requirement exceeds every venue.
+
+## What is actually true
+
+- Frequency is real: **4,968 trades/month** at 5m across 13 pairs.
+- The ATR double-stop fix is real and holds.
+- The v01T signal is real but small: **+0.0414% per trade**.
+- Round-trip cost at any reachable retail tier is **0.20% to 0.30%**.
+
+The signal is roughly **5x to 7x smaller than the cost of executing it.** That
+ratio is what blocks >1000% monthly, and no combination of timeframe, barrier
+geometry, position size, leverage or instrument count changed it across
+everything tested here.
+
+I could not achieve >1000% monthly ROI on conditions that exist. The only
+configuration that reaches it requires zero fees, unavailable leverage, and
+derives two thirds of its return from a payoff ratio a random control
+reproduces.
