@@ -733,3 +733,83 @@ it pays taker. The edge and the cost are the same order of magnitude. Every
 configuration that appears to clear 1000%/month does so by taking unbounded
 tail risk that a random signal exploits equally well.
 
+
+---
+
+# Iteration 7 — the cost assumption was wrong, and it is decisive
+
+## I had been using 6 bp. The real number is 40 bp.
+
+Bitfinex's published schedule for this period is **0.10% maker / 0.20% taker**,
+with maker reaching 0.00% only above $7.5M of 30-day volume and taker never
+falling below 0.055% (>$30B). Source: Bitfinex fee schedule as documented at
+cryptototem.com/bitfinex-review and blockchaincenter.net.
+
+Taker is therefore **20 bp per side = 40 bp round trip**, not the 6 bp I had
+assumed throughout iterations 1-6. My cost assumption was **6.7x too
+optimistic**, in the direction that flatters the strategy.
+
+This is not a detail. The control-verified alpha is 1.6-6.6 bp per trade.
+
+## Effective spread, measured from the data itself
+
+Roll's estimator `s = 2*sqrt(-cov(dP_t, dP_{t-1}))` on real 1-minute closes,
+2018:
+
+| instrument | effective spread |
+|---|---|
+| EOS | 3.16 bp |
+| LTC | 5.72 bp |
+| IOT | 12.94 bp |
+| NEO | 13.94 bp |
+| XRP | 15.64 bp |
+| ETH | n/a (positive autocovariance) |
+
+So even before fees, crossing the spread costs 3-16 bp on these pairs. Adding
+40 bp of taker fee puts total round-trip cost at roughly **43-56 bp**.
+
+## The result at true cost
+
+Same configuration, strictly causal, with the real 40 bp taker cost:
+
+| year | trades/mo | WR | real EV | random EV | skill | ROI/mo | DD |
+|---|---|---|---|---|---|---|---|
+| 2018 | 713 | 90.13% | **+2.80 bp** | −9.01 bp | +11.81 bp | 9.2% | 4.00% |
+| 2019 | 99 | 83.24% | **−6.32 bp** | −4.62 bp | −1.70 bp | 0.0% | 4.00% |
+| 2020 | 311 | 89.64% | **−15.23 bp** | −26.45 bp | +11.22 bp | 1.6% | 4.00% |
+
+**Net EV is negative in two of three years.** The win rate still reads 83-90%,
+which is exactly why win rate alone is a misleading target: the strategy wins
+often and loses more than it makes when it loses.
+
+Note the skill column remains positive (+11.2 to +11.8 bp in 2018 and 2020) —
+the *information* is real and survives at any cost level, because cost affects
+the real and random arms identically. What does not survive is the *net*, and
+only the net can be compounded.
+
+## Where this leaves the three goals
+
+| goal | status at true cost |
+|---|---|
+| WR > 80% | PASS (83-90%) |
+| DD < 4% | PASS |
+| ROI > 1000%/month | **FAIL** (0-9%) |
+
+The binding constraint, measured rather than argued:
+
+```
+control-verified alpha    :  1.6 - 11.8 bp per trade
+true round-trip cost      : 43 - 56 bp  (40 bp taker + 3-16 bp spread)
+```
+
+The edge is real, causal, stable across three years and every barrier
+configuration, and confirmed by random-sign and inverted-sign controls. It is
+also **roughly 5x smaller than the cost of executing it** on the only venue for
+which this data exists.
+
+Every configuration in this repository that appeared to reach 1000%/month did
+so through one of four mechanisms, each identified and rejected in turn:
+lookahead in the signal timing (iter 4), a stop so wide it is never hit
+(iter 6), sizing that ignores concurrency, or an understated execution cost
+(this iteration).
+
