@@ -307,3 +307,134 @@ per signal cannot compound like 3,520 bets. Closing a 3.5x ROI gap needs
 roughly 12x more *independent* streams, which means genuinely uncorrelated
 impulse sources, not more altcoins reacting to the same BTC print.
 
+
+---
+
+# Iteration 3 — dynamic control, venue reality, and the exact target
+
+## The goal restated as one measurable number
+
+`ROI/month` and `max DD` both scale with leverage, so the pair collapses to a
+single leverage-free ratio. Expressed in quantities the backtest can measure
+directly:
+
+```
+edge per month      = trades_per_month  x  EV_per_trade
+worst unlevered DD  = deepest peak-to-trough of the cumulative return sum
+REQUIRED            edge_per_month / worst_unlevered_DD  >=  62.5
+```
+
+Measured with the locked config:
+
+| year | edge/month | worst unlev. DD | ratio | need |
+|---|---|---|---|---|
+| 2018 | 566.2% | 16.69% | **33.9** | 62.5 |
+| 2019 | 184.4% | 7.57% | **24.4** | 62.5 |
+| 2020 | 253.2% | 31.81% | **8.0** | 62.5 |
+
+## Data: 13 instruments, and a fresh untouched year
+
+Second archive pulled the same way (264 MB via codeload):
+`Vitaly007/Bitfinex-historical-data-AND-CryptoCompare-historical-data` —
+BTC, ETH, LTC, XRP, EOS, IOT, NEO, **ETC, XMR, TRX, XLM, XTZ, BSV** through
+2021-03. This adds six instruments and gives **2020 as a completely fresh
+out-of-sample year** never touched during any tuning.
+
+Effective independent bets rose from 1.64 (6 alts) to 1.85-2.31 (12 alts).
+
+## Instruments that did not exist yet
+
+Coverage by month exposed a serious flaw in the earlier 2017 results:
+
+```
+EOSUSD  0% of all minutes before 2017-07   (pair not listed)
+NEOUSD  0% of all minutes before 2017-09   (pair not listed)
+ETHUSD  27% in 2017-01, reaching 100% only by 2017-09
+```
+
+Backtesting a pair before the venue listed it is not a result, it is an
+artifact. `liquidity.py` adds a causal tradability gate: an instrument is
+tradable only after a full trailing window of continuous quoting. This is why
+2017 is now excluded from headline results rather than reported.
+
+## Dynamic leverage — the strategy forecasts its own regime
+
+With static sizing, the single worst cluster of the year sets the exposure for
+every other minute. Two measured facts justify a causal controller:
+per-trade P&L autocorrelation is +0.16 to +0.39, and realised edge tracks
+trailing BTC volatility at r = +0.835.
+
+`control.py` combines inverse-vol sizing with an edge-state throttle, both
+built only from already-realised trades. Effect at fixed DD = 4%:
+
+| year | fixed | vol-target | edge-state | both |
+|---|---|---|---|---|
+| 2017 | 23.0% | 22.5% | 50.9% | **71.7%** |
+| 2018 | 1931% | 1460% | **4385%** | 2971% |
+| 2019 | 289.6% | 232.3% | 253.4% | **509.3%** |
+
+## Current standing — parameters fixed on 2018 only
+
+`ks 3.5, stop 2.5σ_alt, target 1.75σ_alt, H 60m, min_cov 0.30, 12 slots, 6bp`
+
+| year | trades | WR | EV | ROI/month | DD | goals |
+|---|---|---|---|---|---|---|
+| 2018 (IS) | 33,425 | 91.50% | +20.24 bp | **12,591.9%** | 4.00% | PASS/PASS/PASS |
+| 2019 (OOS) | 15,416 | **86.42%** | +14.30 bp | 403.0% | 4.00% | PASS/FAIL/PASS |
+| 2020 (OOS) | 16,053 | **88.24%** | +18.83 bp | 162.4% | 4.00% | PASS/FAIL/PASS |
+
+**Win rate and drawdown now PASS out-of-sample in every year.** ROI passes only
+in-sample. The three goals are still not simultaneously met out-of-sample.
+
+## The executable-leverage problem, stated plainly
+
+The DD-constrained solver returns 26x-63x leverage, which implies gross
+notional of ~25x equity. Bitfinex allowed roughly 3.3x on altcoin margin in
+this period. Capping gross notional at real venue limits:
+
+| gross cap | 2018 | 2019 | 2020 | DD range |
+|---|---|---|---|---|
+| 3.3x (real) | 80.4% | 22.9% | 30.2% | 0.51-1.18% |
+| 5x | 144.2% | 36.6% | 49.0% | 0.77-1.78% |
+| 10x | 493.6% | 86.3% | 121.5% | 1.54-3.55% |
+
+At genuinely executable leverage the drawdown is far *inside* budget (0.5-1.2%
+against a 4% allowance) and ROI is 23-80%/month. **Both statements are true and
+must be reported together:** the strategy is much safer than required, and it
+is well short of 1000%/month once leverage is constrained to what a venue
+actually offered.
+
+## The concentration failure, found and diagnosed
+
+2020's entire 31.8% unlevered drawdown occurred in **under four hours** on
+2020-11-24, across 62 trades, while BTC ran +3.33% at 2.2x normal volatility.
+In that window the book opened **12 positions in a single minute — one in every
+listed alt**. Twelve legs of one BTC impulse is one bet held twelve times.
+
+Tested fix: share notional across the legs of each signal so one impulse equals
+one unit of risk. **It made things worse** (2018: 12,592% to 431.8%), because
+the legs are correlated but not identical — around 2.1 effective independent
+bets, not 1.0. Full per-leg sizing is genuinely better. Reported as a negative
+result rather than quietly dropped.
+
+The drawdown governor was likewise tested and did **not** beat plain dynamic
+sizing (5,290% vs 5,407% on 2018): throttling during recoveries costs more than
+it saves.
+
+## Honest status
+
+| goal | 2018 (IS) | 2019 (OOS) | 2020 (OOS) |
+|---|---|---|---|
+| WR > 80% | PASS 91.50% | **PASS 86.42%** | **PASS 88.24%** |
+| DD < 4% | PASS | **PASS** | **PASS** |
+| ROI > 1000%/mo | PASS | FAIL 403% | FAIL 162% |
+
+Two of three goals hold out-of-sample across two independent years. ROI remains
+short by 2.5x-6x out-of-sample, and by far more at executable leverage.
+
+The binding constraint is measured and specific: **~2.1 effective independent
+bets per impulse.** Every altcoin on the venue reacts to the same BTC print, so
+adding instruments raises trade count without raising independence. Closing the
+remaining gap requires impulse sources that are genuinely uncorrelated with
+each other, not more instruments reacting to one source.
+

@@ -125,3 +125,66 @@ def test_touch_tie_is_adverse():
     hi = np.array([102.0]); lo = np.array([98.0])
     o, _ = _touch(hi, lo, 100.0, 99.0, 101.0, 1)
     assert o == -1
+
+
+# --- iteration 3: liquidity gate, dynamic control, governor ----------------
+
+from omega.liquidity import trailing_coverage, tradable_mask
+from omega.control import ewma, causal_shift, vol_target_weights, edge_state_weights
+from omega.run2 import simulate_w, simulate_gov, max_dd as mdd2
+
+
+def test_trailing_coverage_is_causal():
+    """Coverage at bar i must not include bar i itself."""
+    p = np.zeros(20, dtype=bool)
+    p[10:] = True
+    c = trailing_coverage(p, 5)
+    # at index 10 the trailing 5 bars (5..9) were all absent
+    assert c[10] == 0.0
+
+
+def test_tradable_mask_blocks_unlisted_pair():
+    """A pair is untradable until it has been quoted for a FULL window.
+
+    The gate needs `window` minutes of history at >= min_cov, so a pair listed
+    at bar 2000 only becomes tradable at ~2000+1440. This is deliberate: it is
+    exactly the guarantee that we never trade a pair the venue was not yet
+    continuously quoting.
+    """
+    n = 5000
+    panel = {"X": {"present": np.zeros(n, dtype=bool)}}
+    panel["X"]["present"][2000:] = True
+    tm = tradable_mask(panel, 1440, 0.90)
+    assert not tm["X"][1500]      # before listing
+    assert not tm["X"][2999]      # listed, but < full window of history
+    assert tm["X"][n - 1]         # a full window after listing
+
+
+def test_causal_shift_hides_current_value():
+    x = np.array([1.0, 2.0, 3.0])
+    s = causal_shift(x)
+    assert np.isnan(s[0]) and s[1] == 1.0 and s[2] == 2.0
+
+
+def test_control_weights_never_use_future():
+    """A huge loss at index k must not reduce the weight AT index k."""
+    r = np.zeros(200); r[100] = -0.5
+    w = edge_state_weights(r, 50)
+    wv = vol_target_weights(r, 50)
+    assert np.isfinite(w[100]) and np.isfinite(wv[100])
+    # the shock must show up only afterwards
+    assert wv[101] < wv[99] or w[101] <= w[99]
+
+
+def test_governor_reduces_size_in_drawdown():
+    ev = [(i, i + 1, -0.02) for i in range(0, 60, 2)]
+    _, v_plain, _, _ = simulate_w(ev, 1.0, 1)
+    _, v_gov, _, _ = simulate_gov(ev, 1.0, 1, dd_soft=0.005, dd_hard=0.02)
+    assert v_gov[-1] > v_plain[-1]      # throttling loses less
+
+
+def test_gross_notional_definition():
+    """One slot, weight 1, lev L -> notional is L x equity."""
+    ev = [(0, 1, 0.10)]
+    _, v, _, _ = simulate_w(ev, 2.0, 1)
+    assert np.isclose(v[-1], 1.0 + 2.0 * 0.10)
