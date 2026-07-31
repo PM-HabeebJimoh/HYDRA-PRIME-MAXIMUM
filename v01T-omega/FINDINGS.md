@@ -883,3 +883,100 @@ these is profitable net. The month is also only 17 trades across three
 instruments — far too few to claim an edge from. What it does show is that the
 double-stop fix transfers cleanly to unseen data and to an asset class
 (gold) it was never fitted on.
+
+---
+
+# Iteration 18 — pushing the ATR-corrected v01T for high monthly ROI
+
+Target: remarkable monthly ROI from the corrected model. Approach: ROI is
+`trades x edge x size`, so attack each term on real data, 13 pairs, 2018-2020.
+
+## Term 1 — trade frequency
+
+| timeframe | trades/month | WR | avg win | avg loss |
+|---|---|---|---|---|
+| **5m** | **4,968** | 74.2% | +0.085% | −0.296% |
+| 15m | 1,675 | 70.2% | +0.153% | −0.499% |
+| 30m | 830 | 67.4% | +0.226% | −0.691% |
+| 1h | 427 | 65.3% | +0.331% | −0.925% |
+| 6h | 74 | 64.0% | +0.906% | −2.446% |
+
+5m gives **67x more trades** than the 6h used in the July test. That is the
+frequency lever, and it is large.
+
+## Term 2 — edge per trade
+
+Cached 178,833 real 5m squeeze events with full forward paths and scanned the
+barrier space. Several configurations showed 400-900%/month:
+
+| kSL | kTP | W | WR | avg/trade | implied monthly |
+|---|---|---|---|---|---|
+| 4.0 | 2.0 | 12 | 45.8% | +0.1813% | **+900%** |
+| 4.0 | 1.5 | 12 | 59.1% | +0.1783% | +886% |
+| 3.0 | 1.5 | 12 | 42.4% | +0.0867% | +431% |
+
+**All of these are false.** They use a stop so wide (4x ATR) it is hit 0.01% of
+the time, which means the losing leg is never actually closed — it was being
+booked at zero instead of at its real loss. Marking the unresolved leg honestly
+at its worst excursion:
+
+| config | unresolved | booked at zero | **marked honestly** |
+|---|---|---|---|
+| kSL 4.0 kTP 2.0 | 37.1% | +0.1813% | **−0.4349%** |
+| kSL 4.0 kTP 1.5 | 28.5% | +0.1783% | **−0.3357%** |
+| kSL 3.0 kTP 1.5 | 21.6% | +0.0867% | **−0.2506%** |
+| kSL 0.5 kTP 1.5 | **0.0%** | +0.0656% | **+0.0655%** |
+
+That is the seventh artifact of this class found and removed in this project.
+Restricting to configurations that actually resolve (<1% unresolved) leaves a
+genuine best of **+0.124% per trade**.
+
+## Term 3 — cost, and where it kills the strategy
+
+A straddle pays the fee twice: **0.30% per round trip** at Bitfinex taker rates.
+
+| timeframe | trades/mo | best honest gross | cost | **net** |
+|---|---|---|---|---|
+| 5m | 4,968 | +0.1300% | 0.30% | **−0.170%** |
+| 30m | 830 | +0.1261% | 0.30% | **−0.174%** |
+| 1h | 426 | +0.1043% | 0.30% | **−0.196%** |
+
+**Zero configurations survive cost at any timeframe.** The reason is that the
+gross edge is roughly constant at ~0.13% per straddle regardless of speed,
+while the fee is fixed — so raising frequency raises cost proportionally and
+gains nothing.
+
+Trading a single leg on a breakout trigger (paying 0.15% instead of 0.30%) was
+also tested across 27 trigger/stop/target combinations: **best net −0.084%**,
+none positive.
+
+## The measurement that settles it
+
+Comparing real squeeze entries against the same barriers with the ATR shuffled
+— which destroys the squeeze/volatility match but keeps everything else:
+
+```
+squeeze entries : +0.0874% per trade
+ATR shuffled    : +0.0621% per trade
+true squeeze edge: +0.0252%
+cost per straddle: +0.3000%
+```
+
+**The squeeze itself is worth 0.0252% per trade. Executing it costs 0.30% —
+about 12x more.** Most of the apparent gross return is barrier geometry that a
+shuffled control reproduces, not information from the v01T signal.
+
+## Honest conclusion on high monthly ROI
+
+I could not achieve it, and I can now say precisely why rather than vaguely.
+
+- Frequency is available: 4,968 trades/month at 5m, a 67x increase.
+- The double-stop fix works: whipsaws stay near zero.
+- But the edge per trade (0.0252%) is ~12x smaller than the cost per trade
+  (0.30%), and this ratio does not improve at any timeframe, any barrier
+  setting, or with single-leg entry.
+
+Every configuration I found showing 400-900%/month was an accounting artifact
+from unresolved legs booked at zero. Reporting those as achieved ROI would have
+been the seventh time I nearly shipped a result that real money would have
+disproved.
