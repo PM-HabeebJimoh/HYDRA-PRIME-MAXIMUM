@@ -313,3 +313,44 @@ not coming.
 So the honest statement is sharper than before: **the goal is achievable on the
 measured signal physics, and is blocked entirely by a 1.52 bp spread against a
 0.76 bp budget.**
+
+## Iteration 11b — asymmetric execution tested
+
+If the spread is the entire blocker, the natural move is to pay it only once:
+enter as a taker (the signal is urgent, so crossing is unavoidable) but exit
+passively as a maker, earning the half-spread back.
+
+Measured honestly — post the exit limit and check whether real prices actually
+reach it, counting unfilled positions at their true mark:
+
+| dst | h | n | exit fill rate | EV on filled | **EV on all** |
+|---|---|---|---|---|---|
+| QTUM | 60 s | 30,012 | 71.0% | +2.09 bp | **−4.19 bp** |
+| QTUM | 300 s | 30,012 | 86.1% | +2.04 bp | **−5.42 bp** |
+| NEO | 60 s | 47,013 | 79.1% | +1.93 bp | **−3.16 bp** |
+| NEO | 300 s | 47,013 | 90.2% | +1.90 bp | **−3.63 bp** |
+| BNB | 300 s | 56,757 | 91.1% | +1.83 bp | **−2.11 bp** |
+
+The passive exit fills 71-91% of the time and looks profitable on those fills.
+But the 9-29% that do not fill are precisely the cases where price moved
+against the position, and they carry losses large enough to make the full
+sample negative. This is the same adverse-selection asymmetry measured in
+iteration 7b (−254 bp), now quantified on the exit leg: **selection into fills
+is not free, and conditioning on fills is the survivorship error again.**
+
+## Final position
+
+```
+required monthly Sharpe (derived exactly)   : 5.475
+measured monthly Sharpe (real 1s data)      : 5.78 - 7.82     GOAL MET on physics
+implied ROI at zero cost                    : 1,343% - 13,188% / month
+cost budget to preserve that                : 0.24 - 0.76 bp round trip
+cheapest measured taker floor (BTC spread)  : 1.52 bp
+maker alternative                           : negative after adverse selection
+```
+
+The signal is strong enough. The arithmetic of drawdown and leverage is
+satisfied. The trade count is sufficient. The single unresolved term is a
+**1.52 bp spread against a 0.76 bp budget** — a factor of 2, in the one
+quantity that is a property of the market's microstructure rather than of the
+strategy.
