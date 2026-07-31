@@ -647,3 +647,89 @@ leverage; capped leverage caps ROI. The measured ratio
 `edge_per_month / worst_unlevered_DD` peaks at **1.59** against the **62.5**
 required — a 39x gap, and it is largest precisely at the R that gives WR > 80%.
 
+
+---
+
+# Iteration 6 — a configuration that passed all three goals, and why I rejected it
+
+## The result that looked like success
+
+Pushing the stop far wider and adding the stand-down filter produced, at
+strictly causal timing and executable leverage (3-6.8x):
+
+`k_sigma 2.0, stop 48σ_alt, target 3σ_alt, H 120m, standdown 1, 16 slots, 6bp`
+
+| year | trades/mo | WR | leverage | ROI/month | DD | goals |
+|---|---|---|---|---|---|---|
+| 2018 (IS) | 13,424 | 86.03% | 3.95x | 19,354% | 4.00% | PASS/PASS/PASS |
+| 2019 (OOS) | 7,350 | 83.58% | 6.45x | 1,823% | 4.00% | PASS/PASS/PASS |
+| 2020 (OOS) | 7,712 | 85.52% | 4.97x | 1,364% | 4.00% | PASS/PASS/PASS |
+
+All three goals, all three years, two of them fully out-of-sample. I did not
+report this as an achievement, because it fails the control.
+
+## Why it is not real
+
+Random-sign control on the identical barriers:
+
+| year | real EV | **random-sign EV** | inverted EV |
+|---|---|---|---|
+| 2018 | +32.19 bp | **+27.82 bp** | +24.49 bp |
+| 2019 | +18.92 bp | **+16.91 bp** | +15.16 bp |
+| 2020 | +22.20 bp | **+20.59 bp** | +19.19 bp |
+
+Trading a **coin flip** through these barriers earns +27.82 bp. Almost the
+entire return is barrier geometry, not signal.
+
+The mechanism, measured directly — how often each barrier is actually reached:
+
+| config | target hit | **stop hit** | timeout |
+|---|---|---|---|
+| stop 48σ, target 3σ | 80.7% | **0.42%** | 18.9% |
+| stop 16σ, target 1.5σ | 90.4% | 4.32% | 5.2% |
+| stop 4σ, target 2σ | 73.4% | 26.53% | 0.1% |
+
+A 48σ stop is hit 4 times in 1,000. It is not a stop — it is an unbounded tail
+that the 120-bar horizon happens to truncate inside this sample. The strategy
+is a short-volatility lottery: it collects a small target ~80% of the time and
+the ruinous loss simply never appeared in three years. Sizing it at 4-6x
+leverage against a 4% drawdown cap is a claim about a tail that has not been
+observed, not a measurement.
+
+**Rejected.** Passing the three stated goals while a coin flip passes them too
+is not a solution.
+
+## The honest alpha, isolated
+
+Defining skill as `real EV − random-sign EV` on identical barriers removes the
+geometry entirely and leaves only tradable information:
+
+| stop/target | 2018 | 2019 | 2020 |
+|---|---|---|---|
+| 48σ / 3σ | +4.37 bp | +2.01 bp | +1.61 bp |
+| 16σ / 1.5σ | +6.55 bp | +2.53 bp | +3.00 bp |
+| 8σ / 2σ | +6.62 bp | +2.12 bp | +3.67 bp |
+| 4σ / 2σ | +5.84 bp | +1.95 bp | +3.76 bp |
+| 2σ / 2σ | +4.97 bp | +1.86 bp | +2.93 bp |
+| 2σ / 1σ | +6.10 bp | +2.12 bp | +3.42 bp |
+
+**Skill is +1.6 to +6.6 bp, positive in every configuration and every year.**
+It is remarkably stable across barrier choices, which is what a genuine
+information edge looks like — the signal is worth a fixed amount regardless of
+how the position is wrapped.
+
+The underlying physics is also stable, not decaying: pure causal lead-lag
+strength `E[alt | BTC impulse] / σ_alt` measures 0.269 (2018), 0.217 (2019),
+0.278 (2020).
+
+## The wall, stated exactly
+
+Real, causal, control-verified alpha: **+1.6 to +6.6 bp per trade.**
+Round-trip execution cost on this venue: **6 bp** (20 bp taker, ~2 bp maker
+only for rebate-tier participants who do not cross the spread).
+
+A lead-lag strategy must cross the spread — it is reacting to information — so
+it pays taker. The edge and the cost are the same order of magnitude. Every
+configuration that appears to clear 1000%/month does so by taking unbounded
+tail risk that a random signal exploits equally well.
+
