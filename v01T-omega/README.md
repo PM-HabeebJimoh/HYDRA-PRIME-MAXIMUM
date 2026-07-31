@@ -170,3 +170,140 @@ Bitfinex 1-minute OHLCV, `MTS,OPEN,CLOSE,HIGH,LOW,VOL`, via
 `github.com/Zombie-3000/Bitfinex-historical-data`. Coverage measured, not
 assumed: BTCUSD 2018 has 520,499 of 525,600 possible minutes (99.03%); the
 5,101 absent minutes are real venue gaps and are left absent.
+
+---
+
+# Iteration 2 — challenging the rules I had imposed on myself
+
+The previous iteration hit a wall at 685%/mo. The wall was made of rules I had
+invented and never questioned. Working genuinely back-to-front:
+
+## The goals are not two constraints — they are ONE
+
+ROI scales with leverage. Drawdown scales with leverage. Therefore **ROI/DD is
+leverage-invariant**, and leverage is not a free parameter at all:
+
+```
+required  ROI/DD  =  1000 / 4  =  250
+```
+
+Measured ROI/DD at the end of iteration 1: 2017 = 15.3, 2018 = 171.3,
+2019 = 25.4. The 2018 shortfall was only **1.46x**, not the 16.7x previously
+claimed. And since `ROI/DD ~ sqrt(N) * (EV/sigma) / sqrt(clustering)`, a 1.46x
+gap needs just 2.13x more independent trades.
+
+## Rule I invented and then obeyed: "trades must not overlap"
+
+That is not physics. It is an artifact of assuming a single capital slot. A
+real book holds many simultaneous positions in different instruments. Removing
+it took 2018 from 141 to **3,520 trades/month — a 25x increase**. `portfolio.py`
+does real continuous-time accounting: margin is consumed on open, released on
+close, drawdown marked on the equity curve.
+
+Related discovery: the median position resolves in **1 minute**, not the 120
+minutes I had reserved for it. I was blocking a capital slot for two hours on a
+trade that finished in sixty seconds.
+
+## Why parallel slots alone did NOT work — and the truth it exposed
+
+ROI/DD stayed flat at ~5.0 from 8 slots to 128 slots. Measuring why:
+
+```
+legs per signal            5.80
+single-leg sd             20.98 bp
+group-mean sd if indep.    8.71 bp
+group-mean sd ACTUAL      16.40 bp
+=> effective independent legs = 1.64
+```
+
+**Six altcoins responding to one BTC impulse are 1.64 bets, not 6.** Adding
+slots multiplies a position, it does not diversify it.
+
+## The fundamental regime variable
+
+Signal-mean return vs trailing BTC volatility: **r = +0.835**.
+
+| vol quintile | mean sigma | WR | EV | EV/sigma |
+|---|---|---|---|---|
+| 1 | 2.1 bp | 38.6% | −2.31 bp | −1.12 |
+| 2 | 4.1 bp | 77.4% | +2.21 bp | +0.53 |
+| 3 | 6.1 bp | 79.3% | +6.70 bp | +1.09 |
+| 4 | 9.2 bp | 82.3% | +14.28 bp | +1.55 |
+| 5 | 16.6 bp | 84.8% | +32.60 bp | +1.97 |
+
+Both the *unitless* win rate and the *scale-free* EV/sigma rise monotonically,
+so this is not a mechanical artifact of vol-scaled barriers. Two real causes:
+barriers scale with sigma while cost is a fixed 6 bp (in quintile 1 the barrier
+is ~3 bp and the fee alone exceeds the whole move), and the alt book must
+actually be re-quoting for a lead-lag to exist at all.
+
+## The unit error that was costing the most
+
+The impulse is detected in **BTC** space but the position is held in **ALT**
+space. I had been sizing barriers with `sigma_BTC`. In 2017 the alts were 2-4x
+more volatile than BTC, so a "1.5 sigma_btc" stop was a small fraction of one
+alt sigma and was destroyed by ordinary alt noise before the impulse arrived.
+
+Decomposing the pure signal, `E[alt_{t+1} | impulse] / sigma_alt`:
+
+| year | mean | strongest leg |
+|---|---|---|
+| 2017 | **+0.399** | ETH +0.531 |
+| 2018 | +0.280 | NEO +0.373 |
+| 2019 | +0.264 | IOT +0.453 |
+
+The signal was strongest in 2017 — the year that performed worst. The edge was
+never missing; the yardstick was wrong. Fixing it (`altscaled.py`) raised 2017
+EV from +10.3 to +22.4 bp.
+
+## Barrier geometry: stop WIDER than target
+
+To hit WR > 80% the near barrier must be the target. With alt-scaled barriers
+at `stop = 6 sigma_alt, target = 2 sigma_alt`:
+
+| year | WR | EV |
+|---|---|---|
+| 2017 | 85.1% | +17.92 bp |
+| 2018 | 95.1% | +22.84 bp |
+| 2019 | 91.6% | +14.89 bp |
+
+### Controls prove this is signal, not geometry
+
+| year | real | random sign | inverted | true edge |
+|---|---|---|---|---|
+| 2017 | +17.92 bp | −13.14 bp | −44.44 bp | **+31.06 bp** |
+| 2018 | +22.84 bp | −16.36 bp | −55.06 bp | **+39.20 bp** |
+| 2019 | +14.89 bp | −13.89 bp | −42.81 bp | **+28.78 bp** |
+
+Random-sign trading of these same barriers **loses 13-16 bp**. Only the real
+signal wins, and the inverted signal loses roughly twice as much as random.
+
+## Where it actually stands
+
+In-sample 2018 (`ks 3.5, stop 4σ_alt, target 2.5σ_alt, H 30m, 32 slots, 6bp`):
+
+| metric | value | goal |
+|---|---|---|
+| win rate | **89.1%** | >80% PASS |
+| ROI/month | **1931.3%** | >1000% PASS |
+| max drawdown | **4.00%** | <4% PASS |
+
+Out-of-sample, same parameters, never refitted:
+
+| year | trades/mo | WR | EV | ROI/mo | DD | goals |
+|---|---|---|---|---|---|---|
+| 2017 | 1,546 | 72.90% | +23.52 bp | 23.0% | 4.00% | FAIL/FAIL/PASS |
+| 2019 | 1,868 | **83.38%** | +15.51 bp | 289.6% | 4.00% | PASS/FAIL/PASS |
+
+**All three goals are met in-sample on 2018 and are NOT met out-of-sample.**
+2019 now passes win rate and drawdown; ROI is 3.5x short. That is the honest
+state and it is not a pass.
+
+## What the remaining gap is made of
+
+The binding constraint is no longer edge, trade count, or drawdown control — it
+is **independence**. 3,520 trades/month that are really ~1.64 independent bets
+per signal cannot compound like 3,520 bets. Closing a 3.5x ROI gap needs
+roughly 12x more *independent* streams, which means genuinely uncorrelated
+impulse sources, not more altcoins reacting to the same BTC print.
+

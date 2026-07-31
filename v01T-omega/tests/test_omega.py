@@ -84,3 +84,44 @@ def test_leverage_search_respects_dd_cap():
     lev = max_leverage_at_dd(net, 0.04)
     eq = np.cumprod(1 + lev * net)
     assert max_drawdown(eq) <= 0.0401
+
+
+# --- portfolio / alt-scaling regression tests -------------------------------
+
+from omega.portfolio import simulate, curve_max_dd
+from omega.altscaled import alt_vol, _touch
+from omega.volgate import cost_aware_floor
+
+
+def test_ruin_is_reported_as_failure_not_nan():
+    """A blow-up must return a losing curve, never NaN that a search accepts."""
+    ev = [(0, 1, -1.0), (2, 3, -1.0)]
+    t, v, n = simulate(ev, 10, lev=100.0, max_concurrent=1)
+    assert np.all(np.isfinite(v)) and v[-1] <= 0
+
+
+def test_slot_limit_actually_blocks_trades():
+    ev = [(0, 100, 0.01), (1, 100, 0.01), (2, 100, 0.01)]
+    _, _, n = simulate(ev, 200, lev=1.0, max_concurrent=1)
+    assert n == 1
+
+
+def test_alt_vol_is_causal():
+    """sigma at index i must not use the return into bar i."""
+    c = np.ones(300)
+    c[250:] = 2.0
+    v = alt_vol(c, 240)
+    assert not np.isfinite(v[0])
+    # the jump at 250 must not be visible before it happens
+    assert v[249] == 0.0 or np.isnan(v[249])
+
+
+def test_cost_aware_floor_scales_with_target():
+    assert np.isclose(cost_aware_floor(6, 3, 3.0), 3 * 6e-4 / 3)
+    assert cost_aware_floor(6, 1) > cost_aware_floor(6, 3)
+
+
+def test_touch_tie_is_adverse():
+    hi = np.array([102.0]); lo = np.array([98.0])
+    o, _ = _touch(hi, lo, 100.0, 99.0, 101.0, 1)
+    assert o == -1
