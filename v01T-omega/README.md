@@ -813,3 +813,45 @@ lookahead in the signal timing (iter 4), a stop so wide it is never hit
 (iter 6), sizing that ignores concurrency, or an understated execution cost
 (this iteration).
 
+
+## Iteration 7b — maker execution tested and structurally ruled out
+
+If taker cost (40 bp) is 5x the alpha, the obvious move is to stop paying it:
+post passive limit orders and earn the maker rate instead.
+
+Modelled honestly — post a limit `d*sigma` against our direction at the first
+observable bar, fill only if price actually reaches it, unfilled means no trade:
+
+| offset d | orders | fill rate | WR | EV (20 bp maker) |
+|---|---|---|---|---|
+| 0.5σ | 207,748 | 90.7% | 57.86% | **−22.53 bp** |
+| 1.0σ | 200,044 | 87.4% | 57.72% | **−21.96 bp** |
+| 2.0σ | 183,861 | 80.3% | 57.00% | **−21.35 bp** |
+| 3.0σ | 168,149 | 73.4% | 56.38% | **−20.28 bp** |
+
+Win rate collapses from ~88% to ~57% and EV is deeply negative at every offset.
+
+### The reason, measured directly
+
+Comparing the forward move of orders that **filled** against those that did not:
+
+```
+FILLED   orders : n = 136,172   mean forward move  -18.88 bp
+UNFILLED orders : n =  19,591   mean forward move +235.36 bp
+adverse selection penalty       =  254.24 bp
+```
+
+The passive order fills **only when the market comes back to it**, which is
+precisely when the lead-lag move is not going to happen. When the signal is
+correct the price runs away and the order never fills. We are systematically
+picked off by the very information move we were trying to trade.
+
+This is not a tuning problem. A signal that predicts imminent directional
+movement **cannot** be executed passively, because the counterparty who fills
+you is the one who knows the move is not coming. Lead-lag is intrinsically a
+liquidity-taking strategy, and it must pay the taker fee.
+
+**Both execution paths are therefore closed:**
+- taker: 40 bp fee + 3-16 bp spread vs 1.6-11.8 bp alpha
+- maker: 254 bp of adverse selection
+
