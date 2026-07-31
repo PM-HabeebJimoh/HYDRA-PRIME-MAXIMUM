@@ -855,3 +855,93 @@ liquidity-taking strategy, and it must pay the taker fee.
 - taker: 40 bp fee + 3-16 bp spread vs 1.6-11.8 bp alpha
 - maker: 254 bp of adverse selection
 
+
+---
+
+# Iteration 8 — second-resolution real ticks, a cheaper venue, and a bias I caught in my own filter
+
+## New real data: 5.46 GB of Binance trade ticks
+
+`Nucs/cryptocurrency-ticks-data`, pulled through the same codeload path
+(5,456,970,781 bytes). 591 daily files per symbol for BTC, NEO, BNB, QTUM,
+ETH/BTC, LTC/BTC, spanning **2018-04-07 to 2019-11-18**.
+
+Every row is a real executed trade:
+`Id, time (ms), Price, Quantity, IsBuyerMaker, BuyerOrderId, SellerOrderId, IsBestPriceMatch`
+
+The aggressor flag matters: it lets the effective spread be **measured from
+real executions** instead of assumed. Built **12,360,326 one-second BTC bars**
+across 197 days sampled evenly over the full span.
+
+## Measured spread — my earlier assumption was too pessimistic here
+
+Median touch spread from consecutive opposite-aggressor prints within 1 second:
+
+| symbol | measured spread |
+|---|---|
+| BTCUSDT | **1.62 bp** |
+| BNBUSDT | 3.53 bp |
+| NEOUSDT | 4.83 bp |
+| QTUMUSDT | 7.61 bp |
+
+Binance 2019 spot fee was 0.10%/side, 0.075% with BNB. Total realistic
+round-trip cost on this venue is roughly **15 bp**, against 43-56 bp on
+Bitfinex. This is the cheapest execution available in any real data I can
+reach, so it is the fairest possible test of the edge.
+
+## A survivorship bias I introduced, found, and removed
+
+Measuring the response at h = 1800 s, I required the exit second to have a
+recent real print. That filter looked innocuous. It was not:
+
+```
+events passing ENTRY gate only          : 31,942
+events also passing EXIT gate           :    630
+exit gate discards                      :  98.03% of events
+```
+
+The discarded 98% are exactly the episodes where the alt stopped printing —
+which correlates with the move failing. Effect on the measured edge:
+
+| method | EV |
+|---|---|
+| with exit gate (what I first reported) | **+60.04 bp** |
+| unbiased, exit at last real price | **+5.30 bp** |
+
+An 11x overstatement. The +47 to +102 bp "skill" figures I had just produced
+were this artifact. Corrected before drawing any conclusion from them.
+
+## Unbiased result on real second-resolution ticks
+
+All entry-gated events, exit at the last genuinely traded price in the window,
+random-sign control on identical events:
+
+| alt | k_sigma | H | n | real EV | random EV | skill | net after 15 bp |
+|---|---|---|---|---|---|---|---|
+| NEO | 4 | 300 s | 31,952 | +4.50 | −0.04 | +4.54 | **−10.50** |
+| NEO | 6 | 1800 s | 6,639 | +10.35 | −4.15 | +14.51 | **−4.65** |
+| BNB | 4 | 300 s | 38,298 | +2.46 | +0.02 | +2.44 | **−12.54** |
+| BNB | 6 | 1800 s | 7,309 | +6.82 | −1.72 | +8.54 | **−8.18** |
+| QTUM | 4 | 300 s | 20,489 | +6.07 | −0.24 | +6.31 | **−8.93** |
+| QTUM | 6 | 1800 s | 4,792 | +14.14 | +1.67 | +12.47 | **−0.86** |
+
+**Skill is real and positive everywhere (+2.3 to +14.5 bp), and net EV is
+negative at every single setting.** The random-sign control is flat, confirming
+the information is genuine rather than geometric.
+
+## Two independent datasets, two venues, one answer
+
+| measurement | Bitfinex 1-minute bars | Binance 1-second ticks |
+|---|---|---|
+| control-verified skill | 1.6 - 11.8 bp | 2.3 - 14.5 bp |
+| true round-trip cost | 43 - 56 bp | ~15 bp |
+| net | negative | negative |
+
+Independent data, independent venue, 10x finer time resolution, 3x cheaper
+execution — and the same conclusion, which is what makes it a measurement
+rather than a fitting artifact.
+
+Cutting cost by 3x did not rescue it because the signal shrinks with the
+horizon needed to earn it: the BTC to altcoin impulse is worth roughly
+**4-14 bp**, full stop. That is the physical size of the effect.
+
