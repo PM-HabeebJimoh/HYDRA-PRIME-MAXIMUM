@@ -634,3 +634,89 @@ That is the sixth artifact of this class I have found and removed.
 v01T identified something genuine: **volatility is predictable after a
 squeeze.** Its error is monetising that with a spot straddle, which is
 identically flat. The physics is sound; the instrument is wrong.
+
+---
+
+# Iteration 15 — which pair should v01T actually trade?
+
+BTC was never tested against alternatives; it was inherited from the spec. Ran
+v01T verbatim (BB% <10 or >90, HV <0.8, score >=85, 0.05% stop / 0.50% target,
+24 h window) on **all 13 real Bitfinex pairs, 2018-2020**.
+
+The metric that matters is not win rate but **does the 0.50% target arrive
+BEFORE the 0.05% stop is touched.**
+
+| rank | pair | squeeze rate | **TP before SL** | both legs stopped | net EV |
+|---|---|---|---|---|---|
+| 1 | **XLM** | 5.24% | **46.17%** | 53.83% | **+15.40 bp** |
+| 2 | **XTZ** | 5.86% | **45.02%** | 54.98% | +14.76 bp |
+| 3 | **TRX** | 4.77% | **39.28%** | 60.72% | +11.61 bp |
+| 4 | BSV | 4.49% | 34.21% | 65.79% | +8.82 bp |
+| 5 | XMR | 5.64% | 29.88% | 70.12% | +6.43 bp |
+| 6 | ETC | 4.69% | 29.32% | 70.68% | +6.12 bp |
+| 7 | NEO | 5.01% | 28.90% | 71.10% | +5.89 bp |
+| 8 | IOT | 5.51% | 26.63% | 73.37% | +4.64 bp |
+| 9 | LTC | 4.56% | 22.47% | 77.53% | +2.36 bp |
+| **10** | **BTC** | 4.16% | **21.76%** | 78.24% | **+1.97 bp** |
+| 11 | ETH | 4.55% | 20.42% | 79.58% | +1.23 bp |
+| 12 | XRP | 4.40% | 18.86% | 81.14% | +0.37 bp |
+| 13 | EOS | 4.20% | 17.86% | 82.14% | −0.18 bp |
+
+**BTC ranks 10th of 13 — the second-worst major.** XLM beats it by 2.1x on the
+survival rate and 7.8x on net EV.
+
+## Stable across every year
+
+| pair | 2018 | 2019 | 2020 |
+|---|---|---|---|
+| XLM | 40.4% | 50.8% | 46.1% |
+| XTZ | 57.9% | 51.5% | 36.1% |
+| TRX | 29.6% | 44.8% | 43.1% |
+| BTC | 21.4% | 24.2% | 19.6% |
+| ETH | 24.0% | 19.9% | 17.1% |
+
+The ranking holds in all three years. This is structural, not a sample fluke.
+
+## The physics — and it is the opposite of intuition
+
+Correlation between 1-minute volatility and TP-before-SL rate: **+0.701.**
+**Higher** volatility pairs survive the stop better. That seems backwards until
+the mechanism is measured:
+
+| pair | 1m vol | median minutes to reach 0.50% | minutes to touch 0.05% | ratio |
+|---|---|---|---|---|
+| **XLM** | 50.5 bp | **3** | 1 | **3.0** |
+| TRX | 69.4 bp | 4 | 1 | 4.0 |
+| NEO | 27.2 bp | 7 | 1 | 7.0 |
+| LTC | 18.6 bp | 15 | 1 | 15.0 |
+| ETH | 14.5 bp | 25 | 1 | 25.0 |
+| **BTC** | 11.3 bp | **51** | 2 | **25.5** |
+
+The 0.50% target is a **fixed** distance while the 0.05% stop is only 5 bp away
+— roughly one bar of noise on any pair. So the stop's hazard rate per bar is
+nearly constant across pairs, but the **time spent exposed to it** is not.
+
+XLM reaches 0.50% in **3 minutes**. BTC needs **51 minutes** — seventeen times
+longer sitting next to a stop that a single tick can trigger. BTC is the worst
+choice precisely *because* it is the most stable: a fixed 0.50% target is a
+huge distance in BTC-noise units and a short hop in XLM-noise units.
+
+**Rule: for a fixed percentage target with a tight stop, choose the pair whose
+volatility is largest relative to the target.**
+
+## Practical caveat
+
+| pair | bar coverage | median volume/min |
+|---|---|---|
+| XLM | 11.6% | 1,171 |
+| XTZ | 14.2% | 152 |
+| TRX | 23.5% | 7,511 |
+| BTC | 98.2% | 1.83 BTC |
+
+The winners trade far less continuously than BTC — XLM prints in only 11.6% of
+minutes. Wider spreads and gap risk apply, and iteration 14's finding still
+stands: the squeeze predicts **volatility, not direction**, so the spot double
+entry remains structurally flat regardless of which pair is chosen.
+
+**TRX is the best practical compromise**: 39.28% TP-before-SL (1.8x BTC), 23.5%
+coverage, and by far the deepest volume of the high-ranking pairs.
