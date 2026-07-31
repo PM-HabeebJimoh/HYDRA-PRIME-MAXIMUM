@@ -990,3 +990,104 @@ different things. With ~50,000 observations per day, a tiny mean is enormously
 significant and still worth nothing. The reversion is real, sub-tick, and
 entirely inside the spread.
 
+
+---
+
+# Iteration 9 — cross-venue arbitrage on two real venues
+
+Both datasets in this repository cover BTC over an overlapping period on
+**two independent real venues**. That permits a mechanism none of the earlier
+iterations tested: the same asset priced differently in two places, where
+convergence is enforced by arbitrage rather than by prediction.
+
+## Clock alignment derived from the data, not assumed
+
+The Binance tick archive warns of a possible 1-3 h timezone offset. Rather than
+assume, the offset was **derived** by maximising the correlation of 1-minute
+returns between venues over a +/-4 h search:
+
+```
+best offset = 0 s, correlation 0.8328, n = 1439
+```
+
+The timestamps are true UTC; only the filenames are labelled a day ahead.
+
+## The dislocation is real and it mean-reverts
+
+Binance BTCUSDT versus Bitfinex BTCUSD, real 1-minute closes on both sides:
+
+| day | n | mean spread | sd | \|z\|>15bp |
+|---|---|---|---|---|
+| 2019-05-15 | 1,439 | +30.51 bp | 39.84 | 74.6% |
+| 2019-02-15 | 1,438 | −170.74 bp | 14.42 | 34.5% |
+| 2018-12-15 | 1,437 | −159.71 bp | 11.65 | 19.4% |
+| 2019-10-15 | 1,401 | −26.32 bp | 6.54 | 2.7% |
+
+Mean reversion of the deviation, averaged over days:
+
+| horizon | corr(z, Δz) |
+|---|---|
+| 1 min | −0.238 |
+| 5 min | −0.339 |
+| 15 min | **−0.409** |
+
+This is a strong, genuine convergence force — much stronger than anything in
+the lead-lag work.
+
+## Payoff scales with dislocation size
+
+Trading against the deviation (long the cheap venue, short the rich one),
+30-minute hold, causal z-score from a trailing 120-minute window ending before
+the signal bar:
+
+| dislocation | n | mean dev | gross | capture |
+|---|---|---|---|---|
+| 0-10 bp | 10,985 | 4.3 bp | +1.87 bp | 43.1% |
+| 10-25 bp | 3,178 | 14.7 bp | +5.39 bp | 36.8% |
+| 25-50 bp | 510 | 33.1 bp | +10.53 bp | 31.8% |
+| 50-100 bp | 77 | 65.2 bp | +28.65 bp | 44.0% |
+
+Roughly 30-44% of any dislocation is recovered within 30 minutes, at any size.
+That is the arbitrage force made quantitative.
+
+## Why it still does not clear the goal
+
+This is a **two-leg** trade, so it pays four fills:
+
+```
+Binance  taker 10 bp in + 10 bp out = 20 bp
+Bitfinex taker 20 bp in + 20 bp out = 40 bp
+TOTAL round trip                    = 60 bp
+```
+
+An initial 85-day scan suggested dislocations >100 bp returned +85.81 bp gross,
+i.e. +25.81 bp net — apparently profitable. **Scanning all 590 available days
+destroyed that result:**
+
+| threshold | n | per day | gross | net after 60 bp | t | WR |
+|---|---|---|---|---|---|---|
+| \|dev\| >= 100 bp | 347 | 0.59 | +48.91 | **−11.09** | **−3.07** | 40.3% |
+| \|dev\| >= 150 bp | 137 | 0.23 | +58.43 | −1.57 | −0.27 | 47.4% |
+| \|dev\| >= 200 bp | 66 | 0.11 | +71.91 | +11.91 | **1.46** | 56.1% |
+
+The 85-day figure was small-sample luck. On the full sample the only
+non-negative bucket is |dev| >= 200 bp, and its t-statistic is **1.46** — not
+significant.
+
+Taking even that bucket entirely at face value:
+
+```
+3.4 trades per month x 11.91 bp = 0.41% per month unlevered
+leverage needed for 1000%/month = 2,466x
+worst unlevered drawdown        = 7.09%
+leverage permitted by DD < 4%   = 0.56x
+```
+
+A required 2,466x against a permitted 0.56x — a factor of ~4,400. And the
+"edge" underlying it is not statistically distinguishable from zero.
+
+Even at zero fees the two legs must each cross a spread: measured touch spreads
+are 1.62 bp on Binance BTC and comparable on Bitfinex, so 4 crossings is
+~6.4 bp minimum, already 66% of the 9.76 bp gross available at ordinary
+dislocation sizes.
+
