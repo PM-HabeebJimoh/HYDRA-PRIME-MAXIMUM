@@ -1530,3 +1530,92 @@ the point estimate is 0.228%, so the goal is **not arithmetically excluded** —
 which is a genuine change from every prior iteration. But six trades, three of
 which are one event, cannot establish it. What would settle it is real 5m
 futures data for XLM over several months.
+
+---
+
+# Iteration 26: the 5-minute test. XLM fails. DOGE never qualified.
+
+## Direct answer
+
+**No. XLM did not achieve >1000% monthly ROI. Neither did DOGE.**
+DOGE was never a candidate — it produced **zero signals** in July 2026.
+
+I ran the test that iteration 25 said would settle the question: real
+5-minute Bitfinex perpetual futures data for `tXLMF0:USTF0`, July 2026.
+The answer came back negative, and the reason is new.
+
+## The 5-minute bar does not exist on this instrument
+
+Iteration 25's whole >1000% case rested on one number: **1,607 trades/month**
+at 5-minute frequency. That number assumed 288 bars/day. It is wrong.
+
+Bitfinex returns candles only for intervals **in which a trade printed**.
+On `tXLMF0:USTF0` most 5-minute intervals have no trade at all.
+
+| sampled day | bars returned | of 288 possible | median gap between bars |
+|---|---|---|---|
+| Jul 06 | 39 | 13.5% | 18 min |
+| Jul 14 | 75 | 26.0% | 15 min |
+| Jul 21 | 51 | 17.7% | 12 min |
+| Jul 25 | 47 | 16.3% | 10 min |
+
+Only **33.7%** of consecutive bars are actually 5 minutes apart. The median
+real gap is **12 minutes**; the largest is **270 minutes** (4.5 hours with no
+trade at all).
+
+Average **53 bars/day**, so a real month is about **1,643 bars — not 8,928.**
+
+This kills the arithmetic directly. Iteration 25 projected 1,607 trades/month.
+The measured signal rate is **2.50/day = 78 trades/month**, a **20.6× shortfall**.
+At N=78 the required net per trade is **3.1220%**, not 0.149%.
+
+## The measured 5-minute result
+
+Real bars, v01T's 4 gates, ATR barriers, strictly causal entry at signal+2,
+fees 0.26%, unresolved legs marked at worst excursion (not zero):
+
+```
+signals traded        10
+Win Rate              0.0%
+mean net per trade    -0.4015%
+95% CI                -0.5211% to -0.2820%   (entirely below zero)
+worst / best          -0.668% / -0.170%
+```
+
+**Zero wins out of ten.** Six of the ten had at least one leg unresolved at the
+end of the window; marking those honestly at worst excursion — rather than
+booking them at zero, which is artifact #7 from iteration 25 — is what turns
+the number negative.
+
+Result is invariant to the resolution window: WIN = 12, 24, 48, 96 and 200
+bars all give exactly **−0.4015%**. Nothing hits its target, ever. Widening the
+window cannot help because the barriers are ATR-scaled and the price simply
+never travels 1.75×ATR before travelling 1.5×ATR the other way.
+
+## Why it fails, in one sentence
+
+Gaps. A "5-minute" bar that is really 12 minutes of elapsed time contains 12
+minutes of price movement, so the ATR-scaled stop that worked on clean 6-hour
+bars is now repeatedly jumped straight through by the first gap after entry.
+Higher frequency did not buy more trades — it bought **worse fills on fewer trades**.
+
+## Status after iteration 26
+
+| goal | status |
+|---|---|
+| WR > 80% | **FAIL at 5m** (0.0%). Still 83.3% on 6h, n=6. |
+| DD < 4% | not reached — no profitable configuration to cap |
+| ROI > 1000% | **FAIL, and now arithmetically excluded again** |
+
+Iteration 25 said the goal was "no longer arithmetically excluded" because
+measured 0.228% exceeded the 0.149% needed at N=1,607. **That N was fictional.**
+At the real N=78 the requirement is 3.1220% and the measurement is −0.4015%.
+
+The honest standing best remains iteration 24-25's **XLM +22.32% monthly at
+DD<4%**, on six 6-hour trades, three of which are one event.
+
+## Files
+
+- `v01T-omega/data/jul2026_XLMF_5m_bitfinex_sampled.json` — real 5m perp bars, 4 days
+- `v01T-omega/run_5m_density.py` — gap/density measurement
+- `v01T-omega/run_5m_xlm_futures.py` — the 5m straddle backtest
