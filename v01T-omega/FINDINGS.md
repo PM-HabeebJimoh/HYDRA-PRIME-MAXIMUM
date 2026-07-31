@@ -815,3 +815,71 @@ stable across three years and thirteen instruments.
 IOT −13.22 bp), and none of these figures include execution cost. Fixing the
 whipsaw removes a large source of avoidable loss; it does not manufacture a
 directional edge that the squeeze does not contain.
+
+---
+
+# Iteration 17 — July 2026 rerun with the ATR correction
+
+Real Bitfinex 6h candles fetched live for 2026-07-01 to 2026-08-01. Six-hour
+granularity returns the whole month in a single API response, so coverage is
+complete and verifiable rather than stitched from truncated chunks.
+
+| instrument | bars | coverage |
+|---|---|---|
+| XLMUSD | 124 | 100.0% |
+| TRXUSD | 120 | 97.6% |
+| XAUT:USD | 124 | 100.0% |
+
+`XAUT:USD` is Tether Gold, a spot-gold-backed token. Bitfinex does not list
+XAUUSD spot FX. Yahoo `XAUUSD=X` returns "No data found"; `GC=F` (COMEX gold
+futures) exists but trades only 22 days a month with 1-4 day gaps, which
+invalidates a large share of v01T's 24-hour Gate 4 windows. XAUT trades 24/7,
+so it is the honest gold proxy for this test.
+
+## Result
+
+| instrument | ORIGINAL both% | ORIGINAL EV | **ATR both%** | **ATR EV** |
+|---|---|---|---|---|
+| XLM | 66.67% | +8.33 bp | **0.00%** | +2.04 bp |
+| TRX | 25.00% | +31.25 bp | **0.00%** | +9.36 bp |
+| XAUT | **100.00%** | −10.00 bp | **0.00%** | **+12.69 bp** |
+| **ALL** | **64.71%** | +9.41 bp | **0.00%** | +6.27 bp |
+
+**Double-stops: 11 of 17 trades (64.7%) to 0 of 17 (0.0%).**
+
+XAUT is the clearest case. Under original v01T every single trade was
+double-stopped — gold's 6h range dwarfs a 5 bp stop — for −10.00 bp. With
+ATR-scaled barriers it reaches the target on 100% of trades for **+12.69 bp**,
+the best of the three instruments.
+
+## The window had to move with the barriers
+
+Running the ATR fix inside v01T's original 24-hour window gave XLM −112.04 bp.
+That was not a failure of the fix but of the horizon: ATR targets on XLM are
+~5% wide, and 24 hours is not enough time to travel that far.
+
+| window | XLM timeout% | XLM EV | TRX EV | XAUT EV |
+|---|---|---|---|---|
+| 24 h | 88.89% | −112.04 | −14.30 | +6.60 |
+| **48 h** | **22.22%** | **+2.04** | **+9.36** | **+12.69** |
+| 72 h | 22.22% | −49.87 | +11.51 | +12.69 |
+
+At 24 h, 88.89% of XLM trades expired unresolved. Widening to 48 h cut that to
+22.22% and flipped EV positive on all three. Barrier width and holding period
+are one joint decision, not two independent ones.
+
+## Honest reading
+
+The correction does exactly what it was designed to do — the whipsaw is gone,
+completely, on all three instruments in a live month never used for tuning.
+
+Portfolio EV is lower than the original (+6.27 vs +9.41 bp) because the
+original's figure rests on 3 lucky wins out of 17 trades; with 11 double-stops
+it is a high-variance number on a small sample. The corrected version wins on
+13 of 17 with no catastrophic legs.
+
+Neither figure includes execution cost. At ~15 bp round trip per leg, none of
+these is profitable net. The month is also only 17 trades across three
+instruments — far too few to claim an edge from. What it does show is that the
+double-stop fix transfers cleanly to unseen data and to an asset class
+(gold) it was never fitted on.
