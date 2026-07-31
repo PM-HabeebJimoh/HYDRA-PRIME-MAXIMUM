@@ -203,3 +203,113 @@ comparable to elite HFT at the 1-second variant. It is 4-20x short of what the
 stated goal requires, and the shortfall is in the **signal-to-noise ratio of
 the underlying market physics**, not in cost, leverage, trade count, or
 execution.
+
+---
+
+# Iteration 11 — I derived the goal exactly, and my previous claim was wrong
+
+## Correcting myself
+
+In iteration 10 I asserted the goal "requires annualised Sharpe ~60-100". That
+number came from a hand-waved proportionality, not a derivation. **It was
+wrong.** Here is the exact result.
+
+For log-equity as a drifted random walk with per-trade drift `m` and dispersion
+`s`, the maximum-drawdown law is `P(maxDD > d) = exp(-2md/s²)`, so
+`E[maxDD] = s²/(2m)`. With leverage `L` on a trade of net edge `e` and
+dispersion `v`: `m = Le`, `s = Lv`, hence `E[maxDD] = Lv²/(2e)`.
+
+A drawdown cap `D` therefore permits `L = 2De/v²`, and total log return over
+`N` trades is `N·L·e = 2D·N·(e/v)² = 2D·Sharpe²`. So:
+
+```
+        ln(1 + ROI) = 2 · D · Sharpe²
+```
+
+That single line **is** the goal. At `D = 0.04`:
+
+| target ROI/month | required monthly Sharpe | annualised |
+|---|---|---|
+| 100% | 2.94 | 10.20 |
+| 300% | 4.16 | 14.42 |
+| **1000%** | **5.47** | **18.97** |
+
+The requirement is **annualised Sharpe 19.0**, not 60-100. I overstated the
+difficulty by 3-5x.
+
+## Measured against it
+
+18,482,807 real 1-second BTC bars over 296 days, all directed pairs, entry at
+the first observable second (t+2), random-sign control on every row:
+
+| src → dst | h | N/month | EV | sd | IR | random |
+|---|---|---|---|---|---|---|
+| BTC → QTUM | 60 s | 3,086 | +4.64 bp | 44.6 | **0.1040** | −0.21 |
+| BTC → NEO | 60 s | 4,835 | +3.74 bp | 42.6 | 0.0877 | +0.34 |
+| BTC → QTUM | 60 s | 8,271 | +3.18 bp | 40.1 | 0.0792 | −0.11 |
+| BTC → NEO | 60 s | 14,160 | +2.48 bp | 37.7 | 0.0657 | +0.11 |
+
+Applying the exact law at **zero cost**:
+
+| src → dst | N/month | IR | monthly Sharpe | implied ROI |
+|---|---|---|---|---|
+| BTC → QTUM | 3,086 | 0.1040 | 5.78 | **1,343%** |
+| BTC → NEO | 4,835 | 0.0877 | 6.10 | **1,860%** |
+| BTC → QTUM | 8,271 | 0.0792 | 7.20 | **6,240%** |
+| BTC → NEO | 14,160 | 0.0657 | 7.82 | **13,188%** |
+
+**At zero execution cost the goal is comfortably exceeded.** The physics of the
+signal is sufficient. Everything now reduces to one question: what does it cost
+to trade?
+
+## The exact cost budget
+
+Solving backward for the maximum cost that still yields Sharpe 5.475:
+
+| src → dst | N/month | EV | required net | **max affordable cost** |
+|---|---|---|---|---|
+| BTC → QTUM | 3,086 | 4.64 bp | 4.40 bp | **0.24 bp** |
+| BTC → NEO | 4,835 | 3.74 bp | 3.36 bp | **0.38 bp** |
+| BTC → QTUM | 8,271 | 3.18 bp | 2.42 bp | **0.76 bp** |
+| BTC → NEO | 14,160 | 2.48 bp | 1.73 bp | **0.74 bp** |
+
+The goal is reachable if and only if round-trip execution costs **under about
+0.24 to 0.76 bp**.
+
+## The hard floor, measured from real executions
+
+Touch spread from consecutive opposite-aggressor prints within 1 second,
+median across six sample days:
+
+| instrument | touch spread = taker round-trip floor |
+|---|---|
+| BTCUSDT | **1.52 bp** |
+| BNBUSDT | 3.62 bp |
+| NEOUSDT | 4.39 bp |
+| QTUMUSDT | 5.30 bp |
+
+**Even with a zero exchange fee**, a liquidity taker pays the half-spread on
+entry and again on exit. The cheapest instrument floor is 1.52 bp against a
+budget of 0.24-0.76 bp — short by 2-6x.
+
+## Where this actually lands
+
+The blocker is now identified precisely, and it is neither the signal nor the
+leverage nor the trade count:
+
+```
+signal physics at zero cost  : 1,343% - 13,188% / month   GOAL EXCEEDED
+budget for execution         : 0.24 - 0.76 bp round trip
+cheapest taker floor (real)  : 1.52 bp  (BTC touch spread)
+shortfall                    : 2 - 6x, in the spread alone
+```
+
+A taker cannot reach it. The only remaining path is to **earn** the spread
+rather than pay it — i.e. post passively and be a maker. Iteration 7b measured
+that path and found −254 bp of adverse selection when posting on the signal
+side, because the counterparty who fills you is the one who knows the move is
+not coming.
+
+So the honest statement is sharper than before: **the goal is achievable on the
+measured signal physics, and is blocked entirely by a 1.52 bp spread against a
+0.76 bp budget.**
