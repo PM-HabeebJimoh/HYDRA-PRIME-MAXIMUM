@@ -1269,3 +1269,90 @@ statistically meaningful edge measurement. What it establishes:
 
 It does not establish >1000% monthly. At DD<4% the measured ceiling here is
 about 7.4%/month.
+
+---
+
+# Iteration 23 — audit of iteration 22, and the answer on timeframes
+
+The user challenged iteration 22 on three points. All three are valid.
+
+## Mistake 1 — I counted a zero-return trade as a win
+
+The 10 futures trades were:
+
+```
++0.0000%  <- counted as a WIN in the 90% figure. It is a timeout, not a win.
++0.7291%  +0.7311%  +0.7277%  +0.3631%  +0.3743%
++0.1040%  +0.1032%  +0.0771%  +0.1500%
+```
+
+Correct win rate is **9/10 = 90%** only if a flat trade counts as a win. Scored
+honestly (return > 0), it is 9 wins, 1 flat — the 90% is right by luck, but the
+scoring rule was wrong and would misreport on any larger sample.
+
+## Mistake 2 — I only tested 6h, never 4h or 1h
+
+The user asked for those explicitly. Squeeze rate measured on the real futures
+data: XLM 4.88%, TRX 2.61%, GOLD 0.83% of bars. Applying that to faster bars:
+
+| timeframe | bars/month (3 pairs) | trades/month |
+|---|---|---|
+| 6h | 372 | ~22 |
+| **4h** | 558 | ~33 |
+| **1h** | 2,232 | **~133** |
+| 15m | 8,928 | ~535 |
+| 5m | 26,784 | ~1,607 |
+
+Only 10 trades materialised in the 6h test because gold produced a single
+squeeze all month. **6h was the worst possible choice for trade count.**
+
+## Mistake 3 — I implied a high win rate should produce high ROI
+
+It does not, and this is the core of the user's question.
+
+```
+WIN RATE  = how OFTEN you win
+ROI       = how often  x  how MUCH  x  how MANY times
+```
+
+Measured: average win 0.373%, 10 trades → 3.7%. That is the whole story. A 90%
+win rate on 10 small trades is 3.4%; the same 90% on 1,600 trades is a
+different universe.
+
+## The arithmetic that answers "why not >1000%"
+
+Measured on real futures: gross 0.336%/trade, minus 0.26% fees
+(0.065% taker x 4 legs) = **+0.076% net per trade**.
+
+| trades/month | ROI at 1x |
+|---|---|
+| 10 (what I tested) | 0.8% |
+| 133 (1h) | 10.6% |
+| 535 (15m) | 50.1% |
+| 1,607 (5m) | 239.0% |
+| 5,000 | **4,363%** |
+
+With leverage, which futures genuinely allows:
+
+| leverage | 1h (133) | 15m (535) | 5m (1,607) |
+|---|---|---|---|
+| 1x | 10.6% | 50.1% | 239.0% |
+| 5x | 65.6% | 660.8% | **44,264%** |
+| 10x | 173.7% | **5,643%** | 1.9e+07 |
+| 20x | 643.6% | **319,871%** | 3.4e+12 |
+
+**>1000% monthly is reachable on futures at 15m or 5m with 5-10x leverage** —
+on these numbers. Two caveats that must not be lost:
+
+1. The +0.076% net is measured on **10 trades in one month**. It is not a
+   reliable estimate. The 2018-2020 spot study found the equivalent figure was
+   dominated by barrier geometry, not signal.
+2. Drawdown scales with leverage exactly as ROI does. The DD < 4% constraint
+   has not been applied to these projections.
+
+## What must be done next
+
+Fetch real 1h/15m/5m futures data for XLM, TRX, XAUT and the other perps, run
+the ATR-corrected model, and measure net-per-trade and drawdown on a sample
+large enough to trust. The 6h test was too coarse to answer the question and I
+should have said so instead of presenting it as the futures result.
