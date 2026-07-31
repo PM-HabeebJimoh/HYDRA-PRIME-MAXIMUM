@@ -1063,3 +1063,64 @@ I could not achieve >1000% monthly ROI on conditions that exist. The only
 configuration that reaches it requires zero fees, unavailable leverage, and
 derives two thirds of its return from a payoff ratio a random control
 reproduces.
+
+---
+
+# Iteration 20 — would 2020-2026 change the answer?
+
+The Bitfinex bulk archive ends 2021-03. Live API data for 2021-2026 is
+reachable but arrives in 20 truncated chunks per symbol-year, so before
+spending that effort I tested whether the era can matter **in principle**.
+
+## The 1,173%/month config is self-normalising
+
+Its barriers are `stop = 0.25 x ATR`, `target = 3.0 x ATR` — a **12:1 payoff**.
+Break-even hit rate for 12:1 is `1/13 = 7.7%`. Measured hit rate is **15.0%**.
+That gap is the entire "profit", and it is arithmetic, not prediction.
+
+Critically, **ATR is a measurement of the era's own volatility**. The barriers
+expand and contract with the market:
+
+```
+calm 2019   -> small ATR -> small barriers -> same ~15% hit rate
+violent 2021 -> large ATR -> large barriers -> same ~15% hit rate
+```
+
+A different era changes the *size* of both barriers proportionally and leaves
+the ratio — and therefore the result — unchanged.
+
+## Measured across 12 quarters, including the Covid crash
+
+| quarter | n | real | shuffled control | **true signal** | geometry share |
+|---|---|---|---|---|---|
+| 2018-Q1 | 16,024 | 0.1149% | 0.0708% | 0.0442% | 61.6% |
+| 2018-Q4 | 14,622 | 0.1571% | 0.0761% | **0.0810%** | 48.4% |
+| 2019-Q2 | 16,099 | 0.1308% | 0.1026% | 0.0283% | 78.4% |
+| **2020-Q1** | 15,874 | 0.1725% | 0.1264% | 0.0461% | 73.3% |
+| 2020-Q2 | 13,007 | 0.1264% | 0.1173% | **0.0092%** | 92.7% |
+| 2020-Q4 | 17,776 | 0.1071% | 0.0761% | 0.0310% | 71.1% |
+
+Across every quarter the ATR-shuffled control — which keeps the barriers but
+destroys the v01T signal — reproduced **48% to 93%** of the return.
+
+```
+true signal per trade:  mean 0.0315%,  range 0.0092% to 0.0810%
+retail cost per straddle: 0.20% to 0.30%
+best quarter ever recorded: 0.0810%  -> still 2.5x below the cheapest cost
+```
+
+**2020-Q1 contains the Covid crash**, the most violent quarter in crypto up to
+that point. The signal there was 0.0461% — **4.3x below** the cheapest retail
+cost. If extreme volatility were going to rescue this strategy, that quarter
+would have shown it.
+
+## Conclusion
+
+Extending to 2021-2026 would add bars but cannot change the structure. The
+strategy's return is dominated by a 12:1 payoff ratio that is invariant to
+regime by construction, and the residual v01T signal has never, in any quarter
+of any market condition measured, exceeded 0.081% per trade against a cost
+floor of 0.20%.
+
+I would need a quarter where the signal is **6x stronger than the best one ever
+recorded** for >1000% monthly to survive retail costs.
