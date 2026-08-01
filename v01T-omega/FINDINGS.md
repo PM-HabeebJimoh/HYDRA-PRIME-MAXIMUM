@@ -2066,3 +2066,138 @@ strategy family is a loss.**
 
 `v01T-omega/research/`: `leak2.py` (the proof), `confirm.py`, `salvage.py`
 (horizon scan), `longhold.py`, `final.py` (the kill test)
+
+---
+
+# Iteration 31: exhaustive search for >1000%/month. Not found, and now proven why.
+
+You asked me to find every possible way to reach >1000% monthly and to keep
+working until I did. I ran the widest search in this project. I did not reach
+it. Below is every route tried, what each returned, and the exact arithmetic
+that closes the question.
+
+## Ground rules used throughout
+
+Every number below is **executable**: signal on bar `i`, entry at `O[i+1]`
+(next bar's open), causal ATR, causal 1H forecast using the last **closed**
+hour, honest gap fills, cost 2% of stop distance, real Bitfinex 1-minute data,
+13 instruments, 95.5 months. Both leaks found in iterations 29-30 stay fixed.
+
+## Route 1 — parameter grid (360 configurations)
+
+Swept timeframe {5,15,30,60m} x entry {pullback, breakout, all} x band
+threshold x target/stop geometry {1:1 .. 8:3} x hold {12,24,48}.
+
+Best executable configuration: **bb<40 pullback, target 3R, stop 1R, hold 12, 5m**
+
+```
+n = 75,316   788 trades/month   meanR +0.03447   t = +5.60   WR 33.92%
+out of sample: train +0.02833 (t=+3.88) -> TEST +0.04913 (t=+4.30)
+positive on 10 of 13 symbols
+Bonferroni for 360 configs: |t| > 3.40 required -> PASSES
+```
+
+This is a **genuine, out-of-sample-validated, multiple-testing-corrected edge.**
+It is also small. Its DD-constrained returns:
+
+| DD cap | ROI/mo |
+|---|---|
+| 4% | **+0.24%** |
+| 15% | +0.92% |
+| 30% | +1.93% |
+
+## Route 2 — maximum trade density
+
+If edge per trade is small, the remaining lever is trade count, since
+Sharpe scales as sqrt(N). Removed the no-overlap rule so every signal is taken
+with concurrent positions per symbol.
+
+| config | n | trades/mo | meanR | naive t | naive monthly Sharpe |
+|---|---|---|---|---|---|
+| bb<40 T3 S1 H12 sequential | 75,316 | 788 | +0.03447 | +5.60 | 0.573 |
+| bb<40 T3 S1 H12 **overlap** | 446,259 | 4,671 | +0.07706 | +31.16 | 3.188 |
+| bb<100 T3 S1 H6 **overlap** | 1,375,873 | 14,402 | +0.04929 | **+38.70** | **3.960** |
+
+Naive Sharpe 3.960 against a requirement of 5.475 — a shortfall of only
+**1.38x**. This looked like the route.
+
+## Route 2 fails — and the failure is instructive
+
+**It is an illusion.** The t-statistic treats 1.37M overlapping trades as
+independent observations. They are not: 78 concurrent positions in correlated
+instruments driven by the same 1H forecast are largely **one bet counted 78
+times**. Direct equity simulation cannot be fooled by this:
+
+```
+naive monthly Sharpe (from t-stat)   3.960
+TRUE monthly Sharpe (from equity)    0.653     <- 6.1x lower
+```
+
+| DD cap | risk/trade | real DD | ROI/mo | peak concurrent |
+|---|---|---|---|---|
+| 4% | 0.00134% | 4.00% | **+0.95%** | 78 |
+| 15% | 0.00530% | 15.00% | +3.77% | 78 |
+| 50% | 0.02236% | 50.00% | +16.00% | 78 |
+
+Adding 18x more trades raised true Sharpe from 0.573 to 0.653 — a factor of
+**1.14x**, not the sqrt(18) = 4.24x that independence would give. **Redundancy
+absorbs almost the entire gain.**
+
+## The closing arithmetic
+
+Using the exact goal law `ln(1+ROI) = 2 · D · Sharpe²`:
+
+```
+required monthly Sharpe for 1000% at DD 4%  = sqrt(ln(11)/0.08) = 5.4748
+best true monthly Sharpe achieved            = 0.6531
+shortfall                                    = 8.38x in Sharpe
+                                             = 70x in independent streams
+```
+
+And the inverse question — what drawdown would 1000% require at the Sharpe
+actually measured?
+
+```
+D = ln(11) / (2 x 0.6531²) = 2.81  =  281% drawdown
+```
+
+A 281% drawdown is not a risk setting. It is bankruptcy several times over.
+**>1000%/month is unreachable on this edge at any survivable drawdown.**
+
+## Every route tried, and its result
+
+| # | route | outcome |
+|---|---|---|
+| 1 | 360-config parameter grid | best +0.24%/mo @ DD4 |
+| 2 | Maximum trade density (overlap) | +0.95%/mo @ DD4; naive Sharpe was 6.1x inflated |
+| 3 | Higher timeframes (15/30/60m) | fewer trades, no Sharpe gain |
+| 4 | Wider targets (up to 8R) | +0.0845R but t=+4.12, worse DD-adjusted |
+| 5 | Breakout instead of pullback | dominated by pullback everywhere |
+| 6 | All 13 symbols pooled | already in every number above |
+| 7 | Relaxing DD to 15/30/50% | scales linearly, never approaches 1000% |
+| 8 | Tail-loss capping | priced: costs 10-30x its benefit (iter28) |
+| 9 | Activity-normalised sizing | null (iter28) |
+| 10 | Longer holds to catch 48-bar drift | fails OOS and Bonferroni (iter30) |
+
+## Honest status
+
+| goal | status |
+|---|---|
+| WR > 80% | 33.92% — not met |
+| DD < 4% | met |
+| **ROI > 1000%/month** | **NOT MET. Best honest: +0.24%/mo at DD<4%, +0.95% with max density.** |
+
+**What is real and worth keeping:** a genuine, executable, out-of-sample,
+Bonferroni-corrected edge of **+0.0345R per trade (t=+5.60)** on real data with
+both lookahead bugs removed. That is a legitimate finding. It is roughly
+**4,000x too small** to produce 1000% monthly at a 4% drawdown.
+
+I will not report the goal as achieved, because on this data and this strategy
+family it is not achievable, and every configuration that appeared to reach it
+did so through a measurable artifact that I was able to isolate and remove.
+
+## Files
+
+`v01T-omega/research/`: `grid.py` (360-config sweep) `roi.py` (DD frontier per
+config) `final.py` (the arithmetic) `dense.py` (max-density search)
+`ov.py` (proof that overlap Sharpe is inflated 6.1x)
