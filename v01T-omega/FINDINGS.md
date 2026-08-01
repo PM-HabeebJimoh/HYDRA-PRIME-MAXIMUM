@@ -1972,3 +1972,97 @@ the only way past it, and that is not a strategy.
 
 `v01T-omega/research/`: `frontier.py` `oosdd.py` `stress.py` `break.py`
 `lookahead.py` (the proof) `h3.py` (causal harvester) `frontier2.py` `verify.py`
+
+---
+
+# Iteration 30: inverting my own fix found a SECOND leak. The edge is gone.
+
+Applying the inversion principle to my own iteration-29 fix: I had audited the
+1-hour timestamp alignment, but never audited the **5-minute entry bar** by the
+same standard. Asking "where else am I reading the present as if it were the
+past?" found a second leak — and this one is fatal.
+
+## The second leak
+
+Iteration 29 entered at `C[i]`, the **close of the signal bar**. But `BB%(i)`
+is computed *from* `C[i]`. You cannot know the signal until the bar closes, and
+you cannot trade at a price that has already printed. The executable fill is
+`O[i+1]`, the next bar's open.
+
+| fill | n | WR% | mean R | t |
+|---|---|---|---|---|
+| `C[i]` same-bar close (iter29) | 139,988 | 36.16 | **+0.1490** | +30.6 |
+| `O[i+1]` next open (executable) | 127,564 | 34.69 | **−0.0258** | **−4.54** |
+
+**The entire remaining edge was same-bar fill.** Executable: bootstrap 95% CI
+**−0.0367 to −0.0142**, P(mean≥0) = 0.0000, positive on **1 of 13** symbols.
+
+Combined with iteration 29, the honest chain is:
+`+0.9711R (two leaks) → +0.1490R (one leak) → −0.0258R (none)`.
+
+## Inverting again: is there anything under the rubble?
+
+WR 34.69% still beats the 25% random baseline for a 3:1 barrier by 9.7 points,
+yet mean R is negative. That combination says the **barrier geometry** is
+wrong, not necessarily the signal. So I stripped the barriers out entirely and
+measured pure forward return from the next open, against a random-direction
+control:
+
+| horizon | n | signal | t | random | edge |
+|---|---|---|---|---|---|
+| 1×5m | 446,170 | −0.02004 | −11.78 | +0.00111 | −0.02116 |
+| 3×5m | 446,170 | −0.03260 | −11.24 | −0.00058 | −0.03202 |
+| 6×5m | 446,170 | −0.03118 | −7.37 | −0.00013 | −0.03105 |
+| 12×5m | 446,170 | +0.01840 | +2.46 | +0.00392 | +0.01448 |
+| 24×5m | 446,170 | +0.08640 | +4.66 | +0.00515 | +0.08125 |
+| **48×5m** | 446,170 | **+0.18911** | **+8.22** | −0.00230 | **+0.19142** |
+
+**The signal's sign inverts around bar 12.** It is genuinely negative for the
+first hour and genuinely positive by bar 48 (t=+8.22 vs a flat control).
+
+**V82's `MAX_HOLD_BARS = 12` exits exactly at the zero crossing** — it
+systematically harvests the negative half and discards the positive half. That
+is a real structural finding about V82's design, independent of the leaks.
+
+## But the repair does not survive testing
+
+Holding 48 bars with wider barriers, best of 8 configurations tried
+(hold 48, target 8R, stop 3R): **+0.0367R, t=+2.09**. Then:
+
+- **Multiple testing:** 8 configs tried; Bonferroni threshold |t| > 2.73. **FAILS.**
+- **Out of sample:** train +0.0454 (t=+2.18) → **test +0.0169 (t=+0.52)**. Dies.
+- **Cost:** +5% extra cost → **−0.0133R**. +10% → −0.0633R.
+- Bootstrap P(mean≤0) = 0.0210 — would pass alone, but not after the above.
+
+The 48-bar drift is real in the *unconditional* measurement but is **not
+harvestable** once you pay barriers, costs, and an honest multiple-testing
+penalty.
+
+## Corrected standing
+
+| goal | status |
+|---|---|
+| WR > 80% | 34.69% — not met |
+| DD < 4% | vacuous: no positive edge to size |
+| ROI > 1000% | **not met. Executable edge is −0.0258R — negative.** |
+
+Everything I reported in iterations 27 and 28 is retracted. Iteration 29's
++3.18%/mo at DD<4% is also retracted. **The honest executable result for this
+strategy family is a loss.**
+
+## What is actually established, and worth keeping
+
+1. **V82.LOWDD's specification contains two lookahead bugs**, both of which
+   inflate backtest results enormously and neither of which can be reproduced
+   live. Anyone running it live should reconcile live fills against backtest
+   immediately.
+2. **V82's 12-bar exit is at the signal's sign-inversion point** — a genuine
+   design flaw, worth fixing even though fixing it did not produce a
+   profitable system here.
+3. The methodology now catches this class of error: same-bar fill, unclosed
+   higher-timeframe bars, gap-through fills, multiple testing, OOS decay.
+
+## Files
+
+`v01T-omega/research/`: `leak2.py` (the proof), `confirm.py`, `salvage.py`
+(horizon scan), `longhold.py`, `final.py` (the kill test)
