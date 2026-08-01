@@ -2341,3 +2341,109 @@ pays the *long* side.
 
 `v01T-omega/research/`: `vrp.py` (the t=+11.89 result) `attack.py` (why it is an
 artifact) `selfvol.py` (vol-matched control) `strat.py` (stratified estimate + tail)
+
+---
+
+# Iteration 32: I executed my own inversion. It was WRONG. v01T's thesis is RIGHT.
+
+I proposed: "squeezes predict stillness, so sell volatility instead of buying
+it." You told me to execute it. I did, and **the data refuted me.**
+
+## Test 1 — does a squeeze predict stillness or movement?
+
+Real Bitfinex 1h bars, 13 instruments, 465k observations. Measured E[max |move|
+over the next 4 bars] after a v01T elite squeeze vs all other bars.
+
+| sym | squeeze n | squeeze mean | baseline mean | ratio |
+|---|---|---|---|---|
+| XLM | 1,245 | 2.1388% | 2.1086% | 1.014 |
+| BTC | 2,996 | 1.6011% | 1.3839% | **1.157** |
+| ETH | 2,123 | 1.9967% | 1.8359% | 1.088 |
+| EOS | 1,447 | 2.5259% | 2.2279% | 1.134 |
+| ETC | 1,987 | 2.4052% | 2.1151% | 1.137 |
+| **POOLED** | **22,827** | **2.2416%** | **2.0495%** | **1.0937** |
+
+**difference +0.1921% of price, t = +11.00, ratio > 1 on 13 of 13 instruments.**
+
+**My inversion is dead.** Squeezes predict MORE movement, not less. Selling
+volatility into a v01T squeeze would be selling into a genuine 9.4% volatility
+uplift. That trade loses. **v01T's core thesis is correct** — and my earlier
+claim that "the gate is anti-correlated with its objective" was wrong. It was
+based on n=101 from three months of one instrument. At n=465,000 the sign flips
+and is overwhelmingly significant.
+
+I got that wrong and I am correcting it.
+
+## Test 2 — is the premium harvestable?
+
+The thesis being right does not make the model profitable. Price it:
+
+```
+volatility premium (squeeze - baseline)   = 0.1921% of price
+cost of 4 taker legs @ 6.5bp              = 0.2600% of price
+premium / cost                            = 0.74x
+```
+
+| taker | 4-leg cost | premium/cost |
+|---|---|---|
+| 4.0bp | 0.1600% | **1.20x** |
+| 6.5bp | 0.2600% | 0.74x |
+| 10.0bp | 0.4000% | 0.48x |
+
+**The edge is the same order of magnitude as the fee.** Only at 4bp does the
+premium exceed cost, and only by 1.2x — before slippage and funding.
+
+## Test 3 — I tried to fix it and produced a bogus result
+
+I built a "stopless long-vol straddle" scoring `|move| - fee`. It returned
+**t = +604**, which is impossible. I audited my own code and found the error:
+
+**`|move|` is always >= 0.** Scoring a straddle as `|move| - fee` says "prices
+move, therefore profit." It prices the payoff and never prices the premium.
+
+Worse, the underlying idea is structurally void:
+
+```
+entry 100.00, exit 95.00  -> long -5.000  short +5.000  NET +0.0000000000
+entry 100.00, exit 120.00 -> long +20.000 short -20.000 NET +0.0000000000
+```
+
+**A long+short perp pair of equal size has exactly zero P&L on any path.**
+You cannot be long volatility with two perp legs. The ONLY reason v01T's
+straddle is not identically flat is the stop, which closes one leg early and
+breaks the symmetry.
+
+**Remove the stop and you remove the strategy. Keep the stop and noise kills you.**
+That is a closed trap, and it is intrinsic to the instrument, not the parameters.
+
+## What this establishes
+
+1. **v01T's signal is real.** BB squeeze + HV compression genuinely predicts a
+   9.4% uplift in realised movement (t=+11.00, 13/13 instruments). That is a
+   legitimate discovery and it is yours.
+2. **The premium is ~0.19% of price** and the 4-leg taker cost is 0.16-0.40%.
+   The strategy is fee-bound, not signal-bound.
+3. **The perp straddle cannot express the view.** Zero net exposure without
+   stops; noise-dominated with them.
+4. **My "sell volatility" proposal was wrong** and I have retracted it.
+
+To express a long-volatility view you need an instrument with **convexity** —
+an actual option — where the position profits from |move| without needing a
+stop to break symmetry. Then the test is whether 0.19% of realised premium
+exceeds the option's bid/ask, which for short-dated crypto options it does not.
+
+## Status
+
+| goal | status |
+|---|---|
+| WR > 80% | not met |
+| DD < 4% | not met |
+| ROI > 1000% | not met |
+| **my inversion thesis** | **REFUTED by my own test** |
+| **v01T thesis (squeeze -> movement)** | **CONFIRMED, t=+11.00** |
+
+## Files
+
+`v01T-omega/inversion/`: `still.py` (the 465k-observation test that refuted me),
+`econ.py` (premium vs cost), `fix.py` (the stopless attempt), `audit.py` (proof
+the perp straddle is identically flat and that fix.py was bogus).
