@@ -25,27 +25,29 @@ def bb_hv_vec(c, n=20):
     return bb,hv
 SY=['XLM','TRX','BTC','ETH','XRP','EOS','LTC','NEO','XMR','ETC','IOT','BSV','XTZ']
 W=4
-allsig=[];allbase=[]
-print("%-6s %8s %13s %8s %13s %8s"%("sym","sq_n","sq_mean","base_n","base_mean","ratio"),flush=True)
-for s in SY:
-    a=load_1m(s)
-    if a is None or len(a)<50000: continue
-    f=resample(a,60); c=f[:,2]
-    if len(c)<200: continue
-    bb,hv=bb_hv_vec(c)
-    sc=np.where(bb<10,92,np.where(bb>90,85,72))
-    elite=((bb<10)|(bb>90))&(hv<0.8)&(sc>=85)
-    N=len(c); idx=np.arange(30,N-W)
-    mx=np.max(np.stack([np.abs(c[idx+k]-c[idx])/c[idx] for k in range(1,W+1)]),axis=0)
-    e=elite[idx]
-    if e.sum()<20: continue
-    sg=mx[e]; bs=mx[~e]
-    allsig.append(sg); allbase.append(bs)
-    print("%-6s %8d %12.4f%% %8d %12.4f%% %8.3f"%(s,len(sg),100*sg.mean(),len(bs),100*bs.mean(),sg.mean()/bs.mean()),flush=True)
-S=np.concatenate(allsig); B=np.concatenate(allbase)
-np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)),'sig_moves.npy'),S)
-np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)),'base_moves.npy'),B)
-se=np.sqrt(S.var(ddof=1)/len(S)+B.var(ddof=1)/len(B))
-print()
-print("POOLED squeeze n=%d mean %.4f%% | baseline n=%d mean %.4f%%"%(len(S),100*S.mean(),len(B),100*B.mean()))
-print("difference %+.5f%%   t = %+.2f   ratio = %.4f"%(100*(S.mean()-B.mean()),(S.mean()-B.mean())/se,S.mean()/B.mean()))
+
+if __name__=='__main__':
+    allsig=[];allbase=[]
+    print("%-6s %8s %13s %8s %13s %8s"%("sym","sq_n","sq_mean","base_n","base_mean","ratio"),flush=True)
+    for s in SY:
+        a=load_1m(s)
+        if a is None or len(a)<50000: continue
+        f=resample(a,60); c=f[:,2]
+        if len(c)<200: continue
+        bb,hv=bb_hv_vec(c)
+        sc=np.where(bb<10,92,np.where(bb>90,85,72))
+        elite=((bb<10)|(bb>90))&(hv<0.8)&(sc>=85)
+        N=len(c); idx=np.arange(30,N-W)
+        mx=np.max(np.stack([np.abs(c[idx+k]-c[idx])/c[idx] for k in range(1,W+1)]),axis=0)
+        e=elite[idx]
+        if e.sum()<20: continue
+        sg=mx[e]; bs=mx[~e]
+        allsig.append(sg); allbase.append(bs)
+        print("%-6s %8d %12.4f%% %8d %12.4f%% %8.3f"%(s,len(sg),100*sg.mean(),len(bs),100*bs.mean(),sg.mean()/bs.mean()),flush=True)
+    S=np.concatenate(allsig); B=np.concatenate(allbase)
+    np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)),'sig_moves.npy'),S)
+    np.save(os.path.join(os.path.dirname(os.path.abspath(__file__)),'base_moves.npy'),B)
+    se=np.sqrt(S.var(ddof=1)/len(S)+B.var(ddof=1)/len(B))
+    print()
+    print("POOLED squeeze n=%d mean %.4f%% | baseline n=%d mean %.4f%%"%(len(S),100*S.mean(),len(B),100*B.mean()))
+    print("difference %+.5f%%   t = %+.2f   ratio = %.4f"%(100*(S.mean()-B.mean()),(S.mean()-B.mean())/se,S.mean()/B.mean()))

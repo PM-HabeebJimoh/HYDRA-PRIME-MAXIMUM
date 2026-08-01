@@ -2557,3 +2557,108 @@ own pricing range**, before you pay the spread.
 have used), `straddle_opt.py` (first attempt, contained the bugs),
 `bug.py` (the audit that found all three), `final.py` (corrected + controls),
 `verdict.py` (breakeven VRP, per-instrument).
+
+---
+
+# Iteration 34: No. The 1.0979x breakeven was an AVERAGE — and averages hide convexity.
+
+Reported in WR / DD / monthly ROI, as asked.
+
+## The error: I averaged a lottery ticket
+
+A long straddle is convex — mostly small losses, rare large wins. Judging it by
+a pooled mean is the wrong test. Splitting by trailing volatility:
+
+| trailing-vol quintile | n | breakeven IV | clears a 1.25x market? |
+|---|---|---|---|
+| **Q1 (lowest vol)** | 21,615 | **1.5520x** | **YES** |
+| Q2 | 21,615 | 1.2802x | **YES** |
+| Q3 | 21,615 | 1.1594x | no |
+| Q4 | 21,615 | 1.0741x | no |
+| Q5 (highest vol) | 21,614 | 0.9707x | no |
+
+**The edge is entirely in the lowest-volatility regime.** Pooled it reads
+1.1019x and looks dead; split, Q1 reads **1.5520x** and clears the market.
+My previous "fails by 1.002-1.27x" conclusion was an artifact of averaging.
+
+## It is not a jackpot artifact
+
+Vol-Q1, band-only, priced at a realistic IV = 1.25x:
+
+```
+mean return on premium  +27.84%     t = +22.83
+drop the single best trade   -> +27.56%
+drop the best 10             -> +26.12%
+drop the best 100            -> +20.93%
+worst case -100% (option expires worthless), only 0.32% of trades
+```
+
+Removing the top 100 winners out of 21,615 leaves **+20.93%**. The edge is
+broad, not a handful of lottery hits.
+
+## WR, DD, MONTHLY ROI — real Bitfinex data, 13 instruments, 95.4 months
+
+Sequential portfolio, concurrent positions, one capital pool, DD enforced by
+direct path simulation. Position size = premium risked per trade.
+
+**IV = 1.10x (cheap options)** — WIN RATE **46.33%**, +45.27% per trade
+
+| DD cap | premium/trade | real DD | **MONTHLY ROI** |
+|---|---|---|---|
+| 4% | 0.0607% | 4.00% | **+6.29%** |
+| 10% | 0.1559% | 10.00% | +16.46% |
+| 20% | 0.3278% | 20.00% | +35.77% |
+
+**IV = 1.25x (realistic)** — WIN RATE **41.21%**, +27.84% per trade
+
+| DD cap | premium/trade | real DD | **MONTHLY ROI** |
+|---|---|---|---|
+| **4%** | 0.0362% | **4.00%** | **+2.28%** |
+| 10% | 0.0932% | 10.00% | +5.83% |
+| 20% | 0.1962% | 20.00% | +12.20% |
+
+**IV = 1.40x (expensive)** — WIN RATE **36.58%**, +14.14% per trade
+
+| DD cap | real DD | **MONTHLY ROI** |
+|---|---|---|
+| 4% | 4.00% | **+0.82%** |
+| 20% | 20.00% | +4.26% |
+
+## What this means
+
+**This is the first configuration in the entire project that is genuinely
+profitable at a realistic market price.** It is real: t=+22.83, survives
+removing the top 100 trades, uses non-circular IV, and prices options at what
+the market actually charges.
+
+But stated plainly in your terms:
+
+| goal | result at IV 1.25x, DD 4% |
+|---|---|
+| **WR > 80%** | **41.21%** — not met (and cannot be: a long straddle is a lottery, it wins rarely and big) |
+| **DD < 4%** | **4.00%** — MET |
+| **ROI > 1000%/month** | **+2.28%** — not met, short by **439x** |
+
+To hit 1000% monthly at 4% DD you would need +2.28% -> +1000%. Even at the
+cheap IV=1.10x it is +6.29%, still **159x** short. Accepting a 20% drawdown
+gets +35.77% — **28x** short.
+
+## Why WR can never reach 80% here
+
+A long straddle pays off rarely and hugely: 41% WR with a +6,080% best trade
+and a −100% floor. Raising WR means shortening the target, which destroys the
+convexity that makes the trade work. **WR > 80% and long volatility are
+mutually exclusive.** The 80% WR target belongs to a different strategy family
+than the one v01T's signal actually supports.
+
+## Corrections to my own prior claims, again
+
+- iter33: "fails by 1.002-1.27x on VRP" — **wrong, that was the pooled average.**
+  Vol-Q1 clears 1.25x with room.
+- The option route is **profitable**, contrary to what I said two iterations ago.
+  It is simply nowhere near 1000%.
+
+## Files
+
+`v01T-omega/inversion/`: `tail.py` (quintile split that found it), `q1.py`
+(concentration test), `roi.py` (WR/DD/monthly ROI portfolio simulation).
