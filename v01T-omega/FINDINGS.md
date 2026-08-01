@@ -2885,3 +2885,115 @@ produce it; neither can thirteen.
 `v01T-omega/microstructure/`: `extract.py` (raw tick -> order-flow features),
 `predict.py` (feature assembly), `ablate.py` (chart vs tape vs both),
 `roi.py` (WR/DD/ROI).
+
+---
+
+# Iteration 37: FULL direction + magnitude. Direction found, located, and priced.
+
+You were right that every model I built was magnitude-only. Each one predicted
+|move| and threw the SIGN away. Direction is the other half and I had never
+tested it. Here it is, end to end.
+
+## The directional variable the candle destroys
+
+A candle cannot tell you **who was the aggressor**. Aggressive buying and
+aggressive selling can produce an identical bar. The tape can. So I built 25
+features around signed flow — OFI at lags 0/1/2, cumulative OFI over 3h and 12h,
+big-trade OFI (are whales buying?), and critically **flow x liquidity
+interactions** (`ofi_x_lam`, `ofi_div_depth`, `ofi_x_vpin`, `ofi_x_esp`,
+`ofi_x_bb`) on the logic that identical flow moves price further when depth is thin.
+
+## Result 1 — direction is NOT predictable at the 4-hour horizon
+
+Walk-forward, out-of-sample, 82,409 hours, target = vol-normalised SIGNED return:
+
+| feature set | corr | long-short @10% | directional accuracy |
+|---|---|---|---|
+| chart only | +0.0104 | +0.0081 | 47.1% |
+| chart + order flow | +0.0130 | +0.0142 | 47.5% |
+| chart + flow + liquidity | +0.0133 | +0.0040 | **46.9%** |
+
+**Accuracy is BELOW 50%.** Adding order flow moves corr from 0.0104 to 0.0133 —
+nothing. Compare with the magnitude model from iteration 36, corr **0.1844** on
+the same data. **Magnitude is ~14x more predictable than direction.**
+
+## Result 2 — WHY. The information is instantaneous.
+
+| measurement | corr |
+|---|---|
+| OFI vs return **during** the same hour | **+0.2263** |
+| OFI vs return over the **next** 1h | −0.0093 |
+| next 4h | −0.0053 |
+| next 24h | +0.0030 |
+
+Order flow has a **strong contemporaneous** relationship with price and a
+**zero forward** one. Flow does not precede the move — flow **IS** the move.
+By the time an hourly bar closes, the information it contained is already in
+the price. This is the sharpest single result in the project.
+
+## Result 3 — but it is not zero everywhere. I found where it lives.
+
+Going inside the hour on raw BTCUSDT ticks, 60 days:
+
+| bucket | corr(OFI, next-bucket return) | t |
+|---|---|---|
+| 5s | **−0.0845** | −20.77 |
+| **15s** | **+0.0387** | **+7.82** |
+| **30s** | **+0.0743** | **+15.49** |
+| **1m** | **+0.0611** | **+12.97** |
+| 5m | −0.0003 | −0.04 |
+| 15m | −0.0373 | −2.85 |
+| 30m | −0.0460 | −2.69 |
+
+**A real, statistically overwhelming directional edge exists at 15s-60s.**
+It is dead by 5 minutes and **reverses at 5 seconds** (−0.0845, t=−20.77 —
+microstructure bounce: the last print is at the ask, so the next tick reverts).
+
+Every model in this project ran on 1-hour or 5-minute bars. **The directional
+signal lives two to three orders of magnitude below where I was looking.**
+
+## Result 4 — and it is not tradable, by a measured margin
+
+Traded the top/bottom quintile of 30-second OFI, gross vs the effective spread
+**measured from real executions** (aggressor-buy prints vs aggressor-sell prints):
+
+| symbol | gross bp/trade | round-trip spread | **NET** |
+|---|---|---|---|
+| BTCUSDT | **+0.912** | 1.933 bp | **−1.021 bp** |
+| BNBUSDT | −0.116 | 15.755 bp | −15.871 bp |
+| NEOUSDT | −0.912 | 15.284 bp | −16.196 bp |
+
+BTC's gross edge is real and positive (+0.912 bp) but the round-trip spread is
+**1.933 bp** — the edge covers **47%** of its own transaction cost. On the alts
+the spread is 8x wider and the gross edge is negative outright.
+
+## The complete picture: direction AND magnitude
+
+| | horizon | predictability | tradable? |
+|---|---|---|---|
+| **MAGNITUDE** | 4 hours | corr **0.1844** | **YES** — iter35/36: WR 61%, DD 4%, +14 to +50%/mo |
+| **DIRECTION** | 4 hours | corr 0.0133, acc 46.9% | no — indistinguishable from noise |
+| **DIRECTION** | 15s-60s | corr **+0.074**, t=+15.5 | no — gross +0.91bp vs 1.93bp spread |
+
+This is a coherent and, I think, correct picture of the market:
+**direction is arbitraged away within a minute; magnitude is not.** Volatility
+is predictable hours ahead because it is a *property of the process*; direction
+is not, because any predictable direction is immediately traded away by
+whoever is faster. The 15s edge is precisely the residue that survives — and it
+is smaller than the spread, which is why it survives.
+
+## Status
+
+| goal | result |
+|---|---|
+| WR > 80% | 61.35% (magnitude, iter36) — not met |
+| DD low (<5%) | **4.00% — MET** |
+| ROI > 700%/mo | +13.99% (6 syms) / +49.65% (13 syms) at DD4 — not met |
+| **FULL direction** | **searched exhaustively, located at 15s-60s, priced, does not clear the spread** |
+
+## Files
+
+`v01T-omega/direction/`: `dir.py` (25 signed/interaction features),
+`model.py` (walk-forward ablation on signed returns), `horizon.py`
+(contemporaneous vs forward — the key result), `decay.py` (5s to 1h impact
+decay), `cost.py` (gross edge vs measured spread).
