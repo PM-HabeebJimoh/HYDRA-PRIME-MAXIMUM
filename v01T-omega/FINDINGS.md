@@ -2447,3 +2447,113 @@ exceeds the option's bid/ask, which for short-dated crypto options it does not.
 `v01T-omega/inversion/`: `still.py` (the 465k-observation test that refuted me),
 `econ.py` (premium vs cost), `fix.py` (the stopless attempt), `audit.py` (proof
 the perp straddle is identically flat and that fix.py was bogus).
+
+---
+
+# Iteration 33: No, that was not all. Three more bugs — two of them mine.
+
+I said the option route fails. **I had not measured it.** I also judged a
+convex payoff by its mean, which is the wrong statistic. Both corrected here.
+
+## Error 1 (mine): absolute premium vs normalised premium
+
+I compared a 0.19% absolute vol premium to a 0.26% absolute fee and concluded
+"no room." That is wrong for options. **HV<0.8 selects bars where recent vol is
+LOW, so a short-dated option is CHEAP in absolute terms while the forward move
+is large.** Cost scales down as payoff scales up. The right statistic is the
+ratio forward-move / trailing-vol:
+
+| | squeeze | baseline | lift |
+|---|---|---|---|
+| **POOLED (n=22,827 / 442,037)** | **2.0123** | **1.2874** | **1.5630x** |
+
+**t = +46.10, lift > 1.4 on 13 of 13 instruments.** An option priced off
+trailing vol pays out 1.56x more per unit premium after a squeeze. My earlier
+dismissal was unfounded.
+
+## Error 2 (mine): three bugs in my own option backtest
+
+My first pricing run returned +1.18% at t=+81, and the control — buying
+straddles at **random** bars — returned +0.53% at t=+181. Free money is a bug,
+not a discovery. Audit found:
+
+1. **Straddle priced 2x too cheap.** I wrote `2S(N(d)-0.5)`; correct is
+   `2S(N(d1)-N(d2))`. Verified exactly 0.5000x across all sigma.
+2. **Off-by-one settlement** — settled at `e+W-1` on a `W`-bar option.
+3. **Circular vol estimate (fatal).** I priced IV off 5-bar realised vol —
+   the very window `HV<0.8` deliberately selects to be low. Pricing an option
+   off a hand-picked low vol estimate and then observing higher realised vol
+   measures **vol mean-reversion, not predictive content.**
+
+Fixed all three: correct BS, settle at `e+W`, and price IV off the **20-bar**
+vol the gate does not select on.
+
+## The honest result
+
+| group | n | mean % of spot | t |
+|---|---|---|---|
+| **IV = 1.00x realised** | | | |
+| v01T squeeze (band + HV<0.8) | 22,827 | **+0.1695%** | +10.78 |
+| CONTROL: HV<0.8 only, no band | 165,303 | **−0.2125%** | −39.66 |
+| CONTROL: band only, no HV | 85,248 | **+0.1794%** | +22.22 |
+| ALL BARS | 464,853 | −0.0375% | −11.67 |
+| **IV = 1.25x (25% VRP)** | | | |
+| v01T squeeze | 22,827 | **−0.2632%** | −16.26 |
+| ALL BARS | 464,853 | −0.4893% | −144.58 |
+
+Three findings, all new:
+
+**1. The edge is real and survives the circularity control.** v01T beats the
+HV-only control by **+0.3820%, t=+23.00**. It is not vol mean-reversion.
+
+**2. The BAND carries the edge. HV<0.8 is actively harmful.**
+
+```
+band AND HV<0.8  (v01T)   n= 22,827  +0.1695%  t=+10.78
+band AND HV>=0.8          n= 85,248  +0.1794%  t=+22.22
+band only, any HV         n=108,075  +0.1774%  t=+24.69
+```
+
+**v01T's own HV filter discards 79% of its signal and keeps the weaker half.**
+Deleting Gate 2 raises t from +10.78 to +24.69. Positive on **13/13**
+instruments (XLM +0.06% to XRP +0.29%).
+
+**3. It still dies on the vol risk premium.**
+
+```
+breakeven IV multiple, v01T squeeze  = 1.0979x
+breakeven IV multiple, band only     = 1.1019x
+real crypto short-dated IV/RV        = 1.1 - 1.4x
+Deribit 1-day ATM bid/ask alone      = 2-5% of premium
+```
+
+The strategy needs options priced **below 1.10x realised vol**. The market
+prices them at 1.1–1.4x. The edge sits **exactly at the bottom of the market's
+own pricing range**, before you pay the spread.
+
+## What actually changed
+
+- My "no room in options" claim: **retracted, it was unmeasured.**
+- The normalised premium is **1.5630x (t=+46)**, far larger than the 1.09x
+  absolute figure suggested.
+- **v01T's Gate 2 (HV<0.8) is a defect**, not a feature — removing it more than
+  doubles the t-statistic and quadruples sample size.
+- The strategy remains **unprofitable**, now for a precisely measured reason:
+  breakeven IV 1.0979x vs market 1.1–1.4x. Not "fees are too big" — the vol
+  risk premium is 1.002x to 1.27x too large.
+
+## Status
+
+| goal | status |
+|---|---|
+| ROI > 1000% | not met |
+| v01T thesis (squeeze -> movement) | **confirmed, t=+46 normalised** |
+| v01T Gate 2 (HV<0.8) | **DEFECT — discard it** |
+| option route | **measured, not assumed: fails by 1.002-1.27x on VRP** |
+
+## Files
+
+`v01T-omega/inversion/`: `norm.py` (normalised premium, the statistic I should
+have used), `straddle_opt.py` (first attempt, contained the bugs),
+`bug.py` (the audit that found all three), `final.py` (corrected + controls),
+`verdict.py` (breakeven VRP, per-instrument).
