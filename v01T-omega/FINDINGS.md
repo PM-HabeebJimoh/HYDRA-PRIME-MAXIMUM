@@ -2201,3 +2201,143 @@ did so through a measurable artifact that I was able to isolate and remove.
 `v01T-omega/research/`: `grid.py` (360-config sweep) `roi.py` (DD frontier per
 config) `final.py` (the arithmetic) `dense.py` (max-density search)
 `ov.py` (proof that overlap Sharpe is inflated 6.1x)
+
+---
+
+# Iteration 32: I executed my own proposed fix. It failed. Here is the full autopsy.
+
+I ended iteration 31 by proposing: *"if squeezes predict stillness, the tradable
+edge is selling volatility into them."* You told me to execute it. I did, on
+real data, and I am reporting the result against my own proposal.
+
+## Step 1 — the premise was wrong on its face
+
+The claim assumed squeezes predict *stillness*. Measured forward max-move over
+4h on the shipped BTC data:
+
+| month | squeeze median fwd move | non-squeeze median |
+|---|---|---|
+| Jan 2026 | 0.491% | 0.477% |
+| Jun 2026 | 0.905% | 0.695% |
+| Jul 2026 | 0.510% | 0.476% |
+
+Squeezes are **louder**, not quieter. Pooled significance test:
+
+```
+squeeze     n=  101  mean fwd max-move 0.7752%
+non-squeeze n= 1837  mean fwd max-move 0.7603%
+difference +0.0149%   t = +0.204     NOT SIGNIFICANT
+```
+
+**The squeeze predicts neither movement nor stillness. It predicts nothing.**
+My iteration-31 statement was wrong.
+
+## Step 2 — the naive short-straddle test was circular
+
+Setting premium = breakeven B and asking whether |move| < B is not a test; it
+is choosing your own payout. Raising B raises both the premium and the win
+rate, so *any* price series passes:
+
+| breakeven | WR | mean P&L | t |
+|---|---|---|---|
+| 0.50% | 46.53% | −0.2752% | −3.85 |
+| 1.00% | 75.25% | +0.2248% | +3.15 |
+| 1.50% | 89.11% | +0.7248% | +10.15 |
+
+Control on **non-squeeze** bars gives −0.2603%, +0.2397%, +0.7397% — **identical**.
+The squeeze contributes nothing; this measures BTC's vol drift.
+
+## Step 3 — scaled to 465,000 real observations, it looked like a big win
+
+Priced the premium from trailing realised vol (causal maker proxy) across 13
+instruments, 1h bars, 22,831 real squeezes:
+
+```
+SQUEEZE      n=  22,831  mean(trailing - forward) +0.19051%  t = +11.61
+NON-SQUEEZE  n= 442,113  mean(trailing - forward) -0.00949%  t =  -2.53
+DIFFERENCE                                        +0.20000%  t = +11.89
+```
+
+t = +11.89. I nearly reported this as the fix.
+
+## Step 4 — I attacked it and it collapsed
+
+Decomposing the difference:
+
+| | trailing vol | forward vol |
+|---|---|---|
+| squeeze | 2.43309% | 2.24258% |
+| non-squeeze | 2.04096% | 2.05045% |
+
+Squeeze bars have **higher trailing vol (1.19x) AND higher forward vol (1.09x)**.
+The "edge" exists only because trailing > forward **mechanically**: the gate
+requires HV < 0.8, which *by construction* selects bars where recent vol spiked
+then compressed. A real option seller is not paid trailing vol — they are paid
+IV, which already prices that compression. **The premium proxy was the edge.**
+
+## Step 5 — the vol-matched test, and Simpson's paradox in my own result
+
+Matching squeeze and control bars on trailing vol level, then comparing forward
+vol. Pooled: **+0.1922%, t=+10.99** — squeeze vol *higher*, inversion refuted.
+
+But **16 of 20 vol bins showed the opposite sign**. The pooled number was
+dominated by the extreme-vol bins. Correctly stratified:
+
+```
+weighted mean (squeeze fwd - control fwd) = -0.03568%   SE 0.01574   t = -2.27
+bins with LOWER squeeze forward vol: 16 of 20
+```
+
+So the original intuition is **weakly correct after all** — at matched vol
+levels, squeezes do predict slightly lower forward vol, t = −2.27. But the
+effect is **0.036%**, an order of magnitude smaller than the 0.20% artifact,
+and it is not uniform:
+
+| regime | diff | t |
+|---|---|---|
+| normal vol (bottom 80%) | +0.0042% | +0.31 (nothing) |
+| **HIGH vol (top 20%)** | **+0.2340%** | **+4.76 (against you)** |
+
+The edge is absent in calm markets and **significantly negative** in volatile
+ones — exactly when a short-vol book is at risk.
+
+## Step 6 — the tail closes it
+
+```
+squeeze forward vol:  median 1.494%   p95 6.519%   p99 12.120%   MAX 76.897%
+p99 / median = 8.1x
+```
+
+A short straddle sized for the median is destroyed by the p99. Selling a 0.036%
+edge while exposed to a 76.9% tail is picking up pennies in front of a bulldozer.
+
+Live Bitfinex perp funding, fetched now, confirms the premium is thin:
+`tBTCF0:USTF0 +0.0003943`, `tXLMF0:USTF0 −0.00039839`, `tTRXF0:USTF0 −0.00023111`
+— roughly ±4bp per 8h, and **negative** on two of three, so the carry frequently
+pays the *long* side.
+
+## Verdict on my own proposal
+
+**REFUTED.** The inversion is not a fix.
+
+1. The stated premise ("squeezes predict stillness") is false as stated — t=+0.20.
+2. The real effect, properly stratified, is −0.036% — real but 8x smaller than my artifact.
+3. It vanishes in calm markets and reverses against you in volatile ones (t=+4.76).
+4. The tail is 8.1x the median, which is unsurvivable for a short-vol book.
+5. Live funding is ~4bp and often negative.
+
+## What this iteration actually establishes
+
+- v01T's gate has **no predictive content** for forward volatility (t=+0.20).
+  This is a stronger and cleaner statement than anything in iterations 27-31.
+- Both directions are now closed: **buying** vol into the squeeze fails on fees
+  and double-stops (iter 26-31); **selling** vol into it fails on tail and regime.
+- Methodologically: I produced a t=+11.89 result and destroyed it myself in the
+  next step. Two of my own headline numbers in this iteration were artifacts
+  (+0.20% premium proxy; +0.19% Simpson's paradox). Both were caught by
+  controls, not by intuition.
+
+## Files
+
+`v01T-omega/research/`: `vrp.py` (the t=+11.89 result) `attack.py` (why it is an
+artifact) `selfvol.py` (vol-matched control) `strat.py` (stratified estimate + tail)
