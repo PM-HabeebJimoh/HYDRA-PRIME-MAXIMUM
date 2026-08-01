@@ -1875,3 +1875,100 @@ follow BTC.
 
 `v01T-omega/research/` — all 16 angles, each independently runnable:
 `par.py` `diag.py` `gap.py` `why.py` `path.py` `fix.py` `dd.py` `combo.py` `ceiling.py` `h2.py`
+
+---
+
+# Iteration 29: exploring the DD budget found a LOOKAHEAD BUG. Everything above is revised down.
+
+You asked me to explore and adjust the DD. Doing that produced a number so
+large it forced me to re-audit the engine — and I found a lookahead bug that
+invalidates iterations 27 and 28, and V82.LOWDD's own specification.
+
+## What the DD exploration showed first
+
+Relaxing the drawdown cap on the iter27 engine:
+
+| DD cap | risk/trade | ROI/mo |
+|---|---|---|
+| 4% | 0.0874% | +100.00% |
+| 10% | 0.2189% | +460.29% |
+| **15%** | 0.3289% | **+1210.74%** |
+| 20% | 0.4393% | +2943.29% |
+
+>1000% appeared at 15% DD. It survived every stress test I threw at it:
+cost raised to 30% of stop (+470%), entry slippage −0.25R (+522%), capacity cut
+to 25% of signals (+701%), and 20 random order-shuffles (p5 +1063%). Out of
+sample the DD budget was never breached — train 15% → test 10.21%.
+
+## Then the number that didn't smell right
+
+Win rate **57.44% on a 3:1 barrier**. A driftless random walk gives **25%**.
+An excess of **+32.44 points** is not a trading edge, it is a data leak.
+
+## The bug
+
+```python
+k = bisect.bisect_right(f1h_times, t) - 1     # V82 spec, and my port
+```
+
+This selects the 1H bar **containing** the current 5m bar — a bar that has
+**not closed yet**. `compute_1h_forecast` then reads that bar's CLOSE to build
+`trend_up`, `streak` and `ret_3bar`.
+
+Measured leak, XLM: 40.0 min, 10.0 min, 35.0 min at three sampled points —
+**~30 minutes of future information on average**, on every single trade.
+
+This is in **V82.LOWDD's own specification**, section 5 step 1. It is not
+something I introduced. If V82 is running live with this code, the live
+engine cannot reproduce the backtest, because live it simply does not have
+the hour's close until the hour ends.
+
+**Fix:** `k = bisect_right(ht, t - 3600000) - 1` — the last **fully closed** 1H bar.
+
+## Impact — this is the honest correction
+
+| | n | WR% | mean R | t |
+|---|---|---|---|---|
+| iter27/28 (lookahead) | 78,417 | 57.44 | +0.9711 | 139.9 |
+| **causal (fixed)** | 139,991 | **36.21** | **+0.1489** | **30.3** |
+
+Edge falls **6.5×**. Win rate falls **21 points**, to +11.21 points over the
+25% random baseline — which is a believable size for a real effect.
+
+**The corrected edge is still real:** bootstrap 2,000× gives 95% CI
++0.1394 to +0.1589, P(mean≤0) = 0.0000; out of sample train +0.1625 →
+test +0.1167; positive on **13 of 13** symbols.
+
+## The honest DD frontier
+
+| DD cap | risk/trade | ROI/mo |
+|---|---|---|
+| 4% | 0.0144% | **+3.18%** |
+| 10% | 0.0368% | +8.29% |
+| 20% | 0.0767% | +17.81% |
+| 30% | 0.1203% | +28.93% |
+| 60% | 0.2882% | +78.86% |
+
+**>1000% is not reached at ANY drawdown up to 60%.** Ruining the account is
+the only way past it, and that is not a strategy.
+
+## Corrections to my own prior claims
+
+- iter27's **+100.44%/mo at DD<4%** — WRONG, contaminated by lookahead. True figure **+3.18%**.
+- iter28's 16-angle analysis — all of it ran on contaminated events. The
+  structural conclusions (correlation ceiling, tail-dominated DD) still hold
+  qualitatively, but every number needs re-deriving.
+- iter27's audit of V82 found 4 defects. **This is the fifth and the worst.**
+
+## Status
+
+| goal | status |
+|---|---|
+| WR > 80% | 36.21% — not met |
+| DD < 4% | met |
+| ROI > 1000% | **not met — +3.18%/mo at DD<4%, and unreachable at any DD** |
+
+## Files
+
+`v01T-omega/research/`: `frontier.py` `oosdd.py` `stress.py` `break.py`
+`lookahead.py` (the proof) `h3.py` (causal harvester) `frontier2.py` `verify.py`
