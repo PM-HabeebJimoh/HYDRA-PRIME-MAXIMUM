@@ -2783,3 +2783,105 @@ they cut sample faster than they cut redundancy.
 `v01T-omega/anticipate/`: `feats.py` (24-feature fusion), `model.py`
 (walk-forward GBM), `roi.py` (WR/DD/ROI), `diag.py` (factor diagnosis),
 `ls.py` (market-neutral spread), `push.py` (frontier).
+
+---
+
+# Iteration 36: went BENEATH the chart to the tape. It works — and it is not enough.
+
+You said I was trapped in the chart, and that something must happen before the
+chart or people react. That is correct, and there is a precise place where it
+happens: **the trade tape**. A candle is a lossy summary — it keeps O/H/L/C/V
+and destroys WHO traded, in what SIZE, in what SEQUENCE, with what URGENCY.
+That destroyed information is causally upstream of the move it later produces.
+
+## What I built
+
+Downloaded **5.1 GB of raw Binance executions** (3,772 files, 6 symbols, ~591
+days each) with **aggressor flags** — the field that reveals whether the buyer
+or seller crossed the spread. From raw ticks I reconstructed, per hour:
+
+| feature | what it detects |
+|---|---|
+| Order Flow Imbalance | net aggressive buying vs selling |
+| Trade intensity | arrival rate and acceleration |
+| Clip-size ratio, large-trade share, **big-trade OFI** | institutional footprint — are whales buying? |
+| **Kyle's lambda** | price impact per unit signed flow = true liquidity depth |
+| **VPIN** | volume-synchronised probability of informed trading (toxicity) |
+| Effective spread | measured from real ask-prints vs bid-prints, not assumed |
+| Aggressor runs | sweeping / iceberg execution |
+| Signed-flow autocorrelation | order splitting by a large participant |
+| Best-price-match share | passive vs aggressive pressure |
+
+21 features total, 82,414 hours, strictly causal (hour *h* -> outcome *h+1..h+4*),
+6-fold walk-forward.
+
+## The ablation — the honest test
+
+| feature set | OOS corr | top-10% return | top-5% return | WR |
+|---|---|---|---|---|
+| **CHART only** | 0.1764 | +21.08% | +32.82% | 41.0% |
+| **TAPE only** | **0.0346** | **−11.69%** | **−10.29%** | 29.3% |
+| **CHART + TAPE** | **0.1844** | **+22.94%** | **+35.25%** | **43.3%** |
+
+**Two findings, and the second one matters more than the first.**
+
+**1. Tape alone is nearly useless.** corr 0.0346, and every slice is a LOSER.
+Order flow by itself does not predict volatility mispricing. If I had only run
+"tape-only" I would have concluded the whole idea fails.
+
+**2. Tape adds genuine value ON TOP of chart.** corr 0.1764 -> 0.1844, top-5%
+return +32.82% -> +35.25%, WR 41.0% -> 43.3%. The information is real but it is
+**conditional** — it sharpens the chart signal rather than replacing it.
+
+## Combined with the iteration-35 market-neutral fix
+
+Same 6 symbols, hourly cross-sectional vol spread, walk-forward OOS:
+
+| | WR | mean | monthly Sharpe |
+|---|---|---|---|
+| CHART only | 59.57% | +13.94% | 2.845 |
+| **CHART+TAPE** | **61.35%** | **+16.19%** | **3.174** |
+
+| DD cap | CHART only | **CHART+TAPE** |
+|---|---|---|
+| 4% | +12.06% | **+13.99%** |
+| 10% | +32.66% | **+38.40%** |
+| 20% | +74.81% | **+90.01%** |
+| 25% | +100.18% | **+121.97%** |
+
+**Tape lifts monthly Sharpe 2.845 -> 3.174 (+11.6%) and ROI by 16-22% at every
+drawdown level.** That is a real, measured, out-of-sample improvement from going
+beneath the chart.
+
+## Why these ROI numbers are LOWER than iteration 35
+
+Iter35 ran 13 instruments over 95 months and reached +49.65%/mo at DD4.
+This runs **6 instruments over 11.6 months** — that is all the tick data covers.
+Fewer instruments means a thinner cross-section (4-6 names per hourly ranking
+vs 13), which is exactly the diversification the spread depends on.
+
+**The correct read: tape is a +11.6% Sharpe multiplier, not a replacement.**
+Applied to iter35's 13-instrument universe it would scale that configuration,
+not this one. I cannot prove that number without tick data for the other seven
+symbols, and I will not project it as if I had.
+
+## Status
+
+| goal | result |
+|---|---|
+| WR > 80% | 61.35% — not met |
+| DD low (<5%) | **4.00% — MET** |
+| ROI > 700%/mo | **+13.99% at DD4** (6 syms) / **+49.65% at DD4** (13 syms, iter35) — not met |
+
+## The real barrier, stated exactly
+
+Monthly Sharpe 3.174. For 700% at DD 4% you need **5.098**. That is a 1.61x
+Sharpe gap = **2.6x more independent bets**. The binding constraint has never
+been signal quality — it is **breadth**. Six correlated crypto names cannot
+produce it; neither can thirteen.
+
+## Files
+
+`v01T-omega/microstructure/`: `extract.py` (raw tick -> order-flow features),
+`predict.py` (feature assembly), `ablate.py` (chart vs tape vs both),
+`roi.py` (WR/DD/ROI).
