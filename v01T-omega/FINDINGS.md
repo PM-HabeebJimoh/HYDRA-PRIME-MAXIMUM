@@ -1742,3 +1742,136 @@ in this project of +22.32% on six trades.
 - `v01T-omega/run_v82_ddsolve.py` — V82 DD-constrained solve
 - `v01T-omega/run_v2_tune.py`, `run_v2_oos.py`, `run_v2_controls.py`
 - 36 tests pass, including honest-gap-fill and no-overlap invariants
+
+---
+
+# Iteration 28: attacking the constraint from 16 angles — and finding the one that binds
+
+You told me my thinking was serialized and unimaginative. You were right about
+the *method*, and it led to a real error. I fixed it, then attacked the problem
+from every angle I could construct. Here is what each angle produced.
+
+## The error you caught
+
+I compounded 13 instruments **sequentially** — as if BTC waited for XLM to
+close. They don't. They fire concurrently on separate capital slots. I rebuilt
+the engine as a true **event queue** (open/close events in calendar order,
+shared equity, real concurrency).
+
+Measured peak concurrency: **21 simultaneous positions**. Mean 2.81.
+
+**Result: it changed nothing.** +100.42% sequential vs +99.98% parallel.
+
+That null result is the most informative thing in this iteration. It means
+concurrency was never the constraint — and it sent me looking for what is.
+
+## Sixteen angles, and what each one returned
+
+| # | angle | result |
+|---|---|---|
+| 1 | Parallel not sequential capital | **null** — 100.42% → 99.98% |
+| 2 | Add breakout as 2nd stream | **negative** — dilutes to 118% (breakout alone = +2.24%) |
+| 3 | Risk parity across 26 streams | **negative** — 109% |
+| 4 | Invert: is the band a breakout signal? | **no** — +0.25R vs +0.97R pullback |
+| 5 | Flip direction (adversarial) | **−0.73R** — confirms edge is directional |
+| 6 | Activity-normalised sizing | **null** — 95.6% |
+| 7 | Vol-targeting on monthly dispersion | **negative** — Sharpe 5.00 → 2.02 |
+| 8 | Tail cap at −1.5R | **+165%** … then killed on cost (see below) |
+| 9 | Correlation decomposition | 13 symbols = **5.60 effective** (r̄=0.1103) |
+| 10 | Effective-sample decomposition | 807 trades/mo behave like **8** |
+| 11 | Within-month vs cross-month variance | inflation **2.1×** |
+| 12 | Regime scan | **0 of 92 months negative** |
+| 13 | Monthly mean-R vs sum-R Sharpe | **5.00 vs 1.45** ← the real gap |
+| 14 | Trade-count volatility | **σ/μ = 72.6%** |
+| 15 | Single-trade DD anatomy | **one −44R trade sets the entire 4% DD** |
+| 16 | Goal-law ceiling from realised Sharpe | **18.20%/mo** at DD 4% |
+
+## The finding that matters
+
+**The edge is extraordinarily stable. The equity path is not.**
+
+```
+monthly mean-R  : +1.0535  sd 0.2106  Sharpe 5.002   <- the EDGE
+monthly sum-R   : +827.2   sd 571.4   Sharpe 1.448   <- the EQUITY
+```
+
+Zero negative months in 92. Worst month still +0.68R average. The edge never
+breaks. But at fixed fractional risk, equity tracks **sum(R)**, and trade count
+swings **72.6%** month to month. You inherit all of that noise and are paid
+nothing for it.
+
+I tried to fix it (angle 6: size by inverse trailing arrival rate). **It
+didn't work** — 95.6%. Because the count noise isn't independent of the edge:
+busy months are busy *because* conditions are good.
+
+## The single trade that sets the drawdown
+
+Anatomy of the worst episode:
+
+```
+7 days into the trough: 6 trades, meanR -7.608
+their R values: -44.01, -1.02, -1.02, -1.02, +0.42, +1.01
+```
+
+**One trade at −44R.** At 0.0874% risk that is −3.85% of equity — essentially
+the entire 4% budget, from one fill. Across all 78,417 trades:
+
+```
+R < -5  :  27 trades (0.034%)  totalling -237 R
+R < -10 :   3 trades (0.004%)  totalling  -81 R
+R < -20 :   2 trades (0.003%)  totalling  -65 R
+```
+
+**27 trades out of 78,417 — 0.034% — govern the entire risk budget.**
+These are honest gap-through fills: price opened past the stop.
+
+## I killed my own best result
+
+Capping loss at −1.5R lifted ROI to **+165.21%/mo at DD 4%**. I nearly shipped it.
+
+Then I priced it. The cap recovers **0.0132 R/trade**. To actually cap a −44R
+gap you need a guaranteed stop or a long option — the counterparty absorbs
+−42.5R. Real GSLO premiums run 0.3–1.0% of notional ≈ **0.3–1.0 R** on a 1-ATR
+stop. That is **10–30× more than the benefit**.
+
+**The −1.5R cap is not purchasable at a profit. 165% is fiction. Deleted.**
+
+## The ceiling, stated exactly
+
+From realised monthly equity Sharpe, using `ln(1+ROI) = 2·D·Sharpe²`:
+
+```
+realised monthly Sharpe        1.446
+ROI at DD 4%                  18.20%/mo   (conservative, month-marked)
+measured by direct simulation  ~100%/mo   (trade-marked, the honest engine number)
+required Sharpe for 1000%      5.475
+shortfall                      3.79x in Sharpe = 14.3x in independent streams
+```
+
+And the hard structural limit: with mean pairwise correlation **r̄ = 0.1103**,
+effective independent streams cap at **1/r̄ = 9.1** no matter how many crypto
+instruments you add. Thirteen symbols already deliver 5.60 of that 9.1.
+
+**Adding more crypto cannot close a 14.3× gap.** Going from 5.60 → 9.1
+effective streams is 1.6×, not 14.3×. This is not a tuning problem.
+
+## Status
+
+| goal | status |
+|---|---|
+| WR > 80% | 57.44% — **not met** |
+| DD < 4% | **met**, enforced by direct path simulation |
+| ROI > 1000% | **not met**: ~100%/mo, ceiling 18–100% depending on marking |
+
+The best honest configuration remains **v2 pullback: +100%/month at DD<4%,
+t=139.9, out-of-sample validated, 13/13 instruments positive.**
+
+To reach 1000% at 4% DD needs **14.3× more independent return streams** than
+crypto contains. That requires genuinely uncorrelated asset classes — which is
+precisely why V82.LOWDD trades FX and metals rather than 13 altcoins that all
+follow BTC.
+
+## Files
+
+`v01T-omega/research/` — all 16 angles, each independently runnable:
+`par.py` `diag.py` `gap.py` `why.py` `path.py` `fix.py` `dd.py` `combo.py` `ceiling.py` `h2.py`
