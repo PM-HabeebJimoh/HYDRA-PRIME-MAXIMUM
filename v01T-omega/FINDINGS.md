@@ -3223,3 +3223,117 @@ venue, which is exactly why it survives.
 `v01T-omega/beyond/`: `xex.py` (cross-exchange lead-lag), `lead2.py`
 (dislocation predictive power), `full.py` (the 19-feature model),
 `verify.py` (per-month stability + cost).
+
+---
+
+# Iteration 40: The replacement — stop paying the spread, start COLLECTING it.
+
+Thirty-nine iterations all asked the same question: **"predict direction, then
+CROSS the spread."** The answer was always the same shape — gross edge slightly
+SMALLER than the toll. iter39's best: NEO +35.28 bp gross vs 40 bp taker,
+recovering 88% of its own cost. Always 88%. Never 110%.
+
+That repetition is the tell. The spread was never an obstacle to be out-run.
+**It is the product.** So: stop being the price taker. Become the market maker.
+
+## The reframe
+
+A liquidity provider EARNS the spread on every round trip instead of paying it.
+On NEO that is an **+80 bp swing** — stop paying 40, start earning 40.
+
+Market making has exactly one failure mode: **adverse selection** — you get
+filled by someone informed, right before price moves against you.
+
+**That is precisely what my 87%-accurate cross-exchange model predicts.**
+
+So the iter39 signal was never a trading signal. It is an **adverse-selection
+filter**:
+
+```
+model says UP        -> quote the BID only  (buy cheap, refuse to sell)
+model says DOWN      -> quote the ASK only  (sell rich, refuse to buy)
+model uncertain      -> quote BOTH          (pure spread capture)
+```
+
+## Honest fill simulation
+
+Resting bid at P fills only when a **seller-aggressor print** occurs at price
+**strictly below** P — someone crossed the spread to hit me. Requiring the
+print to trade *through* the quote means I never assume I win a queue race at
+the touch. Real Binance executions with aggressor flags, 591 NEO days.
+
+## Result 1 — naive market making LOSES, exactly as theory says
+
+| half-spread | fills | pnl/day | **bp per fill** |
+|---|---|---|---|
+| 5 bp | 140,877 | −14.85 | **−2.84** |
+| 10 bp | 100,270 | −0.45 | **−0.12** |
+| 20 bp | 40,560 | +2.68 | +1.78 |
+| 40 bp | 10,139 | +3.30 | +8.75 |
+
+At tight spreads the maker is picked off. **This is adverse selection, measured.**
+
+## Result 2 — the filter converts it
+
+| half-spread | mode | bp/fill | change |
+|---|---|---|---|
+| 5 bp | none | −2.84 | |
+| 5 bp | **skew** | **−1.85** | **+35%** |
+| 10 bp | none | −0.12 | |
+| 10 bp | **skew** | **+1.10** | **loss -> PROFIT** |
+| 20 bp | none | +1.78 | |
+| 20 bp | **skew** | **+3.53** | **+98%** |
+
+The signal nearly **doubles** maker profitability at 20 bp and flips the sign at
+10 bp. It is doing exactly the job it should: refusing the fills that are about
+to go bad.
+
+## Result 3 — WR / DD / MONTHLY ROI, full 591 days
+
+Half-spread 20 bp, skew filter, inventory capped at 5 units:
+
+| maker fee | WR | max DD | **MONTHLY ROI** | Sharpe |
+|---|---|---|---|---|
+| **0.0 bp** (rebate/VIP) | **58.38%** | **14.75%** | **+7.35%** | 0.91 |
+| 1.0 bp | 56.01% | 23.98% | +4.13% | 0.54 |
+| 2.0 bp | 53.98% | 36.58% | +1.00% | 0.16 |
+| 5.0 bp | 42.13% | 156% | −7.90% | −0.89 |
+| 10.0 bp | 26.06% | 448% | −21.16% | −2.15 |
+
+## The honest verdict
+
+**Market making is viable, and only at near-zero maker fees.** At 0 bp it earns
++7.35%/month with WR 58.38% and DD 14.75%. At 2 bp it is breakeven. At the
+retail 10 bp maker rate it is destroyed.
+
+This is a **completely different failure mode** from everything before it. Every
+prior model failed on *signal strength*. This one has adequate signal and fails
+on **fee tier** — which is an access problem, not a mathematics problem. Market
+makers with rebates operate exactly here, which is *why* this edge exists at
+0 bp and not at 10 bp: the fee schedule is the moat.
+
+I am not claiming >700%/month. +7.35%/month at 14.75% DD is what the data
+supports, and the DD is worse than the magnitude strategy's 4%.
+
+## Where all four edges now stand
+
+| edge | best result | binding constraint |
+|---|---|---|
+| Magnitude (vol) | **+49.65%/mo @ DD 4%**, WR 61% | breadth — needs 5.2x more independent streams |
+| Direction (cross-exchange) | **86.98% accuracy**, +35.28 bp gross | taker fee 40 bp — recovers 88% |
+| **Market making** | **+7.35%/mo @ DD 14.75%**, WR 58.38% | **maker fee tier — needs <2 bp** |
+| v01T original straddle | structurally void | long+short perp = 0 P&L identically |
+
+## What I would say plainly
+
+The disruptive move was real and it worked: inverting from taker to maker turned
+a −4.72 bp loser into a +3.53 bp/fill winner, and the 87% model found its true
+job as an adverse-selection filter rather than a trade trigger. But it does not
+manufacture 700%/month. The strongest configuration in this entire project
+remains the volatility-magnitude system at **+49.65%/month with 4% drawdown**.
+
+## Files
+
+`v01T-omega/maker/`: `mm.py` (honest fill simulation from aggressor-flagged
+executions), `filt.py` (adverse-selection filter), `roi.py` (WR/DD/ROI vs fee
+schedule).

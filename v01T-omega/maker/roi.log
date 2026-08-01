@@ -1,0 +1,21 @@
+signal minutes: 434621
+
+half-sp  mode         days       fills     pnl/day     bp/fill   maxinv
+5.0      none          120    140877.0    -14.8545       -2.84      6.0
+5.0      skew0.5       120    104110.1     -7.1644       -1.85      6.0
+5.0      skew1.0       120    120744.4     -9.8430       -2.19      6.0
+5.0      step1.5       120    122959.9    -12.2195       -2.67      6.0
+10.0     none          120    100269.7     -0.4546       -0.12      6.0
+10.0     skew0.5       120     73965.2      3.0124        1.10      6.0
+10.0     skew1.0       120     85609.6      2.2803        0.72      6.0
+10.0     step1.5       120     86829.4      0.6419        0.20      6.0
+20.0     none          120     40560.4      2.6785        1.78      6.0
+20.0     skew0.5       120     29349.5      3.8506        3.53      6.0
+20.0     skew1.0       120     33892.8      3.6455        2.89      6.0
+20.0     step1.5       120     34105.8      3.0324        2.39      6.0
+total NEO days available: 591
+maker fee  0.0bp | days 591 | WR 58.38% | maxDD  14.75% | monthly ROI    +7.35% | Sharpe_mo  0.91
+maker fee  1.0bp | days 591 | WR 56.01% | maxDD  23.98% | monthly ROI    +4.13% | Sharpe_mo  0.54
+maker fee  2.0bp | days 591 | WR 53.98% | maxDD  36.58% | monthly ROI    +1.00% | Sharpe_mo  0.16
+maker fee  5.0bp | days 591 | WR 42.13% | maxDD 156.09% | monthly ROI    -7.90% | Sharpe_mo -0.89
+maker fee 10.0bp | days 591 | WR 26.06% | maxDD 447.80% | monthly ROI   -21.16% | Sharpe_mo -2.15
