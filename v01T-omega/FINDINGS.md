@@ -4904,3 +4904,97 @@ persistence-correlation conclusions were overstated and I am flagging them.
 
 `v01T-omega/m2026/`: `data.py` (real 2026 series), `run.py` (monthly backtest),
 `check.py` (the null test that caught the bias).
+
+---
+
+# Iteration 57: Reconciling iter54 vs iter56, and the WR / DD / ROI you asked for
+
+Two fair challenges. Both correct.
+
+## 1. Why the two EURUSD reports differ — they measure different things
+
+| | iteration 54 | iteration 56 |
+|---|---|---|
+| venue | Kraken | Yahoo `EURUSD=X` |
+| timeframe | **1-MINUTE** | **DAILY** |
+| sample | 97 minutes, one session | 150 days of 2026 |
+| metric | median move / spread = **0.58x** | straddle P&L = **−31.17%/mo** |
+| question | can a 1-min strategy pay its spread? | does the vol model work in 2026? |
+
+**Different venue, timeframe, statistic and question. Neither contradicts the
+other — I failed to label them, which made them look inconsistent.**
+
+The scale difference is enormous and I should have shown it:
+
+```
+EURUSD median |1-MINUTE move| : 0.1736 bp  ->  0.58x spread   (iter54)
+EURUSD median |1-DAY    move| : 20.36  bp  ->  67.9x spread   (iter56 scale)
+```
+
+**At daily frequency EURUSD clears its spread 68x over.** So iteration 56's
+−31.17% is **not** a spread problem. It is a straddle *premium* problem: you pay
+1.25x trailing vol and realised vol came in below it.
+
+## 2. WR / DD / MONTHLY ROI — EURUSD=X, 2026
+
+| month | trades | **WR** | mean/trade | **maxDD** | **MONTHLY ROI** |
+|---|---|---|---|---|---|
+| Feb | 16 | 18.8% | −45.29% | 100.00% | **−100.00%** |
+| Mar | 23 | 30.4% | −21.01% | 100.00% | **−100.00%** |
+| Apr | 22 | 22.7% | −44.73% | 100.00% | **−100.00%** |
+| May | 21 | 14.3% | −32.85% | 100.00% | **−100.00%** |
+| Jun | 22 | 40.9% | +2.93% | 99.92% | −99.79% |
+| Jul | 17 | 5.9% | −46.04% | 100.00% | **−100.00%** |
+| **TOTAL** | **121** | **23.1%** | **−29.75%** | **100.00%** | **−100.00%** |
+
+## WR / DD / MONTHLY ROI — BTC-USD, 2026
+
+| month | trades | **WR** | mean/trade | **maxDD** | **MONTHLY ROI** |
+|---|---|---|---|---|---|
+| **Jan** | 6 | **83.3%** | **+93.51%** | **15.66%** | **+2,665.28%** |
+| Feb | 28 | 21.4% | −31.92% | 100.00% | −100.00% |
+| Mar | 31 | 35.5% | −19.29% | 100.00% | −100.00% |
+| Apr | 30 | 13.3% | −33.06% | 100.00% | −100.00% |
+| May | 31 | 38.7% | +20.18% | 100.00% | −99.80% |
+| Jun | 30 | 36.7% | +2.99% | 100.00% | −100.00% |
+| Jul | 29 | 10.3% | −44.63% | 100.00% | −100.00% |
+| **TOTAL** | **185** | **28.1%** | **−13.52%** | **100.00%** | **−100.00%** |
+
+**At full allocation both instruments go to zero.** That is what a −30%/trade
+expectancy does when compounded.
+
+Note Jan on BTC: WR 83.3%, +2,665% — but that is **6 trades**, the first month
+after the 25-bar feature warm-up. It is the same one-good-month pattern seen in
+iterations 46-47, not a repeatable edge.
+
+## DD-constrained sizing — the honest version
+
+Sizing down so the drawdown cap binds:
+
+| DD cap | EURUSD size | **EURUSD ROI** | BTC size | **BTC ROI** |
+|---|---|---|---|---|
+| 4% | 0.1069% | **−0.70%/mo** | 0.1125% | **−0.47%/mo** |
+| 10% | 0.2755% | −1.79%/mo | 0.2895% | −1.20%/mo |
+| 20% | 0.5821% | −3.75%/mo | 0.6097% | −2.54%/mo |
+
+**Sizing controls the drawdown but cannot change the sign.** A negative
+expectancy sized smaller is still negative — it just loses more slowly.
+
+## The complete answer
+
+| | EURUSD 2026 | BTC-USD 2026 |
+|---|---|---|
+| **WR** | **23.1%** | **28.1%** |
+| **DD @ full size** | **100%** | **100%** |
+| **ROI @ full size** | **−100%** | **−100%** |
+| **ROI @ DD 4%** | **−0.70%/mo** | **−0.47%/mo** |
+| profitable months | 1 of 6 | 2 of 7 |
+
+Neither instrument works with this model in 2026. The volatility-magnitude
+straddle requires realised vol to exceed the 1.25x premium, and in 2026 it
+does not — on either a currency or a crypto major.
+
+## Files
+
+`v01T-omega/reconcile/`: `why.py` (the 1-minute vs daily reconciliation),
+`wrddroi.py` (WR/DD/ROI per month, both instruments).
