@@ -5104,3 +5104,125 @@ changes.
 
 `v01T-omega/audit_claims/`: `claims.py` (the two-model reconciliation),
 `panel.py` (89-minute 2026 OKX/Kraken panel), `tradeit.py` (WR/DD/ROI net of spread).
+
+---
+
+## iter59 — answering the user's three questions with measurement
+
+### Q3 first: "Did you challenge all the blockers?" — I had NOT. One was in my head.
+
+I had recorded as permanent fact: *"2026 tick data with aggressor flags is unreachable."*
+That was **wrong**, and it was wrong because I stopped probing, not because it was true.
+
+Broken this iteration:
+- `api-pub.bitfinex.com/v2/trades/tBTCUSD/hist?limit=10000` returns **signed amounts**
+  (sign = aggressor side) for 2026, via `fetch_page`. 10k ticks/call, 54 chunks.
+- `api.kraken.com/0/public/Trades` returns 2026 ticks with explicit **b/s** aggressor
+  and **m/l** maker-taker flags.
+- `github.com/pantlinardatos/market-data-mirror` — real 2026 OHLCV for BTC/SOL/HYPE/DXY/
+  SPX/SPY/QQQ/TSLA/PLTR, reachable from **bash** via codeload tarball. No fetch_page grind.
+- Bitfinex `1m` candles work fine for 2026 (I had logged `1h`/`5m` failures and
+  over-generalised them to the whole endpoint).
+
+Still genuinely blocked (re-verified, not assumed): all direct bash TLS to exchange
+hosts (SSL_ERROR_SYSCALL), 8 public CORS proxies, raw.githubusercontent.com,
+git-LFS object storage, Binance (451 geo-block).
+
+**Correction to the record: the blocker list was partly self-imposed. The user was right.**
+
+### Q1: "If you achieve 80% direction+magnitude accuracy, where's leverage?"
+
+This is a closed-form question. Solved, `iter59/required.py`:
+
+    (1+e)^N = 51   for 5000%/mo at L=1,   e = m*(2w-1)
+
+| trades/mo | required edge | required move @ WR 80% |
+|---|---|---|
+| 20 | 21.72% | **36.21%** |
+| 250 | 1.585% | **2.642%** |
+| 1000 | 0.394% | **0.657%** |
+| 43200 (1m) | 0.0091% | **0.0152%** |
+
+**The user is correct**: at 80% accuracy leverage is unnecessary — *provided* the move
+per trade clears column 3. So "where's leverage?" has an exact answer: leverage is the
+term that covers the gap between the real move and the required move.
+
+Measured on REAL 2026 bars, that gap (`shortfall` = real median move / required move):
+
+| series | trades/mo | median move | required @WR80 | shortfall | ROI @WR80, 1x |
+|---|---|---|---|---|---|
+| HYPE 4h | 180 | 1.0141% | 3.6806% | **0.28×** | 198% |
+| TSLA 4h | 180 | 1.0679% | 3.6806% | 0.29× | 216% |
+| BTC 4h | 180 | 0.3959% | 3.6806% | 0.11× | 53% |
+| HYPE 1d | 30 | 2.5937% | 23.0121% | 0.11× | 60% |
+| BTC 1d | 30 | 1.3526% | 23.0121% | 0.06× | 28% |
+
+Best case in all of 2026 across 19 series: **0.29×**. Even at a *perfect* 100% win rate
+on every bar, HYPE 4h gives 198%/mo, not 5000%. **80% accuracy at 1x cannot reach the
+target on 2026 instruments — the moves are too small relative to trade frequency.**
+That is why leverage kept reappearing: it is the only free term left in the identity.
+
+### Q2: "Why have you NOT achieved >500% constant monthly ROI?"
+
+Ran the honest walk-forward direction model (3-round boosted stumps, retrained every
+bar, enter next bar's OPEN — both lookahead bugs from iter29/30 avoided) on all 2026
+series. ERA 2026, gross, zero cost:
+
+| series | n | WR | DD | ROI/mo | edge |
+|---|---|---|---|---|---|
+| BTC 4h | 578 | 49.31% | 17.43% | −2.69% | −1.19bp |
+| HYPE 4h | 578 | 48.27% | 54.01% | −13.06% | −5.89bp |
+| SOL 4h | 578 | 48.62% | 21.92% | −2.38% | −0.64bp |
+| BTC 1d | 406 | 45.07% | 70.30% | −8.29% | −26.00bp |
+| SPX 1d | 223 | 46.64% | 21.11% | −2.51% | −8.14bp |
+| **TSLA 1d** | 223 | **60.09%** | 15.96% | **+13.43%** | **+44.63bp** |
+
+Mean WR across 12 series = **49.03%** (random = 50%). **1 of 12 positive.**
+
+TSLA survived Bonferroni (binomial p=0.00156, ×12 = **0.019**), so I tested it properly
+rather than dismissing it — 2026 as a never-tuned holdout, real costs, real liquidation:
+
+| config | n | WR | DD | ROI/mo | liq breaches |
+|---|---|---|---|---|---|
+| 2025 in-sample, gross | 78 | 52.56% | 15.96% | +5.91% | 0 |
+| **2026 HOLDOUT gross** | 145 | **64.14%** | 13.40% | **+10.36%** | 0 |
+| 2026 holdout, 5bp, L=1 | 145 | 62.07% | 14.48% | +9.25% | 0 |
+| 2026 holdout, 5bp, L=5 | 145 | 62.07% | 57.34% | +38.74% | 0 |
+| 2026 holdout, 5bp, L=10 | 145 | 62.07% | 90.47% | +37.01% | 0 |
+| 2026 holdout, 5bp, L=25 | 145 | 62.07% | 99.98% | −97.91% | 2 → **BLOWN** |
+
+Monthly, 2026 holdout, net of cost:
+
+| month | n | WR | ROI@1x | ROI@50x | liq@50x |
+|---|---|---|---|---|---|
+| 2026-01 | 20 | 90.00% | +32.09% | −100% | 1 |
+| 2026-02 | 19 | 57.89% | −3.52% | −100% | 3 |
+| 2026-03 | 22 | 54.55% | +6.88% | −100% | 4 |
+| 2026-04 | 21 | 61.90% | +9.57% | −100% | 2 |
+| 2026-05 | 20 | 65.00% | +11.96% | −100% | 2 |
+| 2026-06 | 21 | 52.38% | +18.81% | −100% | 4 |
+| 2026-07 | 22 | 54.55% | −5.26% | −100% | 5 |
+
+**This is the first genuinely positive, cost-inclusive, out-of-sample 2026 result in 59
+iterations** — WR 62.07%, DD 14.48%, +9.25%/mo. It is real and I am not inflating it.
+
+It is also **~540× short of 5000%/mo**, and it does not survive leverage: every level
+that would scale it to target liquidates the account on real 2026 TSLA daily bars.
+
+### The direct answer to Q2
+
+Not from opinion — from the identity plus the 2026 measurements above:
+
+    ROI/mo = (1 + m·(2w−1)·L)^N − 1
+
+On real 2026 data I can obtain `w`=62%, `m`≈1.9%, `N`≈20, and **any `L` that makes this
+reach 5000% also makes `1/L` smaller than moves TSLA actually printed in 2026** — 21
+liquidation breaches at L=50, 2 at L=25. The 2018-19 NEO/LTC result reached the target
+because `m` was 35bp/min against a 12.8bp spread (**2.73×**) at 43,200 trades/month.
+No 2026 instrument I can reach has that ratio; the best is **0.29×**.
+
+>5000% constant monthly ROI is **not achieved on 2026 data**, and the reason is now
+measured rather than asserted: the move/frequency product is a factor of ~500 too small,
+and leverage cannot close it without crossing the liquidation boundary.
+
+Files: `v01T-omega/iter59/{required.py,wf2026.py,tsla_check.py,tsla_oos.py}`
