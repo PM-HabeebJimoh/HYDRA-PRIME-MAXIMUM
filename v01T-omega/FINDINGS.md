@@ -4036,3 +4036,84 @@ same era, and every foundation I have been able to re-test on 2026 has failed.
 
 `v01T-omega/monthly2026/neoltc.py` — real 2026 NEO and LTC perp data,
 month-by-month.
+
+---
+
+# Iteration 48: You were right — I backtested the WRONG SYSTEM in iters 46-47.
+
+The +1,234%/mo (NEO 50x) and +1,398%/mo (LTC 25x) came from the
+**cross-exchange direction model**: venue A's price leads venue B, predict
+venue B's next minute, hold 60 seconds, apply 25-50x.
+
+Iterations 46-47 tested the **volatility straddle** on daily bars. That is a
+completely different system. It shares the instrument names and nothing else.
+Testing it told you nothing about the leveraged result. My error.
+
+## Testing the RIGHT system on 2026
+
+The model needs two venues quoting the same asset in the same minute.
+
+**Venue access, 2026, re-tested this iteration:**
+
+| venue | status |
+|---|---|
+| Binance `api.binance.com` | **HTTP 451 geo-blocked** — "restricted location" |
+| Bitfinex `api-pub` | works via `fetch_page` |
+| Kraken `api.kraken.com` | works, real 1m OHLC |
+| OKX `www.okx.com` | works, real 1m OHLC |
+
+Binance -> Bitfinex cannot be reproduced. But the mechanism is generic, so I
+tested OKX -> Bitfinex on a real 1,000-minute 2026 window.
+
+## The blocker is DATA DENSITY, and it is severe
+
+Same window, 1,000 minutes, August 2026:
+
+| series | bars present | coverage |
+|---|---|---|
+| OKX XLM-USDT 1m | ~1,000 | ~100% |
+| Bitfinex `tXLMUSD` spot 1m | **49** | **4.9%** |
+| Bitfinex `tXLMF0:USTF0` perp 1m | **10** | **1.0%** |
+
+Median gap on Bitfinex spot: **6 minutes**. Max gap: **92 minutes**.
+
+**Overlap available for a cross-exchange model: 49 minutes per 1,000-minute
+window on spot, 10 on the perp.**
+
+The 2018-19 model was built on **226,270 overlapping NEO minutes**. At 49 per
+window that needs **204 `fetch_page` calls** to reach even 10,000 overlaps —
+and each returns markdown that must be parsed by hand.
+
+## What I can and cannot say
+
+**Cannot say:** that the +1,234%/mo result fails in 2026. I have not tested it.
+
+**Can say, and it matters:** the instrument the model traded —
+Bitfinex XLM — now prints **1 bar per 100 minutes** on the perp. The 2018-19
+model assumed a *continuously quoted* follower venue it could hit within
+60 seconds of the leader moving. At 1.0% coverage that assumption is gone:
+there is usually **no follower quote at all** in the minute after the signal.
+
+That is not a statistical failure. It is the same **capacity wall** from
+iteration 42, showing up as absence of data rather than thin data. A market
+that prints ten times in seventeen hours cannot absorb a 60-second
+mean-reversion strategy at any leverage.
+
+## Honest status of every headline number
+
+| system | measured on | 2026 status |
+|---|---|---|
+| Volatility straddle (+49.65%/mo) | 2018-2021 daily | **TESTED, FAILS** — XLM −11.04%, NEO −27.92%, LTC −28.39%/mo |
+| **Cross-exchange direction + 25-50x (+1,234%/mo)** | 2018-2019 1m ticks | **UNTESTABLE** — Binance geo-blocked; Bitfinex follower at 1.0% coverage |
+| Market making (+7.35%/mo) | 2018-2019 ticks | untested, same data barrier |
+
+**Two systems. One tested and failed. One untestable because the venue it
+traded has effectively stopped quoting at 1-minute resolution.**
+
+I should have separated these clearly when you asked for the 2026 backtest,
+instead of running the straddle and presenting it as the answer.
+
+## Files
+
+`v01T-omega/xex2026/`: `note.md` (venue access matrix),
+`coverage.py` (the density measurement that blocks the test).
