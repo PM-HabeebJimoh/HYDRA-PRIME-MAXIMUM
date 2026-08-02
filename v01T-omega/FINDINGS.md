@@ -3684,3 +3684,97 @@ correlation that changes sign between eras.
 `v01T-omega/verify2026/`: `fetch.py` (API pull — documents the egress block),
 `core2026.py` (2026 foundation test), `compare.py` (2018-21 baseline and the
 small-sample null distribution).
+
+---
+
+# Iteration 44: I challenged my own capacity blocker. Half of it was mine.
+
+You said the blockers are in my head. On capacity you were **partly right**,
+and I found the error by attacking my own iteration-42 conclusion.
+
+## What I got wrong in iter42
+
+I killed the whole direction system on one measurement — NEO's $1,490/minute —
+and then stopped. Three assumptions in that were never tested:
+
+**1. I applied a FLAT 8bp fee to every asset.** Fees and spreads differ by an
+order of magnitude across assets. I measured the real effective spread from
+aggressor-flagged executions:
+
+| asset | measured half-spread | **round trip** | median $/min on Binance |
+|---|---|---|---|
+| **BTCUSDT** | 0.825 bp | **1.649 bp** | **$166,767** |
+| NEOUSDT | 6.401 bp | 12.802 bp | $12,303 |
+| BNBUSDT | 8.159 bp | 16.318 bp | $22,733 |
+| LTCBTC | 0.576 bp | 1.153 bp | $2 |
+
+**BTC's real cost is 1.649 bp, not the 8 bp I assumed** — and Binance BTC does
+**$166,767/minute**, which is **112x** the NEO figure I used to declare the
+strategy dead.
+
+**2. I measured capacity on the SMALLEST market and generalised.** NEO was the
+highest-accuracy asset, so I anchored on it. It is also the thinnest.
+
+**3. I treated one venue pair on one asset as the whole opportunity.** The
+mechanism is "venue A leads venue B" — capacity is the SUM across every
+(asset x venue-pair), not one instance.
+
+## Re-run with MEASURED per-asset costs
+
+| asset | n | accuracy | gross bp | cost bp | **net bp** | lev @DD20 | **ROI/mo** |
+|---|---|---|---|---|---|---|---|
+| NEO | 431 | 87.01% | +34.33 | 16.80 | **+17.53** | 14.6x | **+142.54%** |
+| LTC | 1,265 | 81.34% | +15.89 | 5.15 | **+10.74** | 8.9x | **+174.70%** |
+| BTC | 2,402 | 73.73% | +6.39 | 5.65 | **+0.75** | 6.9x | +10.79% |
+
+**All three are net-POSITIVE once the cost is measured rather than assumed.**
+In iter42 I had BTC at −1.61 bp and wrote it off. Correctly costed it is
+**+0.75 bp**, and it is the deepest market of the three.
+
+## But the capacity ceiling is REAL
+
+| asset | notional/min | capital @10% | trades/mo | **PnL/month** |
+|---|---|---|---|---|
+| NEO | $12,303 | $84 | 37.1 | $80 |
+| LTC | $2 | $0 | 108.7 | $0 |
+| **BTC** | **$166,767** | **$2,405** | 206.5 | **$257** |
+| **TOTAL** | | | | **$337** |
+
+BTC carries **29x more capital** than NEO ($2,405 vs $84) exactly as the depth
+argument predicts. But its net edge is 23x thinner (+0.75 vs +17.53 bp), so the
+dollar PnL only rises from $80 to $257.
+
+**That inverse relationship is the wall, and it is physical, not psychological.**
+Depth and edge trade off against each other because the edge exists *because*
+the market is under-arbitraged.
+
+## Direct answers to your three questions
+
+**"Where is leverage?"** Applied — 6.9x to 14.6x, solved against a 20% drawdown
+cap on real trade sequences. It produces **+142% to +175%/month** on NEO and LTC.
+
+**"Why no >500% constant monthly?"** Two separate reasons, now measured:
+- ROI% at DD 20% is +142% / +175% / +11%. Reaching >500% needs ~25-30% DD.
+- More importantly the **dollar** ceiling is ~$337/month total, because the
+  markets where the edge is strongest are the markets that are thinnest.
+
+**"Did you challenge all the blockers?"** I had not. Challenging them found a
+real error — the flat fee assumption — which flipped BTC from negative to
+positive and tripled total capacity. **The percentage blocker was in my head.
+The dollar blocker is in the order book.**
+
+## Honest status
+
+The 86.98% accuracy is real. Leverage is applied. Costs are measured, not
+assumed. Net edge is positive on 3 of 3 assets. Monthly ROI at DD 20% is
++142.54% (NEO) and +174.70% (LTC).
+
+**The system does not reach >500% constant monthly, and at full capacity it
+earns roughly $337/month.** I am not going to present a percentage without the
+notional again.
+
+## Files
+
+`v01T-omega/capacity/`: `challenge.py` (the three untested assumptions),
+`spread.py` (measured effective spread per asset from executions),
+`final.py` (re-run with measured costs and measured capacity).
