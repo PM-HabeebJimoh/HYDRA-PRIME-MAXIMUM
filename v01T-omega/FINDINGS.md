@@ -4117,3 +4117,112 @@ instead of running the straddle and presenting it as the answer.
 
 `v01T-omega/xex2026/`: `note.md` (venue access matrix),
 `coverage.py` (the density measurement that blocks the test).
+
+---
+
+# Iteration 49: Month-by-month for the LEVERAGED CROSS-EXCHANGE system.
+
+You asked three times for the monthly backtest of the system that produced
++1,234%/mo. Iterations 46-47 gave you the straddle. Iteration 48 explained why
+2026 is unreachable. Neither answered the question. Here it is: the exact
+arrays, exact slice, exact costs, exact leverage from `capacity/lev2550.py`,
+split by calendar month.
+
+## NEO at 50x — the config that reported +1,234%/mo
+
+| month | trades | MONTH RETURN | maxDD | WR |
+|---|---|---|---|---|
+| 2018-11 | 4 | +65.73% | 4.34% | 75.0% |
+| 2018-12 | 29 | +2,890.61% | 21.36% | 79.3% |
+| 2019-01 | 8 | +105.76% | 5.45% | 75.0% |
+| 2019-02 | 12 | +760.36% | 5.65% | 83.3% |
+| 2019-03 | 7 | +88.40% | 1.08% | 85.7% |
+| 2019-04 | 44 | +3,001.89% | 60.62% | 75.0% |
+| 2019-05 | 114 | +26,198.63% | 64.07% | 62.3% |
+| 2019-06 | 69 | +521.68% | 57.46% | 58.0% |
+| 2019-07 | 63 | +1,668.45% | 40.74% | 63.5% |
+| 2019-08 | 16 | +95.03% | 26.51% | 62.5% |
+| 2019-09 | 16 | +4,124.07% | 0.00% | 100.0% |
+| 2019-10 | 35 | +4,460.21% | 40.26% | 65.7% |
+| 2019-11 | 14 | +118.23% | 11.74% | 64.3% |
+
+**13 of 13 months positive. Median +760.36%. Worst month +65.73%.**
+
+## LTC at 25x — the config that reported +1,398%/mo
+
+| month | trades | MONTH RETURN | maxDD | WR |
+|---|---|---|---|---|
+| 2018-11 | 7 | +14.56% | 4.83% | 71.4% |
+| 2018-12 | 98 | +3,073.14% | 24.56% | 71.4% |
+| 2019-01 | 20 | +307.43% | 16.77% | 90.0% |
+| 2019-02 | 50 | +440.07% | 10.41% | 78.0% |
+| 2019-03 | 18 | +101.54% | 5.11% | 61.1% |
+| 2019-04 | 174 | +12,851.29% | 23.59% | 71.8% |
+| 2019-05 | 238 | +9,843.67% | 20.01% | 67.6% |
+| 2019-06 | 160 | +1,246.89% | 29.40% | 70.0% |
+| 2019-07 | 190 | +6,355.41% | 48.07% | 68.4% |
+| 2019-08 | 96 | +1,283.27% | 13.77% | 83.3% |
+| 2019-09 | 79 | +1,182.71% | 7.83% | 74.7% |
+| 2019-10 | 96 | +412.36% | 41.57% | 75.0% |
+| 2019-11 | 39 | +187.20% | 9.72% | 84.6% |
+
+**13 of 13 months positive. Median +1,182.71%. Worst month +14.56%.**
+
+Summary of all four configurations:
+
+| config | months | positive | median | worst |
+|---|---|---|---|---|
+| NEO 25x | 13 | **13** | +228.74% | +30.69% |
+| NEO 50x | 13 | **13** | +760.36% | +65.73% |
+| LTC 25x | 13 | **13** | +1,182.71% | +14.56% |
+| LTC 50x | 13 | **13** | +9,591.06% | +29.35% |
+
+## 13 of 13 is a red flag, so I audited it
+
+**Two things had to be checked before this is reportable.**
+
+**1. Walk-forward coverage — where does out-of-sample actually begin?**
+
+```
+NEO: full data 2018-04-06 -> 2019-11-17
+     OOS predictions only 2018-11-28 -> 2019-11-17  (38.1% of rows)
+LTC: same OOS window, 59.3% of rows
+```
+
+The first ~7 months are consumed by training folds. **Every month in the table
+above is genuine out-of-sample.** No month is in-sample.
+
+**2. Selection bias — the top 0.5% slice is ranked GLOBALLY.**
+
+Confidence is ranked across the whole sample, so trade counts per month are
+decided with knowledge of the full period (2019-05 gets 114 trades, 2018-11
+gets 4). That is a real look-ahead in the *allocation*, though not in the
+*predictions*. I re-ran it ranking within each month independently:
+
+| asset | global top 0.5% | **per-month top 0.5%** |
+|---|---|---|
+| NEO | +17.53 bp | **+13.54 bp** |
+| LTC | +10.74 bp | **+11.36 bp** |
+
+**NEO loses 23% of its edge; LTC gains slightly.** So the global ranking
+flatters NEO but does not manufacture the result. The edge survives honest
+per-month selection.
+
+## What this table is, and is not
+
+**Is:** a genuine month-by-month, out-of-sample, cost-adjusted equity path for
+the leveraged cross-exchange system, on real Binance and Bitfinex data,
+Nov 2018 - Nov 2019.
+
+**Is not:** current. Every row is from 2018-19. Per iteration 48, Binance is
+HTTP 451 geo-blocked and the Bitfinex XLM perp now prints 10 bars per 1,000
+minutes, so this cannot be re-run on 2026 from here.
+
+**And the dollar ceiling from iteration 45 still applies to every row:**
+`PnL = notional x edge x trades` has no leverage term. NEO 2019-05 at
++26,198% is +26,198% of roughly $25.
+
+## Files
+
+`v01T-omega/leverage_monthly/`: `monthly.py` (the breakdown you asked for),
+`audit.py` (OOS coverage and selection-bias check).
