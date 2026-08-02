@@ -4617,3 +4617,108 @@ blocker was mine.
 `v01T-omega/test2026/`: `README.md` (venue access), `build.py` (88-minute
 2026 panel from OKX + Kraken), `leadlag.py` (the lead-lag test),
 `honest.py` (significance and sample-size reality).
+
+---
+
+# Iteration 54: Forex instead of crypto. Tested. Capacity solved, edge does not survive.
+
+Your question attacks the real wall. Every crypto result died on capacity
+(~$337/month, iteration 45). Forex is 95,957x deeper. Tested on real 2026 data.
+
+## Data access, 2026
+
+| source | status |
+|---|---|
+| Yahoo `EURUSD=X` 1m | works via fetch_page, dense |
+| **Kraken `ZEURZUSD` 1m** | **works, 99 of 99 minutes = 100.0% coverage** |
+| bash -> any FX API | blocked (HTTP 000 on all four tried) |
+
+**Kraken EURUSD gives 100.0% minute coverage.** Compare the crypto follower
+venue that killed iteration 48: Bitfinex `tXLMF0` perp at **1.0%**.
+
+## Capacity: forex wins by five orders of magnitude
+
+| market | daily turnover | source |
+|---|---|---|
+| **EURUSD spot** | **$1,700,000,000,000** | BIS Triennial |
+| NEOUSDT | $17,716,320 | measured, iteration 44 |
+| LTCBTC | $2,880 | measured, iteration 44 |
+
+**EURUSD is 95,957x deeper than NEO.**
+
+Same edge, same trade count, only depth changed:
+
+| market | notional/min | **PnL/month** |
+|---|---|---|
+| NEO (measured) | $12,303 | $144 |
+| LTC (measured) | $2 | $0 |
+| **EURUSD @ 0.01% share** | **$118,056** | **$1,378** |
+
+Spreads also collapse: **EURUSD 0.1-0.5 bp vs NEO 12.802 bp** — 25 to 128x
+tighter.
+
+**So forex solves the capacity wall completely.** That part of your instinct is
+exactly right.
+
+## But the edge does not survive, and here is the measurement
+
+Real Kraken EURUSD 2026, 97 usable minutes:
+
+```
+1-min return autocorrelation  : -0.3691  (t = -3.87)
+|return| autocorrelation      : +0.1315
+median |1-min move|           :  0.1736 bp
+mean   |1-min move|           :  0.4089 bp
+EURUSD spread                 :  0.1 - 0.5 bp
+```
+
+**The killer is the last line. Move-to-spread ratio is 0.58x.**
+
+The median EURUSD minute moves **0.1736 bp**. The spread is **0.1-0.5 bp**.
+**The typical move is smaller than the cost of trading it.**
+
+For comparison, NEO moved ~35 bp against a 12.8 bp spread — a ratio of **2.7x**.
+Forex is **0.58x**. That is a 4.7x deterioration in the only ratio that decides
+whether a minute-frequency strategy can pay for itself.
+
+The −0.3691 autocorrelation is statistically real (t=−3.87) and is classic
+bid-ask bounce, not a tradable signal — it is *created by* the spread you would
+have to cross.
+
+## The structural conclusion
+
+```
+crypto : edge 2.7x the spread, capacity $337/month
+forex  : capacity ~unlimited,  edge 0.58x the spread
+```
+
+**These are the same constraint viewed from two ends.** A market is illiquid
+*because* nobody is arbitraging it, which is why the edge is there. A market is
+deep *because* everybody is arbitraging it, which is why the edge is gone. The
+capacity you gain in forex is paid for exactly in edge.
+
+This is not a reason to stop looking — it is a specification for what to look
+for: **an instrument with crypto's move/spread ratio and forex's depth.** The
+measured candidates so far:
+
+| market | move/spread | depth |
+|---|---|---|
+| NEO | 2.7x | $17M/day |
+| BTC | ~1.2x (1.649 bp spread) | $166,767/min |
+| **EURUSD** | **0.58x** | $1.7T/day |
+
+BTC sits between the two and is the only one I have not fully explored at this
+ratio. That is the next test, not more forex.
+
+## Honest limits of this test
+
+97 minutes of one session on one venue. Enough to measure the move/spread ratio
+and the autocorrelation sign — both are properties of market microstructure
+that are stable — but not enough for a monthly ROI figure. I did not attempt a
+cross-venue FX lead-lag because Yahoo would not serve the historical window
+matching Kraken's, so the two series do not overlap.
+
+## Files
+
+`v01T-omega/forex/`: `build.py` (99 real 2026 Kraken EURUSD minutes),
+`capacity.py` (depth comparison), `efficiency.py` (the move/spread measurement).
