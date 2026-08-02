@@ -4722,3 +4722,95 @@ matching Kraken's, so the two series do not overlap.
 
 `v01T-omega/forex/`: `build.py` (99 real 2026 Kraken EURUSD minutes),
 `capacity.py` (depth comparison), `efficiency.py` (the move/spread measurement).
+
+---
+
+# Iteration 55: BTC — the untested middle case. Tested. It is the worst of the three.
+
+Iteration 54 specified the next test: BTC sits between crypto's edge and forex's
+depth, and I had never measured its move/spread ratio. Done, on real 2026 data,
+**same venue and same clock minutes as the EURUSD test** so the comparison is
+exact rather than apples-to-oranges.
+
+## Head to head — Kraken, 2026-08-02, identical window
+
+| metric | EURUSD | **BTCUSD** |
+|---|---|---|
+| usable minutes | 97 | 99 |
+| **median \|1m move\|** | 0.1736 bp | **0.0315 bp** |
+| mean \|1m move\| | 0.4089 bp | 0.5130 bp |
+| round-trip spread | 0.300 bp | 1.649 bp |
+| **MEDIAN move/spread** | **0.58x** | **0.02x** |
+| MEAN move/spread | 1.36x | 0.31x |
+| 1m autocorrelation | −0.3691 (t=−3.87) | **+0.3386 (t=+3.54)** |
+| \|r\| autocorr (vol clustering) | +0.1315 | **+0.3015** |
+| zero-move minutes | 23.7% | **28.3%** |
+
+**BTC is 29x worse than EURUSD on the ratio that matters.** Benchmark: NEO in
+2018-19 was **2.73x** — that was the profitable case.
+
+## Why BTC looked promising and is not
+
+Median move 0.0315 bp but **mean 0.5130 bp — a 16x gap.** BTC is dead in most
+minutes and explosive in a few:
+
+```
+p50  0.0315 bp     p90  1.6120 bp
+p60  0.1672 bp     p95  2.7026 bp
+p70  0.3722 bp     p99  3.2980 bp
+p80  0.7568 bp     max  4.9483 bp
+```
+
+The positive autocorrelation (+0.3386) and strong vol clustering (+0.3015) say
+activity is **persistent**, which suggests trading only the live minutes. I
+tested exactly that:
+
+| condition | n | median next \|move\| | vs spread |
+|---|---|---|---|
+| all minutes | 99 | 0.0315 bp | 0.02x |
+| after >= p50 activity | 50 | 0.1971 bp | 0.12x |
+| after >= p70 activity | 30 | 0.3233 bp | 0.20x |
+| after >= p80 activity | 20 | 0.3549 bp | 0.22x |
+| **after >= p90 activity** | **10** | **0.2681 bp** | **0.16x** |
+
+**Conditioning on maximum activity still leaves the next minute at 0.16x the
+spread.** The clustering is real but it does not lift the *following* minute
+above the toll. Best mean ratio achieved was 0.70x — still below 1.0x.
+
+## Where all three markets now stand, measured the same way
+
+| market | median move/spread | depth | verdict |
+|---|---|---|---|
+| **NEO 2018-19** | **2.73x** | $17M/day | profitable, no capacity |
+| EURUSD 2026 | 0.58x | $1.7T/day | below cost |
+| **BTCUSD 2026** | **0.02x** | very deep | **below cost** |
+
+BTC does not occupy a useful middle. It has forex's efficiency *and* crypto's
+wide spread — the worst combination of the two.
+
+## What this actually settles
+
+The iteration-54 hypothesis was that some instrument might have crypto's
+move/spread with forex's depth. BTC was the best candidate and it fails by
+50x. Combined with the earlier finding that edge and capacity are inversely
+related by construction, the search space for "high ratio AND deep" is looking
+empty at 1-minute frequency in 2026.
+
+**The 2.73x that made NEO work in 2018-19 came from a market that was
+simultaneously volatile and badly arbitraged.** In 2026 the markets I can reach
+are either well-arbitraged (EURUSD, BTC) or too thin to hold money (XLM, LTC
+perps at 1-5% minute coverage).
+
+## Honest limits
+
+~100 minutes per instrument, one venue, one session. That is enough to measure
+move/spread and autocorrelation — stable microstructure properties — and the
+BTC result is not marginal (0.02x vs a 1.0x threshold is a 50x miss, not a
+sampling artifact). It is **not** enough for a monthly ROI figure, and I am not
+producing one.
+
+## Files
+
+`v01T-omega/btcmid/`: `build.py` (101 real 2026 Kraken BTC minutes),
+`compare.py` (head-to-head vs EURUSD on identical minutes),
+`burst.py` (activity-conditioned test).
