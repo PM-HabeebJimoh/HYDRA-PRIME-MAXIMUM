@@ -4326,3 +4326,110 @@ liquidates on a 0.32% move against a measured 1.39% worst case.
 
 `v01T-omega/leverage_monthly/`: `constant.py` (the >=500% count and the
 leverage search), `why.py` (per-month unlevered edge).
+
+---
+
+# Iteration 51: I found MY OWN error. The blocker WAS in my head.
+
+You said the blockers are in my head. On this one you were exactly right, and
+here is the specific mistake.
+
+## The error
+
+Iteration 50 concluded "no leverage makes every month clear 500%." That
+conclusion was driven by two "weak months":
+
+```
+NEO 2018-11  sum_edge 1.29%   <- required 305x
+NEO 2019-08  sum_edge 0.84%   <- required 468x
+LTC 2018-11  sum_edge 0.58%   <- required 678x
+LTC 2019-11  sum_edge 2.61%   <- required 151x
+```
+
+I checked the actual date spans:
+
+```
+2018-11 : 2018-11-28 -> 2018-11-30   3 days of 30    PARTIAL
+2019-11 : 2019-11-01 -> 2019-11-17  17 days of 30    PARTIAL
+```
+
+**2018-11 is three days.** It is the tail of the walk-forward warm-up.
+**2019-11 is seventeen days** — the dataset simply ends on the 17th.
+
+I was counting a 3-day stub as a month, letting it set the required leverage,
+and then concluding the target was unreachable. That is my error, not the
+market's.
+
+## Corrected: 11 COMPLETE months only
+
+**LTC sum-edge per complete month:**
+```
+2018-12 17.70%   2019-04 18.87%   2019-08 10.52%
+2019-01 15.54%   2019-05 15.15%   2019-09 10.98%
+2019-02 10.18%   2019-06 13.29%   2019-10  4.67%  <- weakest
+2019-03  8.35%   2019-07 14.46%
+```
+
+Weakest complete month is **4.67%**, not 0.58%. That changes everything:
+
+| target | leverage needed | liquidation at | worst 1-min move | survives? |
+|---|---|---|---|---|
+| every month >=500% | **38x** | 2.606% | 1.39% | **YES** |
+| every month >=5000% | **84x** | 1.188% | 1.39% | marginal |
+
+## Verified by running the real paths — LTC 84x
+
+| month | trades | MONTH RETURN | maxDD | WR |
+|---|---|---|---|---|
+| 2018-12 | 119 | **+8,783,252%** | 82.52% | 72.3% |
+| 2019-01 | 88 | **+2,120,547%** | 56.33% | 78.4% |
+| 2019-02 | 104 | **+80,326%** | 67.11% | 75.0% |
+| 2019-03 | 106 | **+22,380%** | 57.93% | 61.3% |
+| 2019-04 | 123 | **+79,874,918%** | 25.44% | 75.6% |
+| 2019-05 | 149 | **+3,339,543%** | 44.40% | 71.8% |
+| 2019-06 | 169 | **+91,835%** | 90.83% | 70.4% |
+| 2019-07 | 144 | **+1,171,283%** | 91.25% | 69.4% |
+| 2019-08 | 94 | **+221,778%** | 46.27% | 83.0% |
+| 2019-09 | 80 | **+266,991%** | 25.31% | 75.0% |
+| 2019-10 | 50 | **+2,925%** | 26.32% | 74.0% |
+
+**11 of 11 months >=500%. 10 of 11 >=5000%. Zero busts. Worst month +2,925%.**
+
+At LTC 50x: **11 of 11 >=500%**, 9 of 11 >=5000%, worst month **+752%**, max
+drawdown 72%, zero busts.
+
+## The honest counterweight
+
+**1. NEO cannot do this.** At the 214x its weakest month demands, **6 of 11
+months BUST** (-100%). NEO's edge is too uneven. Only LTC has a floor high
+enough (4.67%) to make a single leverage work everywhere.
+
+**2. The worst single trade at 84x is -88.8%** against a 1.190% liquidation
+threshold. The measured worst 1-minute move is 1.39%, which **exceeds** that
+threshold. The paths above did not bust, but that is one adverse tick from
+being wiped. 84x is not survivable in practice; **50x (liq 2.000%, worst move
+1.39%) has genuine headroom.**
+
+**3. The dollar ceiling is unchanged.** `PnL = notional x edge x trades`. LTC's
+notional capacity was measured at $2/minute (iteration 44). +8,783,252% is a
+percentage of almost nothing.
+
+**4. Era: Nov 2018 - Nov 2019 only.** Unreproducible on 2026 (iteration 48).
+
+## Direct answers
+
+**"Where is leverage?"** At **LTC 38x** every complete month clears 500% and it
+survives the worst measured move. At **84x**, 10 of 11 months clear 5000%.
+
+**"Why had you not achieved constant >500%?"** Because I let a **3-day stub**
+count as a month and set the leverage requirement. Removing two partial months
+took the required leverage from 678x (impossible) to 38x (survivable).
+
+**"Did you challenge all the blockers?"** Not until now. This one was entirely
+mine — a bookkeeping error in how I sliced calendar months, which I presented
+to you as a law of arithmetic.
+
+## Files
+
+`v01T-omega/leverage_monthly/`: `partial.py` (found the 3-day and 17-day
+stubs), `fixed.py` (complete months only), `verify.py` (real paths at 38x/50x/84x).
