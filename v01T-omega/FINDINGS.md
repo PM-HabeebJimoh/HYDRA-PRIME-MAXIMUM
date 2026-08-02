@@ -4814,3 +4814,93 @@ producing one.
 `v01T-omega/btcmid/`: `build.py` (101 real 2026 Kraken BTC minutes),
 `compare.py` (head-to-head vs EURUSD on identical minutes),
 `burst.py` (activity-conditioned test).
+
+---
+
+# Iteration 56: 2026 month-by-month for EURUSD and BTC-USD — and a bias I had to catch
+
+Ran both instruments, real Yahoo 2026 daily data (EURUSD 150 bars, BTC-USD 214
+bars, Jan 1 - Aug 2), same method as iterations 46-47.
+
+## EURUSD=X, 2026
+
+| month | days | vol persistence | straddle return | WR | realised vol |
+|---|---|---|---|---|---|
+| Feb | 16 | −0.4501 | **−45.29%** | 18.8% | 0.485% |
+| Mar | 23 | −0.3497 | **−21.01%** | 30.4% | 0.445% |
+| Apr | 22 | **+0.4571** | **−44.73%** | 22.7% | 0.503% |
+| May | 21 | −0.1409 | **−32.85%** | 14.3% | 0.293% |
+| Jun | 22 | −0.7963 | **+2.93%** | 40.9% | 0.268% |
+| Jul | 17 | −0.4192 | **−46.04%** | 5.9% | 0.236% |
+| **MEAN** | | **−0.2832** | **−31.17%** | | |
+
+**Profitable 1 of 6 months.**
+
+## BTC-USD, 2026
+
+| month | days | vol persistence | straddle return | WR | realised vol |
+|---|---|---|---|---|---|
+| Feb | 28 | −0.5305 | **−31.92%** | 21.4% | 4.244% |
+| Mar | 31 | −0.0774 | **−19.29%** | 35.5% | 2.680% |
+| Apr | 30 | −0.1270 | **−33.06%** | 13.3% | 2.134% |
+| May | 31 | −0.2361 | **+20.18%** | 38.7% | 1.421% |
+| Jun | 30 | −0.5056 | **+2.99%** | 36.7% | 2.261% |
+| Jul | 29 | **+0.2464** | **−44.63%** | 10.3% | 1.854% |
+| **MEAN** | | **−0.2050** | **−17.62%** | | |
+
+**Profitable 2 of 6 months.**
+
+## The bias I caught — this matters for iterations 46, 47 and 56
+
+The monthly persistence numbers look damning, but I tested the null before
+reporting them as evidence. Simulating pure random walks at the same sample
+size (~25 bars per month):
+
+```
+random walk, 2000 sims:  mean -0.2043   median -0.2277   NEGATIVE 76.8% of the time
+```
+
+**The statistic is biased downward at monthly sample size.** A random walk
+produces a negative reading 77% of the time. Against that null:
+
+| instrument | observed monthly mean | % of random walks at least this negative |
+|---|---|---|
+| EURUSD | −0.2832 | **42.2%** |
+| BTC-USD | −0.2050 | **52.9%** |
+
+**Neither is unusual. Both sit near the middle of the random-walk distribution.**
+
+And measured on the **full 2026 sample** instead of chopped into months:
+
+| instrument | full-sample 2026 persistence |
+|---|---|
+| EURUSD | **+0.2724** |
+| BTC-USD | **+0.0630** |
+
+**Both are POSITIVE.** The negative monthly readings are a small-sample
+artifact of splitting the year into 25-bar windows, not evidence that
+volatility stopped clustering.
+
+## What actually stands
+
+**The straddle returns are the real result, and they are unambiguous:**
+EURUSD −31.17%/month, BTC-USD −17.62%/month, profitable in 1 of 6 and 2 of 6
+months. Those are direct P&L measurements, not correlation statistics, and they
+do not suffer the small-sample bias.
+
+**The reason is the same one measured in iterations 54-55, not a regime change:**
+the move/spread ratio. EURUSD 0.58x, BTC 0.02x, both far below the 2.73x that
+made NEO profitable. A straddle priced at 1.25x trailing vol cannot pay for
+itself when the underlying barely moves relative to its cost.
+
+## Correction to iterations 46 and 47
+
+Those iterations reported negative monthly vol persistence for XLM, NEO and LTC
+and treated it as evidence of regime change. **The same downward bias applies
+there.** The straddle P&L conclusions in those iterations stand; the
+persistence-correlation conclusions were overstated and I am flagging them.
+
+## Files
+
+`v01T-omega/m2026/`: `data.py` (real 2026 series), `run.py` (monthly backtest),
+`check.py` (the null test that caught the bias).
