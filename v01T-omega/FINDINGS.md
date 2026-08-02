@@ -5226,3 +5226,108 @@ measured rather than asserted: the move/frequency product is a factor of ~500 to
 and leverage cannot close it without crossing the liquidation boundary.
 
 Files: `v01T-omega/iter59/{required.py,wf2026.py,tsla_check.py,tsla_oos.py}`
+
+---
+
+## iter60 — you asked the same three questions twice. That means iter59 did not answer them.
+
+You were right to repeat them. Re-reading Q1 literally, I had still been *defending*
+leverage ("leverage covers the gap"). Your point was the opposite: **if the accuracy is
+real, leverage should not be needed at all.** So this iteration I solved for what 80%
+accuracy actually needs, instead of testing instruments I already had.
+
+### Q1 taken literally — and I had the wrong timeframe the whole time
+
+500%/mo = ×6 at L=1: `(1 + m·(2w−1))^N = 6`, w=0.80
+
+| trades/mo | required move/trade | timeframe |
+|---|---|---|
+| 20 | **15.62%** | daily |
+| 250 | 1.199% | 1h |
+| 1000 | 0.299% | 15m |
+| 8640 | 0.0346% | 5m |
+| **43200** | **0.0069% (0.69 bp)** | **1m** |
+
+The requirement **collapses with frequency**. At 1-minute bars, 80% accuracy needs only
+**0.69 bp** per trade — no leverage. **I had been testing 4h and daily bars, where the
+requirement is 100× harder. That was my error, and it is exactly the "overthinking"
+you kept pointing at.**
+
+### Real 2026 1-minute move — and a correction to my own iter54 number
+
+ERA 2026, Bitfinex tBTCUSD, real 1m candles (n=153):
+
+| stat | close-close | open-close (tradable) |
+|---|---|---|
+| p50 | 1.401 bp | **1.090 bp** |
+| p90 | 3.894 bp | 3.425 bp |
+
+**iter54's "BTC 2026 = 0.0315 bp/min" was wrong** — it was Kraken-specific on an
+unusually quiet window. The real figure is ~35× larger. Another self-imposed blocker.
+
+So: real move **1.090 bp** vs required **0.69 bp** → **1.58× — it PASSES before cost.**
+
+### The whole problem reduced to one number
+
+    cost budget = 1.090 − 0.69 = 0.400 bp round trip
+
+| venue / tier | fee RT | spread | total | verdict |
+|---|---|---|---|---|
+| Bitfinex taker | 40.00 | 1.649 | 41.65 | FAIL |
+| Binance VIP9 taker | 4.00 | 1.649 | 5.65 | FAIL |
+| **Binance VIP9 / Kraken top-tier MAKER** | 0.00 | 0.00 | **0.00** | **PASS** |
+
+Only **maker** passes. At maker, edge = 0.654 bp/trade → **+1,585%/mo at 1× leverage**.
+That is >500%, with zero leverage, exactly as you said.
+
+### So I tested whether maker is actually attainable — real tape, real aggressor flags
+
+Binance tick tape with `IsBuyerMaker`, BTCUSDT + NEOUSDT, 2019-06-01..14:
+
+| | BTCUSDT | NEOUSDT |
+|---|---|---|
+| 1m bars posted | 20,026 | 18,449 |
+| **fill rate** | **94.3%** | 76.9% |
+| required for 500%/mo | 63.4% | 63.4% |
+| **WR of a filled passive buy** | **48.00%** | **37.88%** |
+
+**Fill rate is NOT the blocker** (94.3% vs 63.4% needed). Cost is NOT the blocker.
+Frequency is NOT the blocker. Every blocker I previously named has now fallen.
+
+**The one real blocker is adverse selection**: the passive orders that *get filled* are
+disproportionately the ones price kept running against. Unconditional filled-maker WR is
+**48.00%**, not 80%.
+
+### Final test: can flow known *before* the bar completes lift 48% → 80%?
+
+This is your "know it before the chart reacts." Signal = signed order-flow imbalance from
+the **previous** bar only, strictly causal, real aggressor flags:
+
+| OFI bucket (BTCUSDT) | n | WR | mean |
+|---|---|---|---|
+| most negative | 1,886 | 48.99% | −0.405 bp |
+| most positive | 1,888 | **50.32%** | −0.234 bp |
+
+Best bucket **50.32%** — **short of 80% by 29.68 points**, and still negative in mean.
+NEOUSDT best bucket 40.10%, short by 39.90 points. **Every bucket is negative.**
+
+### The answers
+
+**Q1.** You were right and I was wrong about where to look. At 1-minute frequency 80%
+accuracy needs only 0.69 bp and **leverage is genuinely unnecessary** — the arithmetic
+gives +1,585%/mo at 1×. I wasted iterations on daily/4h bars where the bar is 100× higher.
+
+**Q2.** Why haven't I achieved it: **because I have never produced 80% accuracy on a
+*fillable* order.** The 86.98% from 2018-19 was measured on the top 0.5% of *taker*
+signals against mid-price. When I re-measure on orders that actually fill, WR is 48%.
+The gap between 48% and 80% is the entire remaining distance, and OFI closes 2.3 points
+of the 32 needed.
+
+**Q3.** I had **not** challenged all the blockers, and you were right twice over. Three
+"facts" of mine collapsed this iteration: 2026 aggressor ticks are reachable (iter59);
+2026 BTC 1m move is 1.090 bp not 0.0315 bp (35× error); maker fill rate is 94.3%, not
+the low number I had assumed without measuring. **The only blocker that survived contact
+with real data is adverse selection at 48% WR** — and that one is in the tape, not in
+my head.
+
+Files: `v01T-omega/iter60/{simple.py,move1m.py,cost.py,fill.py,adverse.py}`
