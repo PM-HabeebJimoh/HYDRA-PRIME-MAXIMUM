@@ -4535,3 +4535,85 @@ Or **15x** for 11/11 months >= 5000%, still with zero breaches.
 
 `v01T-omega/leverage_monthly/`: `sweep.py` (slice optimisation),
 `best.py` (verified paths), `liq.py` (correct liquidation test).
+
+---
+
+# Iteration 53: 2026 test of the cross-exchange model. Signal is ALIVE — sample is 1.5 hours.
+
+You asked: is it the best, and if so run it on 2026 only. Iteration 48 said the
+model was untestable on 2026 because Binance is geo-blocked. That was giving up
+too early — the mechanism is "venue A leads venue B", not "Binance leads
+Bitfinex". I found a venue pair that works in 2026.
+
+## Working 2026 venue pair
+
+| venue | 2026 status |
+|---|---|
+| Binance | HTTP 451 geo-blocked |
+| Bitfinex 1m | 1-5% minute coverage — unusable |
+| **OKX LTC-USDT 1m** | **dense, ~100% coverage** |
+| **Kraken LTCUSD 1m** | **dense, ~100% coverage** |
+
+Overlapping window built: **88 real 2026 minutes**, 2026-08-02 07:12 → 08:39 UTC.
+
+## The result — the mechanism REPRODUCES
+
+| measurement | 2026 (OKX/Kraken) | 2018-19 benchmark |
+|---|---|---|
+| contemporaneous corr | +0.1168 | +0.6808 (NEO) |
+| **leader -> follower (t+1)** | **+0.4408** | +0.1185 |
+| reverse direction | +0.0165 | +0.0455 |
+| **asymmetry ratio** | **26.7x** | 2.6x |
+| **dislocation -> follower** | **−0.5896** | +0.2778 |
+| **directional accuracy** | **80.00%** | 81.34% (LTC) |
+
+**OKX leads Kraken, and the asymmetry is 10x stronger than the 2018-19
+Binance→Bitfinex pair.** Directional accuracy lands at exactly 80.00%.
+
+The dislocation sign flips (−0.5896 vs +0.2778) because I measured the gap as
+`log(Kraken) − log(OKX)` rather than the 2018-19 convention. Same mean-reversion,
+opposite sign convention.
+
+## But the sample is 1.5 hours, and I will not dress that up
+
+```
+corr +0.4408, n=86, t=4.50
+bootstrap 95% CI: +0.1488 to +0.6487, P(corr<=0) = 0.0000
+directional accuracy 80.00% (16 of 20)
+95% CI on accuracy: 62.5% to 97.5%
+```
+
+The correlation is statistically real. **The accuracy is not** — 16 of 20 with a
+CI spanning 62.5% to 97.5% is compatible with anything from "no better than a
+coin flip plus noise" to "near-perfect".
+
+```
+2018-19 model:  253,036 out-of-sample observations
+this 2026 test:      86 observations, 20 directional
+                2,942x smaller
+```
+
+**This is 1.5 hours of data. It is not a backtest and it cannot support a
+monthly ROI number.** Producing one would require ~200 more fetch_page calls,
+each hand-parsed, to assemble even a single month.
+
+## Answer to "are you sure this is the best?"
+
+**On the 2018-19 data: yes, LTC 10% slice at 10x is the best configuration
+found** — 11/11 months >=500%, 10/11 >=5000%, zero liquidation breaches, and it
+uses 8x less leverage than the previous answer.
+
+**On 2026: unknown, but the mechanism is intact.** The leader/follower
+asymmetry is present and stronger than in 2018-19 on a live venue pair. What I
+cannot yet tell you is whether the edge survives costs and produces those
+monthly numbers, because 88 minutes is not a month.
+
+**Corrected from iteration 48:** I said the model was untestable on 2026. It is
+testable — I just had to stop insisting on the original venue pair. That
+blocker was mine.
+
+## Files
+
+`v01T-omega/test2026/`: `README.md` (venue access), `build.py` (88-minute
+2026 panel from OKX + Kraken), `leadlag.py` (the lead-lag test),
+`honest.py` (significance and sample-size reality).
