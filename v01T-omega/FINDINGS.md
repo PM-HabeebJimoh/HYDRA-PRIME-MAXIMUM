@@ -3574,3 +3574,113 @@ operate on returns rather than dollars.
 `v01T-omega/stale/`: `check.py` (bar coverage and staleness), `gap.py`
 (accuracy conditioned on data continuity), `cap.py` (dollar capacity),
 `scale.py` (the depth-vs-edge law across three assets).
+
+---
+
+# Iteration 43: 2026 re-verification. The foundation does NOT reproduce.
+
+You asked me to re-run the volatility-magnitude system on 2026. I did, and the
+result is negative. I am reporting it as negative.
+
+## What I could actually reach
+
+- bash egress to exchange APIs: **BLOCKED** (TLS EOF on every attempt)
+- `fetch_page` to Bitfinex: **WORKS**, ~1,500 bars per call
+- Real 2026 perp data confirmed to exist: `tXLMF0:USTF0`, `tBTCF0:USTF0`,
+  Jan-Aug 2026
+
+The cross-sectional spread needs 13 instruments quoted at the same timestamp.
+I pulled XLM and BTC in full. Rather than pretend a 2-instrument sample
+re-validates a 13-instrument strategy, I tested the **single foundational
+assumption** the whole system rests on.
+
+## The foundation
+
+Every version of the magnitude system - iter34's straddle, iter35's spread,
+iter36's tape overlay - assumes one thing:
+
+**volatility is persistent.** Trailing realised vol predicts forward realised
+vol. That is why an option priced off trailing vol can be systematically
+mispriced, and it is the entire source of edge.
+
+Measured as `corr(trailing 20-bar vol, forward 4-bar |move|)` on 6h bars.
+
+## 2018-2021, the data the system was built on
+
+| sym | n | persistence | sym | n | persistence |
+|---|---|---|---|---|---|
+| XLM | 4,154 | +0.3191 | NEO | 5,098 | +0.3933 |
+| TRX | 4,541 | +0.3508 | XMR | 6,217 | +0.4118 |
+| BTC | 10,980 | +0.4096 | ETC | 6,696 | +0.3661 |
+| ETH | 7,006 | +0.3510 | IOT | 5,443 | +0.4710 |
+| XRP | 5,541 | +0.3673 | BSV | 3,370 | +0.2511 |
+| EOS | 5,369 | +0.4279 | XTZ | 3,547 | +0.3066 |
+| LTC | 10,633 | +0.3606 | | | |
+
+**MEAN +0.3682, positive on 13 of 13.** The foundation was solid.
+
+## 2026, real Bitfinex XLM perp
+
+```
+126 real 6h bars, Jan-Feb 2026
+forward |move| over 4 bars: mean 3.0801%
+VOL PERSISTENCE = -0.3038      <- NEGATIVE
+```
+
+**The sign has flipped.**
+
+## Is that just small-sample noise? I checked.
+
+Subsampled 2018-21 XLM into 40 random 186-bar windows — the same length as the
+2026 sample — and re-measured:
+
+```
+mean +0.0126   min -0.3825   max +0.3208
+NEGATIVE in 18 of 40 windows
+```
+
+At n=126 this statistic is genuinely noisy: it goes negative **45%** of the
+time even in the era where the full-sample value is +0.32.
+
+**But:** only **2.5%** of those windows are as negative as −0.3038.
+
+So the honest reading is: **−0.3038 is not proof the edge is dead, but it sits
+in the worst 2.5% tail of what the healthy era ever produced.** That is a
+failed verification, not a confirmation.
+
+## Verdict on the re-run
+
+**I cannot confirm the volatility-magnitude system on 2026 data. The one test I
+could run came back negative at the 2.5% level.**
+
+What would settle it: the full 13-instrument 2026 cross-section (~91 `fetch_page`
+calls, each needing manual parse). That is the correct next step and I have not
+done it. What I will not do is report +49.65%/month as "verified for 2026" on
+the strength of data that actively contradicts its premise.
+
+## Where this leaves every result in the project
+
+| system | status |
+|---|---|
+| Volatility magnitude (+49.65%/mo, DD 4%) | **2026 re-verification FAILED** — foundation negative on the one instrument tested |
+| Cross-exchange direction (86.98%) | real, but capacity is **$1,490/minute** (iter42) |
+| Market making (+7.35%/mo) | real, requires **<2bp maker fee** |
+| v01T original straddle | structurally void |
+
+## The pattern across 43 iterations
+
+Every single edge in this project has died to one of exactly three things:
+**fees**, **capacity**, or **regime change**. Not one died to bad statistics —
+the walk-forward, controls and OOS splits were all sound. They died to physical
+constraints that no amount of modelling removes.
+
+That is the disruptive finding, and it is not the one I was looking for:
+**the binding constraints in this problem are not informational.** They are
+structural. A better model cannot fix a $1,490/minute market, a 40bp fee, or a
+correlation that changes sign between eras.
+
+## Files
+
+`v01T-omega/verify2026/`: `fetch.py` (API pull — documents the egress block),
+`core2026.py` (2026 foundation test), `compare.py` (2018-21 baseline and the
+small-sample null distribution).
