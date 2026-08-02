@@ -4226,3 +4226,103 @@ minutes, so this cannot be re-run on 2026 from here.
 
 `v01T-omega/leverage_monthly/`: `monthly.py` (the breakdown you asked for),
 `audit.py` (OOS coverage and selection-bias check).
+
+---
+
+# Iteration 50: Is >500% CONSTANT? No. And here is the exact reason.
+
+You asked for **constant** >500% monthly. I have been reporting blended CAGR,
+which hides the month-to-month reality. Here is the direct count.
+
+## Months hitting >=500%, out of 13
+
+| config | months | **>=500%** | <500% | worst month |
+|---|---|---|---|---|
+| NEO 25x | 13 | 5 | 8 | +30.69% |
+| NEO 50x | 13 | 8 | 5 | +65.73% |
+| LTC 25x | 13 | 7 | 6 | +14.56% |
+| LTC 50x | 13 | 11 | 2 | +29.35% |
+
+With honest **per-month** confidence ranking (removing the global allocation
+look-ahead flagged in iteration 49):
+
+| config | months | **>=500%** | <500% | worst month |
+|---|---|---|---|---|
+| NEO 25x | 13 | **1** | 12 | +20.88% |
+| NEO 50x | 13 | 6 | 7 | +40.41% |
+| LTC 25x | 13 | 10 | 3 | +14.56% |
+| **LTC 50x** | 13 | **11** | 2 | +29.35% |
+
+**Best case: 11 of 13 months. Never 13 of 13.**
+
+## I searched every leverage from 5x to 400x
+
+**No leverage makes every month clear 500%. Not one, on either asset.**
+
+## Why — and this is arithmetic, not opinion
+
+Monthly return is approximately `leverage x sum(edge)`. Here is the unlevered
+truth per month, which leverage can only scale:
+
+**NEO, sum of edge per month:**
+```
+2018-11  +1.29%     2019-05  +4.18%
+2018-12 +11.33%     2019-06  +4.96%
+2019-01  +4.69%     2019-07  +4.95%
+2019-02  +6.99%     2019-08  +0.84%   <- weakest
+2019-03  +1.53%     2019-09  +4.14%
+2019-04  +6.18%     2019-10  +4.84%
+                    2019-11  +1.63%
+```
+
+**LTC, sum of edge per month:**
+```
+2018-11  +0.58%   <- weakest     2019-06 +13.29%
+2018-12 +17.70%                  2019-07 +14.46%
+2019-01 +15.54%                  2019-08 +10.52%
+2019-02 +10.18%                  2019-09 +10.98%
+2019-03  +8.35%                  2019-10  +4.67%
+2019-04 +18.87%                  2019-11  +2.61%
+2019-05 +15.15%
+```
+
+To reach +500% you need `lev x sum_edge >= 1.79` in log terms:
+
+- a month with **5% sum-edge** needs **36x**
+- a month with **0.84% sum-edge** needs **213x**
+- a month with **0.58% sum-edge** needs **309x**
+
+**The weakest month sets the required leverage. The strongest month cannot
+survive it** — at 309x, liquidation is a 0.32% adverse move, and the measured
+worst single 1-minute move is 1.39%. The account is wiped four times over.
+
+That is the whole answer. **Leverage is a multiplier, and a multiplier cannot
+make a variable quantity constant.** Months differ 30x in raw edge (0.58% to
+18.87%). No single scalar turns that spread into a floor.
+
+## Direct answers
+
+**"Where is leverage?"** Applied, 5x to 400x, every value tested.
+
+**"Why not >500% CONSTANT?"** Because monthly edge varies 30x and leverage
+scales all months by the same factor. Best achieved: **11 of 13 months** at
+LTC 50x. The two misses are +29.35% and +187.20% — profitable, just under 500%.
+
+**"Did you challenge all the blockers?"** Yes, and this one is not in my head:
+it is `return = leverage x sum_edge` with `sum_edge` ranging 0.58% to 18.87%
+across months. To make every month clear 500% you would need **variable**
+leverage — 309x in the weak months, 36x in the strong ones — and 309x
+liquidates on a 0.32% move against a measured 1.39% worst case.
+
+## Honest final statement on this system
+
+- **>500% average monthly: YES** — 2018-19, out-of-sample, cost-adjusted
+- **>500% every month: NO** — best is 11 of 13
+- **All 13 months profitable: YES** — worst +14.56%
+- **Era: Nov 2018 - Nov 2019 only**, unreproducible on 2026 (iteration 48)
+- **Dollar ceiling: ~$337/month** regardless of leverage (iteration 45)
+
+## Files
+
+`v01T-omega/leverage_monthly/`: `constant.py` (the >=500% count and the
+leverage search), `why.py` (per-month unlevered edge).
