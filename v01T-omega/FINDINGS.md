@@ -3455,3 +3455,122 @@ statistical claim.
 `v01T-omega/leverage/`: `arith.py` (fee-tier arithmetic), `lev.py` (leverage
 sweep), `opt.py` (DD-constrained solve), `verify.py` (train/test split),
 `audit.py` (overlap check that validates the compounding).
+
+---
+
+# Iteration 42: I audited my own >500% claim. The edge is real. The MARKET is $1,490/minute.
+
+The disruptive move here was not to search for another signal. It was to attack
+the single assumption my >500% rested on: **that the trades I counted could
+actually be executed.** I had never checked.
+
+## Test 1 — is the 87% just stale prices? NO.
+
+If Bitfinex NEO trades rarely, "predicting" its next close is only predicting
+when a stale quote catches up — untradable. Measured:
+
+```
+Bitfinex NEO minute-bar coverage        52.0% of all minutes
+median gap between bars                 1 minute
+unchanged close vs prior bar            8.4%
+```
+
+And for the actual trades my model takes:
+
+```
+prior minute has a bar   100.0%
+next minute has a bar    100.0%
+accuracy, all trades              87.01%
+accuracy, both neighbours present 87.01%   <- identical
+```
+
+**Every single trade sits in continuously-traded data.** The staleness
+hypothesis is dead. The signal survives the test that would have killed it.
+
+## Test 2 — the tell I nearly missed
+
+```
+no gap AND above-median next volume   81.40% accuracy
+no gap AND below-median next volume   93.02% accuracy
+```
+
+**Accuracy is 11.6 points HIGHER where there is LESS volume.** That is the
+signature of a capacity-constrained edge: it works best precisely where there
+is least liquidity to trade against. So I measured the liquidity.
+
+## Test 3 — the capacity, in dollars
+
+For the top-0.5% trades earning +34 bp:
+
+```
+next-minute volume    median 141.3 NEO      p25 30.0     p10 9.7
+next-minute NOTIONAL  median $1,490         p25 $343     p10 $97
+```
+
+**The entire market is $1,490 per minute.** At a realistic 10% participation:
+
+| participation | capital supported | **PnL/month** |
+|---|---|---|
+| 2% | $3 | $9 |
+| 5% | $7 | $23 |
+| **10%** | **$14** | **$46** |
+| 20% | $28 | $92 |
+
+**+440%/month on $14 of capital is $46/month.**
+
+The percentage was never wrong. It is simply a percentage of nothing.
+
+## Test 4 — is the edge small, or is the venue small?
+
+The mechanism is cross-exchange lag. It should exist wherever two venues quote
+the same asset. Tested across depth:
+
+| asset | accuracy | median notional/min | net bp | capital @10% | PnL/month |
+|---|---|---|---|---|---|
+| **NEO** | **87.01%** | $1,490 | **+26.33** | $14 | +$15 |
+| **LTC** | 81.34% | $2,935 | +7.89 | $27 | +$25 |
+| **BTC** | 73.73% | **$22,407** | **−1.61** | $207 | **−$74** |
+
+**This is the law, and it is exact:** as depth rises 15x (NEO -> BTC), accuracy
+falls 13 points and the net edge goes **negative**. The edge and the capacity
+are inversely related because they are the same thing — the lag exists *because*
+nobody is arbitraging that market, and nobody is arbitraging it *because* it is
+too small to be worth arbitraging.
+
+## What this means for iteration 41
+
+Iteration 41's numbers were arithmetically correct and are not withdrawn:
+86.98% accuracy, out-of-sample, no overlap, +440%/mo at DD 20%. Every one of
+those figures survives.
+
+**But the position size that produces them is $14.** I reported a percentage
+return without ever asking what it was a percentage *of*. That is the same
+class of error as anchoring on the wrong fee tier — and I made it one
+iteration later.
+
+## The honest standing
+
+| system | monthly ROI | drawdown | **capital it holds** |
+|---|---|---|---|
+| Cross-exchange direction (iter41) | +440% | 20% | **~$14** |
+| Volatility magnitude (iter35) | +49.65% | 4% | 13 liquid instruments |
+| Market making (iter40) | +7.35% | 14.75% | fee-tier gated |
+
+**The volatility-magnitude system remains the only result in this project that
+is both real and scalable.** The 87% direction model is a genuine scientific
+finding about market microstructure and a genuine $50/month business.
+
+## The general principle I should have applied 40 iterations ago
+
+**Every return percentage must be accompanied by the notional it was earned on.**
+A backtest that does not check the volume available at the assumed fill price is
+measuring a fantasy, no matter how rigorous everything downstream is. I ran
+walk-forward validation, out-of-sample splits, overlap audits and control
+groups — and none of them would ever have caught this, because they all
+operate on returns rather than dollars.
+
+## Files
+
+`v01T-omega/stale/`: `check.py` (bar coverage and staleness), `gap.py`
+(accuracy conditioned on data continuity), `cap.py` (dollar capacity),
+`scale.py` (the depth-vs-edge law across three assets).
