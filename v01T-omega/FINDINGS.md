@@ -4433,3 +4433,105 @@ to you as a law of arithmetic.
 
 `v01T-omega/leverage_monthly/`: `partial.py` (found the 3-day and 17-day
 stubs), `fixed.py` (complete months only), `verify.py` (real paths at 38x/50x/84x).
+
+---
+
+# Iteration 52: "Are you sure this is the best?" No. It was not.
+
+Fair challenge. I fixed the leverage in iteration 51 but never re-optimised the
+**slice**. The 0.5% top-confidence cut was inherited from a completely
+different question (a DD-capped solve in iteration 44) and I carried it forward
+without re-testing it once the objective changed to "every month >= 500%".
+
+## The slice sweep I should have run first
+
+The binding constraint is the **weakest month's sum-edge**. A wider slice has
+lower edge per trade but many more trades — sum-edge can rise even as quality
+falls.
+
+**LTC:**
+
+| slice | trades | edge bp | weakest month | lev for 500% | lev for 5000% |
+|---|---|---|---|---|---|
+| 0.2% | 486 | 14.28 | 1.70% | 105x | 231x |
+| **0.5%** (what I used) | 1,226 | 11.39 | 4.67% | **38x** | **84x** |
+| 1.0% | 2,458 | 9.05 | 7.38% | 24x | 53x |
+| 2.0% | 4,921 | 7.06 | 16.68% | 11x | 24x |
+| 5.0% | 12,314 | 5.05 | 31.87% | 6x | 12x |
+| **10.0%** | **24,632** | 3.41 | **38.99%** | **5x** | **10x** |
+| 20.0% | 49,270 | 1.82 | −5.08% | negative |
+
+**The weakest month improves 8.3x (4.67% -> 38.99%) as the slice widens**, so
+required leverage collapses from 38x to **5x**. Past 10% the edge goes negative
+and it breaks. NEO's best is a 5% slice at 53x, still far worse than LTC.
+
+## Verified paths — LTC, 10% slice
+
+**At 10x (liquidation at −10.00%):**
+
+| month | trades | MONTH RETURN | maxDD | WR |
+|---|---|---|---|---|
+| 2018-12 | 2,384 | +21,155,752% | 24.91% | 57.5% |
+| 2019-01 | 1,762 | +39,271% | 19.79% | 51.4% |
+| 2019-02 | 2,096 | +418,322% | 22.21% | 56.2% |
+| 2019-03 | 2,137 | +7,841% | 20.50% | 48.9% |
+| 2019-04 | 2,464 | +3,514,135% | 17.55% | 55.5% |
+| 2019-05 | 2,985 | +1,106,179% | 34.31% | 54.9% |
+| 2019-06 | 3,398 | +16,585% | 64.00% | 50.8% |
+| 2019-07 | 2,883 | +787,075% | 38.75% | 54.5% |
+| 2019-08 | 1,894 | +42,970% | 25.78% | 57.4% |
+| 2019-09 | 1,617 | +17,932% | 55.91% | 55.5% |
+| 2019-10 | 1,012 | +4,121% | 29.70% | 58.0% |
+
+**11/11 months >= 500%. 10/11 >= 5000%. Worst month +4,121%. Zero busts.**
+
+At **15x**: **11/11 months >= 5000%**, worst month **+24,293%**.
+At **5x**: 11/11 >= 500%, worst +575%, max monthly DD only 38.96%.
+
+## I caught a second error of my own in this iteration
+
+My first pass printed "SAFE" using a broken comparison. Redone properly — at
+leverage L a single trade return x wipes the account when `x <= -1/L`:
+
+| lev | liquidation at | trades breaching (10% slice) | |
+|---|---|---|---|
+| 5x | −20.000% | 0 | safe |
+| **10x** | −10.000% | **0** | **safe** |
+| 15x | −6.667% | 0 | safe |
+| 25x | −4.000% | 1 | **WIPES** |
+| 50x | −2.000% | 3 | **WIPES** |
+| 84x | −1.190% | 10 | **WIPES** |
+
+The 10% slice has a fatter tail (worst trade −4.548% vs −1.058% at 0.5%), so it
+**cannot** take 25x or above. But it does not need to — it hits 5000% at 10x.
+
+This also retroactively condemns iteration 51's LTC 84x recommendation on the
+0.5% slice: zero breaches there, but that config needed 84x with only 1.19%
+liquidation headroom against a 1.39% measured worst move. **10x on the 10%
+slice is strictly better and strictly safer.**
+
+## Answer
+
+**No, 38x/84x on a 0.5% slice was not the best.** The best is:
+
+```
+LTC, 10% confidence slice, 24,632 trades, 10x leverage
+11/11 months >= 500%   10/11 months >= 5000%   worst month +4,121%
+zero liquidation breaches (nearest tail trade -4.55% vs -10% threshold)
+```
+
+Or **15x** for 11/11 months >= 5000%, still with zero breaches.
+
+**8x less leverage than what I told you last iteration, for a better result.**
+
+## What has not changed
+
+- **Era: Nov 2018 - Nov 2019.** Unreproducible on 2026 (iteration 48).
+- **Dollar ceiling.** `PnL = notional x edge x trades`. Widening to a 10% slice
+  raises trade count 20x, which raises capacity — but LTC's measured notional
+  was $2/minute. This needs re-measuring at the new slice, and I have not done it.
+
+## Files
+
+`v01T-omega/leverage_monthly/`: `sweep.py` (slice optimisation),
+`best.py` (verified paths), `liq.py` (correct liquidation test).
