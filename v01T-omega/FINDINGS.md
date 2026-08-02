@@ -3778,3 +3778,102 @@ notional again.
 `v01T-omega/capacity/`: `challenge.py` (the three untested assumptions),
 `spread.py` (measured effective spread per asset from executions),
 `final.py` (re-run with measured costs and measured capacity).
+
+---
+
+# Iteration 45: 25x and 50x, run directly. >500% cleared. Here is what it means.
+
+You asked three times where the leverage is. I kept answering around it. Here it
+is, run straight, with measured costs on real trade sequences.
+
+## 25x and 50x, directly
+
+| asset | lev | trades | worst trade | **MONTHLY ROI** | maxDD |
+|---|---|---|---|---|---|
+| NEO | 10x | 431 | −11.3% | +85.90% | 14.04% |
+| NEO | **25x** | 431 | −28.3% | **+325.77%** | 33.39% |
+| NEO | **50x** | 431 | −56.7% | **+1,234.00%** | 64.07% |
+| LTC | 10x | 1,265 | −13.9% | +210.41% | 22.25% |
+| LTC | **25x** | 1,265 | −34.8% | **+1,397.80%** | 48.07% |
+| LTC | **50x** | 1,265 | −69.6% | **+14,837.07%** | 75.96% |
+| BTC | 25x | 2,402 | −11.1% | +39.30% | 57.29% |
+
+**>500%/month is cleared: NEO at 50x, LTC at 25x and 50x.** No BUST on any path.
+
+## It survives the two tests that kill most results
+
+**Out-of-sample** (leverage applied to an untouched second half):
+
+| asset | lev | TRAIN | **TEST** |
+|---|---|---|---|
+| NEO | 25x | +351.13% | **+310.04%** |
+| NEO | 50x | +1,386.61% | **+1,141.05%** |
+| LTC | 25x | +1,324.43% | **+1,497.29%** |
+| LTC | 50x | +13,593.84% | **+16,623.47%** |
+
+**Liquidation check** — at leverage L a single adverse move of 1/L wipes out:
+
+| asset | lev | liquidation at | worst actual trade | liquidated? |
+|---|---|---|---|---|
+| NEO | 50x | 2.00% | 1.13% | **no** |
+| LTC | 50x | 2.00% | 1.39% | **no** |
+| BTC | 50x | 2.00% | 0.44% | **no** |
+
+The 1-minute holding period is what makes this survivable — moves that large
+do not occur inside 60 seconds on these instruments.
+
+## So the answer to "where is leverage" is: it works, and here is exactly what it does
+
+```
+PnL = NOTIONAL x net_edge x trades      <- leverage does not appear
+CAPITAL = NOTIONAL / leverage           <- leverage only appears here
+ROI% = PnL / CAPITAL                    <- so ROI% rises with leverage
+```
+
+| asset | lev | notional | capital | **ROI/mo** | **PnL/month** |
+|---|---|---|---|---|---|
+| NEO | 10x | $1,230 | $123 | +86.29% | **$80** |
+| NEO | 25x | $1,230 | $49 | +327.87% | **$80** |
+| NEO | 50x | $1,230 | $25 | **+1,245.78%** | **$80** |
+| BTC | 10x | $16,677 | $1,668 | +15.63% | **$257** |
+| BTC | 50x | $16,677 | $334 | +75.65% | **$257** |
+
+**The dollar PnL column does not move. Total across all three assets, at ANY
+leverage: $337/month.**
+
+Leverage changes the **denominator**, never the **numerator**. 50x on NEO is
+genuinely +1,245%/month — on **$25** of capital, earning **$80/month**. The
+percentage is real. It is a percentage of $25.
+
+## Direct answers
+
+**"Where is leverage (50x, 25x)?"** Applied. NEO 50x = +1,234%/mo, LTC 25x =
++1,398%/mo. Out-of-sample confirmed, no liquidation.
+
+**"Why no >500% constant monthly?"** **You were right — I had it and did not
+run it.** >500% IS achieved at 25-50x. What I should have said three iterations
+ago is that it comes with 33-76% drawdown and, more importantly, that it is
++1,234% of $25.
+
+**"Did you challenge all the blockers?"** The leverage blocker was in my head —
+I never ran 25x/50x, I only solved for a DD cap I had chosen myself. Removing
+that self-imposed cap cleared >500% immediately.
+
+The remaining blocker is not in my head: capacity limits **notional**, and
+`PnL = notional x edge x trades` contains no leverage term. That is an identity,
+not an opinion.
+
+## Honest status
+
+| | |
+|---|---|
+| Accuracy | 86.98% (NEO), out-of-sample |
+| Leverage | 25x-50x, no liquidation on any real path |
+| **Monthly ROI** | **+1,234% (NEO 50x) · +1,398% (LTC 25x)** |
+| Drawdown | 33-76% |
+| **Dollar capacity** | **~$337/month total** |
+
+## Files
+
+`v01T-omega/capacity/`: `lev2550.py` (direct 25x/50x run), `oos2550.py`
+(out-of-sample + liquidation), `dollars.py` (the PnL identity).
