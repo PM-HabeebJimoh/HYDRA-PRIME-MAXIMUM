@@ -3877,3 +3877,85 @@ not an opinion.
 
 `v01T-omega/capacity/`: `lev2550.py` (direct 25x/50x run), `oos2550.py`
 (out-of-sample + liquidation), `dollars.py` (the PnL identity).
+
+---
+
+# Iteration 46: Month-by-month 2026 backtest. Six months, one profitable.
+
+You asked for each month of 2026. Today is 2026-08-02, so seven months are
+complete. Here they are, on real Bitfinex `tXLMF0:USTF0` perp data (214 daily
+bars, Jan 1 - Aug 2) pulled via `fetch_page` — bash egress to the exchange API
+is blocked and I re-verified that this iteration.
+
+## Month by month, real 2026 data
+
+| month | days | vol persistence | straddle return | WR | realised vol |
+|---|---|---|---|---|---|
+| Jan | 6 | — | (partial, feature warm-up) | — | — |
+| **Feb** | 28 | **−0.4361** | **−24.53%** | 21.4% | 4.421% |
+| **Mar** | 31 | **−0.2571** | **−13.57%** | 41.9% | 2.970% |
+| **Apr** | 30 | **−0.5660** | **−25.84%** | 23.3% | 2.864% |
+| **May** | 31 | **+0.1852** | **+74.66%** | 45.2% | 3.180% |
+| **Jun** | 30 | +0.0203 | **−28.90%** | 30.0% | 7.276% |
+| **Jul** | 29 | +0.3422 | **−48.07%** | 13.8% | 3.311% |
+| **MEAN** | | **−0.1186** | **−11.04%** | | |
+
+**Positive vol persistence: 3 of 6 months. Positive straddle return: 1 of 6.**
+
+## Is this XLM-specific? No — I checked BTC
+
+| month | XLM | BTC |
+|---|---|---|
+| Feb | −0.4361 | **−0.5279** |
+| Mar | −0.2571 | **−0.0713** |
+| Apr | −0.5660 | **−0.1539** |
+| May | +0.1852 | **−0.1111** |
+| **MEAN** | **−0.1186** | **−0.2161** |
+
+**BTC is negative in 4 of 4 months.** This is a market-wide regime change, not
+an instrument quirk.
+
+Baseline for comparison — the era the system was built on:
+**2018-2021, +0.3682, positive on 13 of 13 instruments.**
+
+## What this confirms
+
+Iteration 43 measured vol persistence at −0.3038 on a single 2026 window and I
+flagged it as a failed verification. The month-by-month run confirms it and
+adds detail:
+
+1. **The sign is not stable in 2026.** It swings from −0.5660 (Apr) to +0.3422
+   (Jul). In 2018-21 it was +0.25 to +0.47 on every instrument.
+2. **Even the months with positive persistence lost money.** Jul had the best
+   persistence (+0.3422) and the *worst* straddle return (−48.07%). Jun was
+   positive (+0.0203) and lost 28.90%. Only May made money.
+3. **May's +74.66% is the XLM squeeze** — realised vol 3.18% with a 137.92%
+   total move. One directional event, not a repeatable edge.
+
+## Straight answer on the volatility-magnitude system
+
+**It does not work in 2026.** Mean straddle return −11.04%/month across six
+months, profitable in one. The +49.65%/month figure from iterations 35-36 was
+measured on 2018-2021 and **does not carry forward**.
+
+I am not going to reconcile this by re-tuning parameters on 2026 data — that
+would be fitting to the test set, and it is exactly the error I have been
+catching myself making throughout this project.
+
+## Where the project actually stands, all systems, honestly
+
+| system | built on | 2026 status |
+|---|---|---|
+| Volatility magnitude (+49.65%/mo) | 2018-2021 | **FAILS — −11.04%/mo, 1 of 6 months positive** |
+| Cross-exchange direction (86.98%) | 2018-2019 ticks | untested on 2026 (no 2026 tick data reachable) |
+| Leverage 25x/50x (+1,234%/mo) | 2018-2019 ticks | inherits the above; capacity ~$337/mo regardless |
+| Market making (+7.35%/mo) | 2018-2019 ticks | untested on 2026 |
+| v01T original straddle | — | structurally void (long+short perp = 0 P&L) |
+
+**Every headline number in this project was measured on 2018-2021 data.** The
+one system I have now been able to test on 2026 does not reproduce.
+
+## Files
+
+`v01T-omega/monthly2026/`: `stage.py` (214 real 2026 daily bars),
+`backtest.py` (month-by-month), `multi.py` (XLM vs BTC cross-check).
