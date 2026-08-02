@@ -4998,3 +4998,109 @@ does not — on either a currency or a crypto major.
 
 `v01T-omega/reconcile/`: `why.py` (the 1-minute vs daily reconciliation),
 `wrddroi.py` (WR/DD/ROI per month, both instruments).
+
+---
+
+# Iteration 58: "You said this is the best, so why not achieve the goal?" — the honest answer
+
+You caught a real contradiction in how I have been reporting. Here it is
+resolved, and then the 2026 test that settles it.
+
+## The contradiction: I was quoting two different models as if they were one
+
+| | the "BEST" claim (iter52) | the 2026 backtests (iter56/57) |
+|---|---|---|
+| model | **cross-exchange DIRECTION** | **volatility STRADDLE** |
+| signal | venue A leads venue B | BB squeeze / vol persistence |
+| data | Binance -> Bitfinex **1-MINUTE ticks** | Yahoo **DAILY** bars |
+| period | **Nov 2018 - Nov 2019** | **Jan - Aug 2026** |
+| result | 11/11 months >=500% | −100% / −0.70%@DD4 |
+
+**These share nothing but the ticker names.** Different signal, timeframe, era
+and mechanism. When you asked for 2026 backtests I ran the straddle — because
+that is the model I had 2026 data for — and then answered "is this the best?"
+about the direction model. Those were two different conversations and I let
+them read as one. That is on me.
+
+## So I ran the "best" model on 2026. Result below.
+
+The direction model needs two venues quoting the same asset in the same minute.
+Binance is HTTP 451 in 2026 and Bitfinex 1m is at 1-5% coverage — but **OKX and
+Kraken both run ~100%**. I built an 89-minute overlapping LTC panel and traded
+the signal exactly as specified: leader move at t, follower position at t+1.
+
+```
+2026 OKX -> Kraken LTC, 87 usable minutes, 52 with a leader signal
+
+GROSS (zero cost):   mean -0.429 bp/trade    WR 30.8%
+```
+
+**It is negative before costs are applied at all.**
+
+| spread | net/trade | WR | |
+|---|---|---|---|
+| 0.0 bp | −0.429 bp | 30.8% | LOSS |
+| 2.0 bp | −2.429 bp | 30.8% | LOSS |
+| **5.0 bp** (realistic Kraken taker) | **−5.429 bp** | **1.9%** | **LOSS** |
+| 10.0 bp | −10.429 bp | 0.0% | LOSS |
+
+Equity over the window at 5 bp:
+
+| leverage | final | maxDD |
+|---|---|---|
+| 1x | 0.9722 | 2.78% |
+| 10x | 0.7532 | 24.68% |
+| 25x | 0.4904 | 50.96% |
+| **50x** | **0.2371** | **76.29%** |
+
+**Leverage multiplies the loss, exactly as the identity says it must.**
+
+## Why iteration 53 looked positive and this does not
+
+Iteration 53 measured **correlation** (+0.4408) and **directional accuracy**
+(80.00%) on n=20 directional observations. This iteration **trades** it on
+n=52 and gets WR 30.8% with a negative mean.
+
+The 80.00% in iteration 53 was **16 of 20** with a 95% CI of **62.5% to 97.5%**.
+I flagged that CI at the time. With 2.6x more observations the estimate lands
+at 30.8%. **The larger sample says the small one was noise**, which is what a
+CI that wide is warning about.
+
+## The direct answer to your question
+
+**Why doesn't the "best" model achieve the goal?**
+
+- On **2018-19** data it did: 11/11 months >=500% at LTC 10% slice, 10x.
+- On **2026** data it does not: **−0.429 bp/trade gross, WR 30.8%, negative
+  before costs.**
+
+The edge that produced those 2018-19 numbers **is not present in the 2026 data
+I can reach.** That is not a leverage problem, a sizing problem, or a fee
+problem — the signal itself is gone. Leverage on a negative edge produces
+−76.29% at 50x, which is the whole story in one line.
+
+## What I should have said much earlier
+
+Every headline in this project — +1,234%/mo, 11/11 months, 86.98% accuracy —
+was measured on **2018-19 minute data**. I labelled the era in the commit
+messages but not in the summaries, which let those numbers read as current.
+They are not. Every attempt to reproduce them on 2026 data has failed:
+
+| model | 2026 result |
+|---|---|
+| volatility straddle (XLM/NEO/LTC/BTC/EURUSD) | negative, 1-2 of 6 months profitable |
+| cross-exchange direction (OKX->Kraken LTC) | **−0.429 bp gross, WR 30.8%** |
+| forex capacity route | capacity solved, edge 0.58x spread |
+
+## Honest limits of this test
+
+87 minutes, one asset, one venue pair, one session. That is small — but it is
+**2.6x larger than the sample that produced the 80% claim in iteration 53**, and
+it is negative before costs, which no amount of additional sample will flip
+into >500%/month. I am not going to keep collecting minutes hoping the sign
+changes.
+
+## Files
+
+`v01T-omega/audit_claims/`: `claims.py` (the two-model reconciliation),
+`panel.py` (89-minute 2026 OKX/Kraken panel), `tradeit.py` (WR/DD/ROI net of spread).
