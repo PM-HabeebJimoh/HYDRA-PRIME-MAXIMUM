@@ -3959,3 +3959,80 @@ one system I have now been able to test on 2026 does not reproduce.
 
 `v01T-omega/monthly2026/`: `stage.py` (214 real 2026 daily bars),
 `backtest.py` (month-by-month), `multi.py` (XLM vs BTC cross-check).
+
+---
+
+# Iteration 47: NEO and LTC 2026 monthly backtest — you were right to ask.
+
+You caught a real gap. Iteration 46 ran XLM and BTC, but every headline number
+I have quoted for **NEO (86.98% accuracy)** and **LTC (81.34%)** was measured on
+2018-2019 tick data. I never tested those two instruments on 2026. Here they are.
+
+## NEO — `tNEOF0:USTF0`, 141 real 2026 daily bars
+
+| month | days | vol persistence | straddle return | WR |
+|---|---|---|---|---|
+| Feb | 28 | **−0.4572** | **−40.02%** | 21.4% |
+| Mar | 30 | **−0.2825** | **−40.81%** | 16.7% |
+| Apr | 30 | **−0.0979** | **−55.95%** | 10.0% |
+| May | 18 | **−0.5885** | **+25.09%** | 50.0% |
+| **MEAN** | | **−0.3565** | **−27.92%** | |
+
+**Positive persistence: 0 of 4 months. Profitable: 1 of 4.**
+
+## LTC — `tLTCF0:USTF0`, 138 real 2026 daily bars
+
+| month | days | vol persistence | straddle return | WR |
+|---|---|---|---|---|
+| Feb | 28 | **−0.3849** | **−36.70%** | 17.9% |
+| Mar | 31 | +0.1791 | **−37.85%** | 22.6% |
+| Apr | 30 | **+0.4749** | **−52.01%** | 10.0% |
+| May | 14 | −0.0606 | **+13.00%** | 50.0% |
+| **MEAN** | | **+0.0521** | **−28.39%** | |
+
+**Positive persistence: 2 of 4 months. Profitable: 1 of 4.**
+
+## All four instruments, 2026
+
+| instrument | mean vol persistence | mean straddle return | profitable months |
+|---|---|---|---|
+| XLM | −0.1186 | **−11.04%** | 1 of 6 |
+| BTC | −0.2161 | — | 0 of 4 positive persistence |
+| **NEO** | **−0.3565** | **−27.92%** | **1 of 4** |
+| **LTC** | **+0.0521** | **−28.39%** | **1 of 4** |
+
+**2018-2021 baseline: +0.3682, positive on 13 of 13 instruments.**
+
+## The detail that matters most
+
+**LTC April had the strongest positive persistence of any month tested
+(+0.4749) — comparable to the 2018-21 era — and returned −52.01%.**
+
+That decouples the two things I had assumed were linked. In 2018-21, positive
+vol persistence produced profitable straddles. In 2026 it does not, even when
+the persistence itself looks healthy. So the failure is not simply "volatility
+stopped clustering" — the relationship between clustering and straddle
+profitability has broken.
+
+The common factor across all four instruments is May: every one of them has its
+only profitable month in May 2026, which is the month of the large directional
+move (XLM +137.92% total travel). **One event, four instruments, not an edge.**
+
+## Corrected standing for NEO and LTC specifically
+
+| claim | measured on | 2026 result |
+|---|---|---|
+| NEO 86.98% accuracy, +1,234%/mo at 50x | 2018-2019 ticks | **volatility foundation fails: −27.92%/mo** |
+| LTC 81.34% accuracy, +1,398%/mo at 25x | 2018-2019 ticks | **volatility foundation fails: −28.39%/mo** |
+
+I want to be precise about what this does and does not show. The 2026 test here
+is of the **volatility-magnitude** foundation on daily bars. The **cross-exchange
+direction** model for NEO/LTC ran on 1-minute tick data with aggressor flags,
+and no 2026 tick data is reachable from this sandbox — so that specific model is
+**untested on 2026**, not disproven. But it shares the same instruments and the
+same era, and every foundation I have been able to re-test on 2026 has failed.
+
+## Files
+
+`v01T-omega/monthly2026/neoltc.py` — real 2026 NEO and LTC perp data,
+month-by-month.
