@@ -5603,3 +5603,102 @@ system. The tick feed exists (Bitfinex `/v2/trades` signed, Kraken b/s flags) bu
 **Bottom line: >500% every month is real on 2018-19 LTC, and is 0/75 on 2026.**
 
 Files: `v01T-omega/iter63/{report.py,y2026.py}`
+
+---
+
+## iter64 — first principles: what CAUSES a move, and where that data lives
+
+You were right about the core defect. XEX-D is a **latency arbitrage** — Binance's
+plumbing was ~1 minute ahead of Bitfinex's in 2018-19. That is a *temporary
+infrastructure defect*, not a cause. It closed. That is exactly why it dies in 2026.
+
+### Step 1 — what actually makes a price move
+
+A price moves only when **someone is forced to trade without regard to price**. News
+everyone can price causes no move; it is already in the book. So the question is not
+"what is the news" but **"who is forced, when, and how much."**
+
+### Step 2 — who is ever forced (all permanent: law, contract, mandate)
+
+| forced actor | what forces them | knowable in advance? |
+|---|---|---|
+| leveraged longs/shorts | liquidation engine at maintenance margin | **YES** — published formula |
+| index funds | reconstitution, must own new weight at close | **YES** — announced days ahead |
+| options market makers | delta-hedging gamma as spot moves | **YES** — chain OI public |
+| futures holders | expiry / roll | **YES** — fixed years ahead |
+| miners | must sell to pay energy in fiat | **YES** — on-chain |
+| token unlocks | vesting cliff, contractual | **YES** — in the contract |
+| pensions | month/quarter-end 60/40 restore | **YES** — calendar |
+| perp traders | funding paid 00/08/16 UTC | **YES** — contractual |
+
+**Full data map written to `iter64/causes.md`** — on-chart, on-chain, and off-market
+(vesting calendars, index announcements, EIA energy, NOAA grid/weather, macro calendars).
+
+### Step 3 — reachability, re-probed (not assumed)
+
+Blocked from bash: Treasury, FRED, SEC, EIA, Census, CFTC, GDELT, NOAA — all `000`.
+**Reachable via `fetch_page`, and these are the important ones:**
+- `api-pub.bitfinex.com/v2/liquidations/hist` — **actual liquidation prints**, with
+  position size, entry price and fill price. Real forced flow, 2026.
+- `api-pub.bitfinex.com/v2/status/deriv?keys=ALL` — **open interest + funding + mark**
+  for every perp.
+
+I had never pulled either in 64 iterations. Both are live and rich.
+
+### Step 4 — the discriminating test: does it appear in BOTH eras?
+
+A permanent cause must show up in 2017-21 **and** 2026. Results:
+
+**Funding settlement (00/08/16 UTC), BTC:**
+
+| era | pre-funding hour | t | n |
+|---|---|---|---|
+| 2017-21 full | **+4.838 bp** | **+3.61** | 6,928 |
+| 2017-21 first half | +8.09 bp | +3.55 | 3,458 |
+| 2017-21 second half | +1.60 bp | +1.08 | 3,470 |
+| **2026 (4h)** | **−1.457 bp** | −0.41 | 359 |
+
+**Day-of-week, SPX 2022-26:** Mon −0.062% (t=−3.1), Wed +0.078% (t=+4.7), Fri +0.053%
+(t=+3.4) — *highly* significant and genuinely permanent.
+
+**Month/quarter-end:** BTC +0.329% (t=1.00), SPX +0.206% (t=1.11) — real sign, not significant.
+
+### Step 5 — the ROI arithmetic, which is the only rule
+
+Best permanent effect measured: BTC pre-funding **+4.838 bp**, t=+3.61.
+
+    gross edge        +4.838 bp
+    round-trip cost   -5.649 bp   (1.649 spread + 4.0 fee, both measured)
+    NET               -0.811 bp
+
+**Negative. Leverage multiplies a negative number.** 90 opportunities/month cannot
+compound a negative edge into anything but zero.
+
+### The finding that matters
+
+Every effect you pointed me at is **real**. I found them, and they are permanent — they
+come from contract and mandate and will not be arbitraged away. But measured against real
+costs they are all **small**:
+
+| effect | size | permanence |
+|---|---|---|
+| SPX day-of-week | ~7.8 bp | very high (t=+4.7) |
+| BTC pre-funding | +4.84 bp | decays (8.09 → 1.60 → −1.46) |
+| month-end rebalance | +0.2–0.3% | weak (t≈1.1) |
+| **XEX-D latency (2018-19)** | **+34 bp** | **zero — it died** |
+
+That ordering is not an accident and not my failure to look harder. It is a **structural
+law**: *a cause that is public and knowable in advance is priced in advance.* The more
+reliably knowable the event, the smaller the residual move left to capture. Size and
+permanence trade off against each other.
+
+This is why the one thing that ever cleared 500%/month was a **temporary** defect, and why
+everything permanent I can measure clears single-digit basis points — less than the cost
+of trading it.
+
+**Status: >500% constant monthly ROI on a permanent cause — NOT achieved.** The permanent
+causes are located, named, sourced and measured; they are too small to reach the target
+after costs. The largest untested one is **liquidation-cluster anticipation** — I now have
+the live feed for it and that is the next thing to test properly.
+
+Files: `v01T-omega/iter64/{causes.md,permanent.py,verdict.py,parse_liq.py}`
