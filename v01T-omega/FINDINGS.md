@@ -5955,3 +5955,83 @@ only directional number in this project I can still stand behind.
 This is bug #12, and the most expensive one: it invalidated the project's headline result.
 
 Files: `v01T-omega/iter68/{audit87.py,btc_ceiling.py}`
+
+---
+
+## iter69 — the formulas were wrong by CONSTRUCTION. Rebuilt tradable-only.
+
+You said the calculations and formula design were wrong. They were, in four specific ways.
+
+### Error 1 — I was predicting something smaller than the cost of trading it
+
+BTC median 1-minute σ = **6.149 bp**. Round-trip cost = **5.65 bp** = **0.92×** that σ.
+**A perfect oracle on next-1-minute direction still loses money.** No formula fixes a
+target chosen below the cost floor.
+
+### Error 2 — "sign of next close" is not an order you can place
+
+A real trade is: enter, then hit a **target or a stop first** — path-dependent. Using
+close-to-close threw the path away, which is also what let bid-ask bounce fake 87% (iter68).
+
+### Error 3 — forcing a prediction on every bar
+
+Diluted by no-information bars. A tradable system abstains by default.
+
+### Error 4 — the deepest: I never separated PAYOFF GEOMETRY from SKILL
+
+For a driftless walk with target `+a` and stop `−b`:  **P(win) = b/(a+b)**.
+
+So **85% win rate is FREE** — set a=0.5σ, b=3σ → 85.7%, expectancy exactly zero.
+**Proved numerically this iteration:** BTC at a=0.5, b=3.0 gave **WR 82.76%** against a
+free baseline of **85.71%** → **negative skill, −0.34R per trade.**
+
+**Any "85% accuracy" claim that doesn't state its barrier ratio is reporting geometry, not
+skill.** I could have handed you 85% at any point in this project by widening the stop, and
+it would have been worthless. The only honest metric is **EDGE = P_observed − b/(a+b)**.
+
+### The corrected system
+
+Entry at **next bar's OPEN** · target/stop in **bp** · resolved by walking forward through
+**HIGH/LOW** · **pessimistic** tie-break (stop wins) · **non-overlapping** (one position at
+a time) · costs charged · threshold **frozen on train** · edge measured against the baseline.
+
+### The cost wall, quantified
+
+| stop | stop bp | cost in R | viable (<0.10)? |
+|---|---|---|---|
+| 1σ | 6.15 | 0.919 | no |
+| 3σ | 18.45 | 0.306 | no |
+| **10σ** | **61.49** | **0.092** | **YES** |
+
+**Stops must be ≥ ~60bp**, which forces a horizon of **hours, not one candle**. That is a
+data-derived design constraint, not a preference.
+
+### Results — corrected system, out-of-sample, costs charged
+
+**BTCUSDT** (cost 5.65bp):
+
+| target | stop | N | n | WR | baseline | **EDGE** | **netR** |
+|---|---|---|---|---|---|---|---|
+| 240 | 120 | 240 | 1,477 | 43.94% | 33.33% | **+10.61** | −0.0475 |
+| 180 | 60 | 240 | 2,073 | 33.96% | 25.00% | **+8.96** | −0.1189 |
+| **240** | **120** | **1440** | **774** | 38.76% | 33.33% | **+5.43** | **+0.0383** |
+| **120** | **240** | **1440** | **818** | 67.48% | 66.67% | +0.81 | **+0.0157** |
+| 60 | 180 | 1440 | 1,539 | **76.15%** | 75.00% | +1.15 | −0.0101 |
+
+**Two configurations are net-positive after real costs** — the first genuinely tradable,
+path-resolved, non-overlapping results in this project.
+
+**LTCBTC**: best edge **+11.25** points (240/120/240) but **every** config is net-negative
+after its 5.15bp cost. LTC does not clear its own cost wall.
+
+### The honest statement on 85%
+
+- **85% WR is trivially available** (a=0.5σ, b=3σ → 85.7% free) and worth **zero**.
+- **85% WR with positive skill is not available** in this data. Best real edge: **+10.61
+  points above baseline** (BTC 240/120), and the best *net* result is **+0.0383R/trade**.
+- The largest genuine WR with positive edge and near-breakeven cost is **76.15%** (BTC
+  60/180/1440, edge +1.15).
+
+I am not going to widen a stop to hand you an 85% number that loses money.
+
+Files: `v01T-omega/iter69/{DIAGNOSIS.md,triple.py,fix_sign.py,costwall.py,final.py}`
