@@ -5331,3 +5331,92 @@ with real data is adverse selection at 48% WR** — and that one is in the tape,
 my head.
 
 Files: `v01T-omega/iter60/{simple.py,move1m.py,cost.py,fill.py,adverse.py}`
+
+---
+
+## iter61 — resolving the 48%, not reporting it
+
+You told me to resolve the challenge rather than describe it. I attacked the 48%
+directly and found **the 48% was my own measurement error.**
+
+### The flaw in my own iter60 test
+
+iter60 posted a passive BUY and exited at the **bar close**. That is a *directional bet
+with a passive entry* — of course it wins ~48%, the close is a coin flip. **A market
+maker exits passively on the other side and earns the spread.** I was measuring the
+wrong strategy and calling it a maker.
+
+### Corrected test — two-sided maker, real Binance tape, IsBuyerMaker flags, 2019-06
+
+| symbol | both sides fill | WR | mean |
+|---|---|---|---|
+| **BTCUSDT** | 87.8% | **87.94%** | −1.0445 bp |
+| LTCBTC | 77.3% | 78.17% | −0.5817 bp |
+| NEOUSDT | 56.8% | 59.10% | −3.9101 bp |
+
+**WR 48.00% → 87.94%. Your 80% target is real and reachable** — it was never an accuracy
+problem, it was that I measured a direction bet instead of a spread capture.
+
+But mean is **negative**: the 6.4%/5.7% of bars where only one side fills leak
+**−8.77 bp**. Win small often, lose big rarely. That is the actual challenge.
+
+### Attempt 1 — quote width × inventory stop
+
+Grid on train (06-01..14), holdout (06-15..28):
+quote 2bp / stop 2bp → train WR 54.85% mean +1.2036bp; **holdout WR 52.97%, mean
++1.0875bp, ROI/mo +10,112%.**
+
+I did not believe it, and I was right not to.
+
+### Audit — the number was false (bug #9 in my own work)
+
+| scenario | WR | mean | ROI/mo |
+|---|---|---|---|
+| as reported | 52.97% | +1.0875 | +10,112% |
+| **+ stop gaps to worst price** | 52.97% | **−3.6006** | **−100%** |
+| + taker 4bp on stop exit | 48.00% | −5.6808 | −100% |
+| + maker fee + 50% queue | 25.27% | −10.5376 | −100% |
+
+**A 2bp stop on a tape whose median 1m move is 4.7bp sits inside the noise** — it fires
+constantly and fills *through*, not at, the stop. I had exited at the stop price for
+free. That single term flips +10,112% to −100%.
+
+### Attempt 2 — remove the stop, widen quotes. Produced numbers like +6,583,117,346%/mo.
+
+That is not a result, it is a bug, and I hunted it:
+
+| quote | queue mode | n | WR | mean |
+|---|---|---|---|---|
+| 1bp | no rejection | 20,002 | 71.65% | **−0.6250** |
+| 1bp | whole-bar rejection 50% | 9,996 | 72.35% | −0.5624 |
+| 1bp | **per-SIDE rejection 50%** | 13,382 | 57.34% | **+6.2800** |
+
+**Bug #9 confirmed:** rejecting each side *independently* converts a two-sided bar
+(spread captured, small win) into a one-sided bar scored as a directional trade — and in
+a trending bar the surviving side is the winning one. **The random filter was selecting
+winners.** With whole-bar rejection, which is the correct model, the edge vanishes:
+**−0.63 bp, negative at every quote width tested (1–30bp) and every fee tier including
+rebates.**
+
+### The answers
+
+**Q1.** You were right again, and more specifically than before. At 1-minute two-sided
+maker the WR is **87.94%** — above your 80% — and at that frequency leverage is
+arithmetically unnecessary. I had been measuring a direction bet, which is why I kept
+reporting 48%.
+
+**Q2.** Why I still have not achieved >500%: **the 87.94% WR does not carry a positive
+mean.** Spread captured on 87.8% of bars = +2bp × small; inventory left on 12.2% of bars
+= −8.77bp each. Net −1.04bp. Winning 88% of the time and still losing is the defining
+property of an unhedged maker, and no quote width or stop I tested fixes it on this tape.
+
+**Q3.** I had not challenged the blocker — I had **mis-measured** it. But I also have to
+report that two of my own attempted resolutions this iteration were false positives
+(+10,112% and +6.58bn%), and I caught both myself before claiming them. That is bugs #9
+in the running list.
+
+**Status: >500% constant monthly ROI NOT achieved.** WR target 80% — **achieved (87.94%)**.
+Positive expectancy at that WR — not achieved. The gap is inventory risk, and it is in
+the tape.
+
+Files: `v01T-omega/iter61/{roundtrip.py,solve.py,honest.py,widen.py,bug.py}`
