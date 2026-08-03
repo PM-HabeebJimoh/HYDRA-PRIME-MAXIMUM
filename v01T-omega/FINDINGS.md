@@ -5524,3 +5524,82 @@ slice lookahead. Neither killed the result. The one real constraint left is capa
 reasoning.
 
 Files: `v01T-omega/iter62/{liqtruth.py,causal.py,capacity.py}`
+
+---
+
+## iter63 — the four questions: name, mechanism, per-month DD/WR, and 2026
+
+### 1. Name
+
+**XEX-D** — *Cross-EXchange Dislocation, Directional*. Built in `v01T-omega/`, distinct
+from the `v01T-model/` straddle app (untouched). Pipeline:
+`crossflow/sync.py` → `beyond/full.py` → `iter62/causal.py`.
+
+### 2. How it works — one sentence, then the mechanism
+
+**Binance and Bitfinex quote the same coin; Binance's aggressive order flow moves first,
+so the gap between the two venues predicts Bitfinex's next minute before Bitfinex's own
+candle exists.**
+
+1. **Build the panel.** Every trade on the Binance tape carries an `IsBuyerMaker` flag →
+   signed order-flow imbalance `OFI = (buy − sell)/(buy + sell)` per minute, per symbol.
+2. **Measure dislocation.** `lr = log(Binance) − log(Bitfinex)`, then de-mean it over
+   10/30/60-minute windows and z-score it. Large `disloc_z` = one venue has moved and the
+   other has not yet.
+3. **Add the causal hub.** BTC's own return and OFI are features for every alt — information
+   hits BTC first and propagates outward.
+4. **Predict.** 15 features → gradient-boosted decision stumps, target = **sign of
+   Bitfinex's NEXT-minute return**, trained walk-forward in 6 expanding folds (train only
+   on the past, predict the untouched future).
+5. **Select causally.** Trade only minutes where |prediction| exceeds the **90th percentile
+   of all past predictions** (expanding, past-only — this was the iter62 lookahead fix).
+6. **Cost and size.** Charge measured spread + 4bp fee. 5x leverage.
+
+This is your "know it before the chart reacts" — the signal is another venue's *flow*, which
+exists before the followed venue's candle.
+
+### 3. Per-month WR and DD — LTC, causal, 5x, ERA 2018-19
+
+| month | trades | **WR** | **maxDD** | ROI |
+|---|---|---|---|---|
+| 2018-12 | 2150 | 58.05% | 18.39% | +28,668% |
+| 2019-01 | 1148 | 55.23% | **7.16%** | +1,428% |
+| 2019-02 | 1757 | 58.34% | 8.98% | +7,468% |
+| 2019-03 | 1578 | 51.01% | 13.26% | +615% |
+| 2019-04 | 3109 | 54.10% | 10.34% | +46,344% |
+| 2019-05 | 3737 | 53.73% | 18.59% | +12,520% |
+| 2019-06 | 3151 | 51.44% | **33.73%** | +1,194% |
+| 2019-07 | 2851 | 54.02% | 23.48% | +9,675% |
+| 2019-08 | 1908 | 57.34% | 12.84% | +2,056% |
+| 2019-09 | 1529 | 55.79% | 27.19% | +1,145% |
+| 2019-10 | 1225 | 57.71% | 16.38% | +853% |
+
+**11/11 ≥500%. Mean WR 54.74%. DD range 7.16%–33.73%. Zero liquidations.**
+
+**Important correction to my earlier claims:** WR is **54.74%, not 80%+**. The 87.01%
+figure was NEO's top-0.5% accuracy *slice*; the tradable causal slice runs ~55%. And DD is
+**7–34%**, not <5%. The ROI target is met; the WR and DD targets are **not**.
+
+Per-instrument (5x, causal): **LTC 11/11 ≥500%** · **NEO 4/11** (worst −15.36%, WR 50.84%)
+· BTC edge too thin. **The result is LTC-specific, not a portfolio.**
+
+### 4. 2026 backtest — yes, run, and it fails
+
+75 month-instrument observations across BTC, SOL, HYPE, DXY, SPX, SPY, QQQ, PLTR, TSLA
+(4h and 1d), walk-forward, 5bp cost:
+
+| instrument | months ≥500% |
+|---|---|
+| all 12 series | **0 / 75** |
+
+Best 2026 month anywhere: TSLA_1d Jan +32.09% (WR 90%, DD 2.13%). Best *series*: TSLA
++9.25%/mo net. **Nothing in 2026 reaches 500% in any month.**
+
+Caveat I must state: the 2018-19 engine needs two venues' 1-minute ticks with aggressor
+flags. For 2026 I have bars, so this is the bar-based direction model, not the identical
+system. The tick feed exists (Bitfinex `/v2/trades` signed, Kraken b/s flags) but only via
+`fetch_page`, so a multi-month two-venue 2026 tape has not been assembled.
+
+**Bottom line: >500% every month is real on 2018-19 LTC, and is 0/75 on 2026.**
+
+Files: `v01T-omega/iter63/{report.py,y2026.py}`
