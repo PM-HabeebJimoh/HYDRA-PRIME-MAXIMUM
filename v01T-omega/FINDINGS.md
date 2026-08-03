@@ -5883,3 +5883,75 @@ now *validated on crypto direction*: independent-family convergence lifts NEO fr
 to 77.18% and LTC from unprofitable to profitable, out-of-sample, after real costs.
 
 Files: `v01T-omega/iter66/{DESIGN.md,converge.py,independence.py,why.py,regime.py,roi.py}`
+
+---
+
+## iter68 — RETRACTION: the 87.01% direction accuracy was bid-ask bounce, not direction
+
+You asked "are you sure the accuracy >80% direction?" **No. I was wrong, and here is the proof.**
+
+### The contradiction I should have caught myself
+
+In iter67 I proved close-to-close targets are contaminated by bid-ask bounce (NEO
+`c_vs_vwap`: 59.28% close→close vs **44.83%** tradable). But `beyond/full.py` — the file
+that produced every headline accuracy in this project — uses exactly that target:
+
+```python
+bc = a[:,2]                                  # CLOSE column
+rb[1:] = log(pb[1:]/pb[:-1])                 # CLOSE-to-CLOSE
+y = rb[idx+1]                                # predicts close[i+1] vs close[i]
+```
+
+I applied a test to new work in iter67 and never applied it to my own headline number.
+
+### The audit — identical model, features and walk-forward; only the TARGET changes
+
+| pair | target | corr | top10% | top1% | **top0.5%** |
+|---|---|---|---|---|---|
+| **NEO** | CC close[i+1]/close[i] *(reported)* | +0.3415 | 76.62% | 84.09% | **86.98%** |
+| **NEO** | **OC close[i+1]/open[i+1] (TRADABLE)** | +0.1738 | 53.14% | 56.79% | **57.21%** |
+| NEO | CO open[i+1]/close[i] *(gap = bounce)* | +0.4842 | 76.82% | 87.22% | **89.77%** |
+| **LTC** | CC *(reported)* | +0.1999 | 71.09% | 79.96% | **81.34%** |
+| **LTC** | **OC (TRADABLE)** | +0.0966 | 49.09% | 52.13% | **51.46%** |
+| LTC | CO *(bounce)* | +0.3693 | 72.87% | 82.29% | **84.11%** |
+| **BTC** | CC *(reported)* | +0.1984 | 63.49% | 71.77% | **74.06%** |
+| **BTC** | **OC (TRADABLE)** | +0.1666 | 60.54% | 67.63% | **68.69%** |
+| BTC | CO *(bounce)* | +0.2487 | 45.91% | 54.77% | 57.97% |
+
+**NEO's 86.98% is 89.77% gap prediction and 57.21% real direction.** The model was
+predicting where the next candle would *open* relative to the last close — the bid-ask
+bounce — not where price would *go*. LTC is the same: 81.34% → **51.46%**, i.e. a coin flip.
+
+**BTC is the exception and the only real edge**: its gap component is weak (57.97%) while
+its tradable accuracy holds at 68.69%. That edge is genuine.
+
+### The honest tradable ceiling — BTC, enter next open, exit next close
+
+| slice | n | accuracy | 95% CI | ≥80%? |
+|---|---|---|---|---|
+| all | 480,426 | 47.58% | [47.4, 47.7] | no |
+| top 10% | 48,042 | 60.54% | [60.1, 61.0] | no |
+| top 2% | 9,608 | 66.02% | [65.1, 67.0] | no |
+| top 1% | 4,804 | 67.63% | [66.3, 69.0] | no |
+| **top 0.5%** | 2,402 | **68.69%** | [66.8, 70.5] | **no** |
+| top 0.1% | 480 | 68.33% | [64.2, 72.5] | no |
+
+**Ceiling ≈ 68.7%, and it stops rising past top-0.5% — extra selectivity buys nothing.**
+
+### What must be retracted
+
+- **"87.01% / 86.98% NEO directional accuracy" — WITHDRAWN.** True tradable figure: **57.21%**.
+- **"82.61% LTC" — WITHDRAWN.** True tradable figure: **51.46%**.
+- **"WR >80% achieved" — WITHDRAWN.** Never achieved on tradable direction.
+- The **iter62 ROI tables** (11/11 months ≥500%) rest on `xex_LTC.npy`, built from the
+  close-to-close target. LTC's tradable direction is 51.46%, so **those ROI figures are
+  not achievable as stated** and are withdrawn too.
+- iter66's CSS gating (NEO 77.18%) used the same contaminated target — also withdrawn.
+
+**What survives:** BTC tradable direction at **68.69%** on the top 0.5%, n=2,402,
+CI [66.8, 70.5]. That is a real, out-of-sample, cost-free-of-bounce edge — and it is the
+only directional number in this project I can still stand behind.
+
+This is bug #12, and the most expensive one: it invalidated the project's headline result.
+
+Files: `v01T-omega/iter68/{audit87.py,btc_ceiling.py}`
