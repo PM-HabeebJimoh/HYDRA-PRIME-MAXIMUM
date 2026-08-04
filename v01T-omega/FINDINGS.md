@@ -6035,3 +6035,68 @@ after its 5.15bp cost. LTC does not clear its own cost wall.
 I am not going to widen a stop to hand you an 85% number that loses money.
 
 Files: `v01T-omega/iter69/{DIAGNOSIS.md,triple.py,fix_sign.py,costwall.py,final.py}`
+
+---
+
+## iter71 — JULY 2026 FORWARD TEST, $1,000 capital. Both geometries LOSE.
+
+Real Bitfinex `tLTCBTC` 1-hour candles, **2026-07-01 → 2026-07-31, 716 bars**, pulled live
+via `fetch_page` this session. Rules identical to iter69/70 — nothing relaxed: signal from
+past bars only, entry at **next bar's OPEN**, outcome resolved by walking **HIGH/LOW**
+forward, **pessimistic** ties (stop wins), **non-overlapping**, **5.15bp** charged per
+round trip, 2% of equity risked per trade.
+
+### GEOMETRY A — 400/200 bp (the "skill" config)
+
+| date | side | outcome | hrs | netR | P&L | equity |
+|---|---|---|---|---|---|---|
+| 07-03 | LONG | STOP | 7 | −1.026 | −$20.52 | $979.49 |
+| 07-06 | SHORT | TIMEOUT | 240 | +0.178 | +$3.48 | $982.97 |
+| 07-17 | SHORT | STOP | 36 | −1.026 | −$20.17 | $962.80 |
+| 07-19 | LONG | STOP | 57 | −1.026 | −$19.75 | $943.05 |
+| 07-21 | SHORT | STOP | 109 | −1.026 | −$19.35 | $923.70 |
+| 07-26 | LONG | STOP | 11 | −1.026 | −$18.95 | $904.75 |
+| 07-29 | SHORT | STOP | 50 | −1.026 | −$18.56 | $886.19 |
+| 07-31 | SHORT | TIMEOUT | 7 | +0.568 | +$10.06 | $896.25 |
+
+**8 trades · WR 25.00% · baseline 33.33% · EDGE −8.33 · final $896.25 · −10.37% · maxDD 11.38%**
+
+### GEOMETRY B — 30/270 bp (the "85%+" config)
+
+20 trades, 17 targets and 3 stops.
+
+**20 trades · WR 85.00% · baseline 90.00% · EDGE −5.00 · final $969.95 · −3.01% · maxDD 5.47%**
+
+### What this shows
+
+| | Geometry A | Geometry B |
+|---|---|---|
+| July 2026 return | **−10.37%** | **−3.01%** |
+| WR | 25.00% | **85.00%** |
+| free baseline | 33.33% | 90.00% |
+| **EDGE** | **−8.33** | **−5.00** |
+| maxDD | 11.38% | 5.47% |
+
+**Both are net-negative, and both have NEGATIVE edge — they underperformed the free
+geometric baseline.** Geometry B *did* deliver its advertised 85.00% win rate almost
+exactly, and still lost money — which is the cleanest possible demonstration of the
+iter70 finding: **a high win rate purchased with a wide stop is worth nothing.** 17 wins
+at +$1.85 were erased by 3 losses at −$20.
+
+### The limitation I must state plainly
+
+iter70 fitted these barriers on **1-minute 2018-19** bars. This test runs them on
+**1-hour 2026** bars, because Bitfinex 1-minute 2026 history would need ~200 hand-parsed
+`fetch_page` calls. A 400bp barrier on hourly candles is a *different trade population*
+than 400bp on minute candles, and the signal here is an OHLCV volume-pressure proxy, not
+the tick-tape order-flow imbalance the model was built on (no 2026 aggressor-flagged tape
+is reachable from this sandbox).
+
+So this is an honest **out-of-sample test of the rules**, not a like-for-like replication.
+It does not by itself prove the 2018-19 edge is dead — but it gives **zero** confirmation
+that it survives into 2026, and that is the fourth consecutive era-transfer failure
+(iter56 straddle, iter58 direction, iter63 0/75 months, iter71 both geometries).
+
+**$1,000 → $896.25 (A) and $969.95 (B). Neither is tradable.**
+
+Files: `v01T-omega/iter71/jul2026.py`, data `/tmp/j26/ltcbtc_1h.json`
